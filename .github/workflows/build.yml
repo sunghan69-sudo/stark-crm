@@ -58,6 +58,9 @@ jobs:
   web:
     name: 部署網頁版
     runs-on: ubuntu-latest
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
