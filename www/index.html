@@ -826,8 +826,11 @@ async function aiExtract(blobs){
   if(sample)return await sample.json(SCAN_PROMPT,{images:blobs,modelTier:"default"});
   throw new Error("這個版本無法使用拍照辨識");
 }
-function scanErr(e){const m=String((e&&(e.code||e.message))||e);
+function scanErr(e){const m=String((e&&((e.code||"")+" "+(e.message||"")))||e);
   if(/not_granted/.test(m))return "你沒有允許使用 Claude 辨識";
+  if(/prepayment|prepay|credits are depleted/i.test(m))return "Google AI 預付額度不足：請到 Google AI Studio（ai.studio/projects）為 stark-crm 專案儲值後再試";
+  if(/api-not-enabled|has not been used|SERVICE_DISABLED/i.test(m))return "Firebase 尚未開啟 AI Logic（Gemini Developer API），或剛開啟還在生效中，請等 2～5 分鐘再試";
+  if(/billing/i.test(m))return "Google 帳單設定尚未完成，請確認 Firebase 已升級 Blaze 並綁定帳單";
   if(/rate_limited|429|quota|RESOURCE_EXHAUSTED/i.test(m))return "辨識次數暫時用完了，請稍後再試";
   if(/API has not been used|disabled|PERMISSION_DENIED|403|firebasevertexai|AI Logic/i.test(m))return "Firebase 尚未開啟 AI Logic（Gemini Developer API），請照說明開啟後再試";
   if(/JSON|Unexpected token|invalid_json/i.test(m))return "照片內容沒辦法整理成保單，請拍清楚一點或換一張";
