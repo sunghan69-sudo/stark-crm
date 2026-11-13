@@ -247,6 +247,14 @@ async function copy(t){try{await navigator.clipboard.writeText(t);toast("已複�
   openText("請手動複製",t)}
 function lineUrl(t){return "https://line.me/R/msg/text/?"+encodeURIComponent(t)}
 function cById(id){return S.clients.find(c=>c.id===id)}
+function idCheck(v){
+  v=(v||"").toUpperCase().trim();if(!v)return "";
+  if(/^[A-Z]{2}\d{8}$/.test(v))return true; // 舊式居留證
+  if(!/^[A-Z][1289]\d{8}$/.test(v))return false;
+  const L="ABCDEFGHJKLMNPQRSTUVXYWZIO",n=L.indexOf(v[0])+10;
+  let sum=Math.floor(n/10)+(n%10)*9;for(let i=1;i<9;i++)sum+=+v[i]*(9-i);sum+=+v[9];return sum%10===0;
+}
+function maskId(v){return v&&v.length>=6?v.slice(0,3)+"****"+v.slice(-3):(v||"")}
 function lastContactDays(c){const d=pd(c.lastContact);return d?daysBetween(d,today()):9999}
 
 /* ========== 儲存層（Firebase 雲端同步 / 本機模式） ========== */
@@ -356,7 +364,7 @@ const FILTERS=[
 ];
 function filtered(){
   const f=FILTERS.find(x=>x.id===S.filter)||FILTERS[0];const q=S.q.trim().toLowerCase();
-  return S.clients.filter(c=>f.f(c)&&(!S.tag||(c.tags||[]).includes(S.tag))&&(!q||[c.name,c.phone,c.line,c.family,c.job,(c.tags||[]).join(" "),c.notes].join(" ").toLowerCase().includes(q)))
+  return S.clients.filter(c=>f.f(c)&&(!S.tag||(c.tags||[]).includes(S.tag))&&(!q||[c.name,c.idNo,c.phone,c.line,c.family,c.job,(c.tags||[]).join(" "),c.notes].join(" ").toLowerCase().includes(q)))
     .sort((a,b)=>(a.family||"~").localeCompare(b.family||"~","zh-Hant")||(a.name||"").localeCompare(b.name||"","zh-Hant"));
 }
 
@@ -528,7 +536,7 @@ function drawModal(){
   const fam=c.family?S.clients.filter(x=>x.family===c.family&&x.id!==c.id):[];
   const body={info:mInfo,pol:mPol,cov:mCov,log:mLog,svc:mSvc}[M.tab]();
   document.getElementById("modalRoot").innerHTML=`<div class="mask" data-act="maskClose"><div class="modal">
-    <div class="mh"><span class="av" style="width:44px;height:44px;font-size:16px">${esc((c.name||"新").slice(-2))}</span><div><div class="nm" style="font-size:18px">${esc(c.name||"新增客戶")}</div><div class="sub">${c.birthday?age(c.birthday)+" 歲・":""}${esc(c.stage||"")}${c.family?"・🏠 "+esc(c.family):""}${!c.isNew?"・年繳保費 "+fmt(annualSum(c))+" 元":""}</div></div>
+    <div class="mh"><span class="av" style="width:44px;height:44px;font-size:16px">${esc((c.name||"新").slice(-2))}</span><div><div class="nm" style="font-size:18px">${esc(c.name||"新增客戶")}</div><div class="sub">${c.birthday?age(c.birthday)+" 歲・":""}${c.idNo?esc(maskId(c.idNo))+"・":""}${esc(c.stage||"")}${c.family?"・🏠 "+esc(c.family):""}${!c.isNew?"・年繳保費 "+fmt(annualSum(c))+" 元":""}</div></div>
     ${c.phone&&!c.isNew?`<a class="btn sm x" href="tel:${esc(c.phone.replace(/[^\d+]/g,""))}">📞 撥打</a>`:""}<button class="btn ghost ${c.phone&&!c.isNew?"":"x"}" data-act="close">✕</button></div>
     ${c.isNew?"":`<div class="tabs">${tabs.map(t=>`<button class="${M.tab===t[0]?"on":""}" data-act="mtab" data-t="${t[0]}">${t[1]}</button>`).join("")}</div>`}
     ${fam.length&&!c.isNew?`<div style="padding:10px 22px 0" class="row"><span class="sub">全家成員：</span>${fam.map(x=>`<button class="chip" data-act="switchClient" data-id="${x.id}">${esc(x.name)}${x.relation?"（"+esc(x.relation)+"）":""}</button>`).join("")}</div>`:""}
@@ -540,6 +548,7 @@ function mInfo(){
   const fams=[...new Set(S.clients.map(x=>x.family).filter(Boolean))];
   return `<form id="infoForm"><div class="form">
     ${f("name","姓名 *","text")}${sel("gender","性別",["","男","女"])}${f("birthday","生日","date")}
+    <label>身分證字號<input class="inp" name="idNo" value="${esc(c.idNo)}" maxlength="10" placeholder="例：A123456789" style="text-transform:uppercase" autocomplete="off" autocapitalize="characters"></label>
     ${f("phone","手機","tel")}${f("line","LINE","text")}${f("email","Email","email")}
     ${f("job","職業","text","例：工程師")}${f("income","年收入（萬）","number")}${sel("stage","客戶階段",STAGES)}
     <div class="sec">家庭（同一個家庭名稱的客戶會整合在一起，方便看全家保單）</div>
@@ -631,7 +640,7 @@ function confirmBox(msg,onYes){
 
 /* ========== 匯出 ========== */
 function csv(rows){return rows.map(r=>r.map(v=>{v=String(v==null?"":v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(",")).join("\n")}
-function exportCsv(){copy(csv([["姓名","性別","生日","年齡","手機","LINE","Email","職業","年收入(萬)","家庭","身分","階段","來源","標籤","上次聯絡","下次追蹤","有效保單數","年化保費","備註"]].concat(S.clients.map(c=>[c.name,c.gender,c.birthday,age(c.birthday),c.phone,c.line,c.email,c.job,c.income,c.family,c.relation,c.stage,c.source,(c.tags||[]).join("、"),c.lastContact,c.nextFollow,(c.policies||[]).filter(active).length,Math.round(annualSum(c)),c.notes]))))}
+function exportCsv(){copy(csv([["姓名","身分證字號","性別","生日","年齡","手機","LINE","Email","職業","年收入(萬)","家庭","身分","階段","來源","標籤","上次聯絡","下次追蹤","有效保單數","年化保費","備註"]].concat(S.clients.map(c=>[c.name,c.idNo,c.gender,c.birthday,age(c.birthday),c.phone,c.line,c.email,c.job,c.income,c.family,c.relation,c.stage,c.source,(c.tags||[]).join("、"),c.lastContact,c.nextFollow,(c.policies||[]).filter(active).length,Math.round(annualSum(c)),c.notes]))))}
 function exportPol(){const h=["客戶","保險公司","商品","險種","保單號","要保人","狀態","生效日","繳費年期","繳別","每期保費","年化保費","繳費方式"].concat(COV.map(x=>x.n+"("+x.u+")"));copy(csv([h].concat(S.clients.flatMap(c=>(c.policies||[]).map(p=>[c.name,p.company,p.product,p.type,p.policyNo,p.holder,p.status,p.start,p.payYears,FREQ[p.freq||12],p.premium,Math.round(annual(p)),p.payMethod].concat(COV.map(x=>(p.cov||{})[x.k]||"")))))))}
 function exportJson(){openText("完整備份（請複製後存成文字檔）",JSON.stringify({v:1,exported:new Date().toISOString(),profile:S.profile,clients:S.clients}))}
 function importJson(){openText("貼上 JSON 備份內容（同 ID 客戶會被覆蓋）","",true,async t=>{
@@ -710,6 +719,10 @@ document.addEventListener("submit",async e=>{
     catch(err){S.authErr=AUTH_ERR[err.code]||err.message;render()}return}
   if(f.id==="infoForm"){
     if(!fd.name.trim()){toast("請填寫姓名");return}
+    fd.idNo=(fd.idNo||"").toUpperCase().replace(/\s/g,"");
+    if(fd.idNo&&idCheck(fd.idNo)===false){toast("身分證字號格式或檢查碼不正確，請再確認");return}
+    if(fd.idNo&&!fd.gender&&/^[A-Z][12]/.test(fd.idNo))fd.gender=fd.idNo[1]==="1"?"男":"女";
+    if(fd.idNo&&S.clients.some(x=>x.id!==M.c.id&&x.idNo===fd.idNo)){toast("這個身分證字號已經有客戶使用，請確認是否重複建檔");return}
     Object.assign(M.c,fd,{name:fd.name.trim(),tags:fd.tags.split(/[,，、]/).map(s=>s.trim()).filter(Boolean)});
     const wasNew=M.c.isNew;await commitM();toast(wasNew?"已建立客戶":"已儲存");if(wasNew){M.tab="pol"}drawModal();
   }
