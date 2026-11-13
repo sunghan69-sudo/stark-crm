@@ -1,0 +1,71 @@
+name: 編譯 Android App 與部署網頁版
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  android:
+    name: 編譯 APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: 安裝套件
+        run: npm install
+      - name: 建立 Android 專案
+        run: npx cap add android
+      - name: 產生 App 圖示
+        run: npx @capacitor/assets generate --android --iconBackgroundColor "#14365c" --iconBackgroundColorDark "#14365c" --splashBackgroundColor "#14365c" --splashBackgroundColorDark "#14365c"
+      - name: 設定版本號
+        run: |
+          sed -i "s/versionCode 1$/versionCode ${{ github.run_number }}/" android/app/build.gradle
+          sed -i "s/versionName \"1.0\"/versionName \"1.0.${{ github.run_number }}\"/" android/app/build.gradle
+          grep -E "versionCode|versionName" android/app/build.gradle
+      - name: 使用固定簽章（之後更新可直接覆蓋安裝）
+        run: mkdir -p ~/.android && cp keystore/debug.keystore ~/.android/debug.keystore
+      - name: 同步網頁檔並編譯
+        run: |
+          npx cap sync android
+          cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+      - name: 整理 APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk StarkCRM.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: StarkCRM-apk
+          path: StarkCRM.apk
+      - name: 發佈到 Releases（固定下載連結）
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: 史塔克CRM v1.0.${{ github.run_number }}
+          body: 下載 StarkCRM.apk 到 Android 手機安裝即可。更新版本直接覆蓋安裝，資料在雲端不會不見。
+          files: StarkCRM.apk
+          make_latest: true
+
+  web:
+    name: 部署網頁版
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: www
+      - id: deploy
+        uses: actions/deploy-pages@v4
