@@ -513,15 +513,10 @@ function vCard(){
 function cardText(){const p=S.profile;return [`【${p.agent||"你的名字"}｜${p.title||"保險顧問"}】`,p.company,p.slogan?"「"+p.slogan+"」":"",p.phone?"📱 "+p.phone:"",p.line?"💬 LINE："+p.line:"",p.email?"✉ "+p.email:"",p.area?"📍 服務區域："+p.area:"","保單健檢・理賠協助・家庭保障規劃，歡迎隨時聯絡我！"].filter(Boolean).join("\n")}
 function vSetup(){
   const p=S.profile;const f=(k,n,ph)=>`<label>${n}<input class="inp" name="${k}" value="${esc(p[k])}" placeholder="${esc(ph||"")}"></label>`;
-  return `<div class="top"><div><h1>設定</h1><div class="sub">個人資料、保障建議目標、訊息範本、備份</div></div></div>
+  return `<div class="top"><div><h1>設定</h1><div class="sub">個人資料、帳號、備份</div></div></div>
   <form class="card" id="profForm"><h2>個人資料（名片與訊息署名用）</h2><div class="form">
     ${f("agent","姓名","例：Justin")}${f("title","職稱","例：資深副總")}${f("company","公司","")}${f("phone","手機","")}${f("line","LINE ID","")}${f("email","Email","")}
     <label class="w2">一句話介紹<input class="inp" name="slogan" value="${esc(p.slogan)}" placeholder="用心規劃，做您一輩子的保險顧問"></label>${f("area","服務區域","例：雙北")}
-    <div class="sec">保障建議目標（用於缺口分析，可依你的規劃理念調整）</div>
-    ${COV.map(x=>`<label>${x.n}（${x.u}）<input class="inp" type="number" min="0" name="t_${x.k}" value="${(p.targets||{})[x.k]!=null?esc(p.targets[x.k]):""}" placeholder="預設 ${x.t}"></label>`).join("")}
-    <div class="hint w3">壽險目標：若客戶有填年收入，取「年收入 × 10」與上方設定的較大值。</div>
-    <div class="sec">LINE 訊息範本（可用 {name} 客戶名、{agent} 你的名字、{product} 商品、{amount} 金額、{date} 日期）</div>
-    ${[["birthday","生日祝福"],["payment","繳費提醒"],["paidup","繳費期滿"],["follow","追蹤約訪"],["care","一般關懷 / 群發"]].map(([k,n])=>`<label class="w3">${n}<textarea class="inp" rows="2" name="tpl_${k}">${esc((p.tpl||{})[k]||DEF_TPL[k])}</textarea></label>`).join("")}
   </div><div class="row" style="margin-top:16px"><button class="btn p" type="submit">儲存設定</button></div></form>
   <div class="card" style="margin-top:14px"><h2>帳號與同步</h2>${S.mode==="cloud"?`<div class="row"><span>☁ 已登入：<b>${esc(S.email)}</b>，手機與電腦即時同步</span><span class="sp"></span><button class="btn" data-act="logout">登出</button></div>`:`<div class="row"><span>💾 目前是本機模式</span><span class="sp"></span><button class="btn p" data-act="toCloud">改用雲端同步</button></div>`}
     <div class="hint" style="margin-top:8px">從 claude.ai 版本搬資料過來：在舊版「設定 → 複製完整備份 JSON」，再到這裡按「匯入 JSON 備份」貼上。</div></div>
@@ -595,7 +590,7 @@ function mCov(){
   const famRows=fam.length>1?`<h3 style="margin-top:22px">🏠 ${esc(c.family)} 全家保單整合</h3><table class="tbl"><thead><tr><th>成員</th><th>保單</th><th>年化保費</th>${["life","med","ci","acc"].map(k=>`<th class="hide-m">${COV.find(x=>x.k===k).n}</th>`).join("")}</tr></thead><tbody>
     ${fam.map(x=>{const xv=x.id===c.id?v:cov(x);const xa=x.id===c.id?annualSum(c):annualSum(x);return `<tr><td class="nm">${esc(x.name)}<div class="sub">${esc(x.relation||"")}</div></td><td>${((x.id===c.id?c:x).policies||[]).filter(active).length}</td><td>${fmt(xa)}</td>${["life","med","ci","acc"].map(k=>`<td class="hide-m">${xv[k]>0?fmt(xv[k]):`<span style="color:var(--bad)">缺</span>`}</td>`).join("")}</tr>`}).join("")}
     <tr><td class="nm">全家合計</td><td></td><td class="nm">${fmt(fam.reduce((a,x)=>a+(x.id===c.id?annualSum(c):annualSum(x)),0))}</td><td colspan="4" class="hide-m"></td></tr></tbody></table>`:"";
-  return `<div class="row"><h3 style="margin:0">保障總覽 vs 建議目標</h3><span class="sp"></span><span class="hint">目標可在「設定」調整</span></div>
+  return `<div class="row"><h3 style="margin:0">保障總覽 vs 建議目標</h3><span class="sp"></span><span class="hint">建議額度為一般參考值</span></div>
   ${COV.map(x=>{const t=x.k==="life"?lifeTarget(c):target(x.k);const r=t?v[x.k]/t:1;const cls=r>=1?"ok":r>=.5?"mid":"low";
     return `<div class="covrow"><div class="n">${x.n}</div><div class="bar"><i class="${cls}" style="width:${Math.min(100,r*100)}%"></i></div><div class="x"><b style="color:var(--ink)">${fmt(v[x.k])}</b> / ${fmt(t)} ${x.u}${r<1?` <span style="color:var(--bad)">缺 ${fmt(t-v[x.k])}</span>`:" ✓"}</div></div>`}).join("")}
   <div class="row" style="margin-top:12px"><button class="btn" data-act="copyCov">複製保障摘要給客戶</button><button class="btn" data-act="gotoClaim">→ 理賠情境試算</button></div>${famRows}`;
@@ -744,8 +739,6 @@ document.addEventListener("submit",async e=>{
   if(f.id==="svcForm"){M.c.services=M.c.services||[];M.c.services.push({id:"s"+uid(),date:fd.date,type:fd.type,status:fd.status,note:fd.note});await commitM();drawModal();toast("已新增服務件")}
   if(f.id==="profForm"){
     const p=S.profile;["agent","title","company","phone","line","email","slogan","area"].forEach(k=>p[k]=fd[k]||"");
-    p.targets={};COV.forEach(x=>{const v=fd["t_"+x.k];if(v!=="")p.targets[x.k]=num(v)});
-    p.tpl={};Object.keys(DEF_TPL).forEach(k=>{const v=(fd["tpl_"+k]||"").trim();if(v&&v!==DEF_TPL[k])p.tpl[k]=v});
     p.type="profile";await saveProfile();toast("設定已儲存");
   }
 });
