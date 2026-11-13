@@ -116,6 +116,28 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{outline:2px solid #bcd3ee;bo
 .form .w2{grid-column:span 2}.form .w3{grid-column:1/-1}
 .sec{grid-column:1/-1;font-weight:700;color:var(--pri);font-size:14px;margin-top:6px;padding-top:10px;border-top:1px dashed var(--line)}
 .pol{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px}
+.insh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 12px}
+.insh b{background:#fff36b;padding:2px 10px;font-size:17px;border-radius:3px}
+.psheet{margin-bottom:16px}
+.phead{display:flex;align-items:stretch;border:1.5px solid #2fa84f;border-radius:8px;overflow:hidden;font-size:14px;flex-wrap:wrap;background:#fff}
+.phead .no{background:#2fa84f;color:#fff;font-weight:700;padding:6px 12px;letter-spacing:1px;white-space:nowrap}
+.phead .hd{padding:6px 12px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.phead .hd i{font-style:normal;color:#1f8a3c}
+.phead .pm{margin-left:auto;padding:6px 12px;border-left:1px solid #cfe9d6;color:#333}
+.pwrap{overflow-x:auto}
+.ptbl{width:100%;border-collapse:collapse;margin-top:6px;font-size:14px;min-width:680px;table-layout:fixed}
+.ptbl th{font-weight:500;color:#666;font-size:12.5px;padding:6px;border-bottom:1px solid #ddd;text-align:center;white-space:nowrap}
+.ptbl td{padding:8px 6px;text-align:center;border-bottom:1px solid #eee}
+.ptbl tr.main td{background:#f1f3f1}
+.ptbl tr.click{cursor:pointer}.ptbl tr.click:hover td{background:#e8f5ec}
+.ptbl td.nm{text-align:left;font-weight:500}
+.ptbl td.g{color:#1f8a3c;font-weight:700;white-space:nowrap}
+.ptbl td.bf{font-size:12px;color:#1f8a3c;text-align:left;white-space:pre-line;min-width:110px}
+.ptbl .rd{color:#2fa84f;margin-right:6px}
+.ptbl tr.off td{opacity:.4}
+.scanbox{border:2px dashed #b8c4d4;border-radius:12px;padding:22px;text-align:center;background:#f8fafc}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px}
+.thumbs img{width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
 .pol .h{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .pol .meta{font-size:13px;color:var(--muted);margin-top:4px}
 .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1b2433;color:#fff;padding:10px 18px;border-radius:10px;z-index:99;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.2)}
@@ -171,6 +193,7 @@ body.gate .side{display:none}
 <script src="vendor/firebase-app-compat.js"></script>
 <script src="vendor/firebase-auth-compat.js"></script>
 <script src="vendor/firebase-firestore-compat.js"></script>
+<script src="vendor/stark-ai.js" defer></script>
 <script src="firebase-config.js"></script>
 <script>
 (function(){
@@ -257,6 +280,24 @@ function idCheck(v){
   let sum=Math.floor(n/10)+(n%10)*9;for(let i=1;i<9;i++)sum+=+v[i]*(9-i);sum+=+v[9];return sum%10===0;
 }
 function maskId(v){return v&&v.length>=6?v.slice(0,3)+"****"+v.slice(-3):(v||"")}
+function rocDate(s){const d=pd(s);return d?(d.getFullYear()-1911)+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0"):""}
+function rocBirth(s){const d=pd(s);return d?(d.getFullYear()-1911)+"."+(d.getMonth()+1)+"."+d.getDate():""}
+const FREQ_SHORT={12:"年繳",6:"半年",3:"季繳",1:"月繳"};
+function sumLabel(p){if(p.sumText)return p.sumText;const c=p.cov||{};const k=COV.find(x=>num(c[x.k])>0);return k?fmt(num(c[k.k]))+(k.u==="元/日"?"元":k.u.replace("/次","").replace("/月","")):""}
+function policyGroups(ps){const g=[],map={};ps.forEach(p=>{const k=(p.policyNo||"").trim()||("_"+p.id);if(!map[k]){map[k]={no:(p.policyNo||"").trim(),items:[]};g.push(map[k])}map[k].items.push(p)});
+  g.forEach(x=>x.items.sort((a,b)=>(!!a.rider-!!b.rider)||(a.start||"").localeCompare(b.start||"")));return g}
+function sheetHtml(c,ps,opts){opts=opts||{};
+  if(!ps.length)return "";
+  return policyGroups(ps).map(g=>{const f=g.items.find(x=>!x.rider)||g.items[0];
+   return `<div class="psheet"><div class="phead"><span class="no">保 單 號 碼 ▷ ${esc(g.no||"（未填）")}</span><span class="hd">要保人 <i>▶</i> <b>${esc(f.holder||c.name||"")}</b></span><span class="pm">${esc(f.payMethod||"")}</span></div>
+   <div class="pwrap"><table class="ptbl"><colgroup>${opts.check?'<col style="width:34px">':""}<col style="width:30%"><col style="width:8%"><col style="width:7%"><col style="width:10%"><col style="width:8%"><col style="width:10%"><col style="width:7%"><col></colgroup><thead><tr>${opts.check?"<th></th>":""}<th style="text-align:left">商品</th><th>繳費年期</th><th>對象</th><th>投保日期</th><th>保額</th><th>下期保費</th><th>繳別</th><th>受益人</th></tr></thead><tbody>
+   ${g.items.map(p=>`<tr class="${p.rider?"":"main"} ${opts.check?"":"click"} ${active(p)?"":"off"}" ${opts.check?"":`data-act="editPol" data-pid="${p.id}"`}>
+     ${opts.check?`<td><input type="checkbox" class="scanchk" data-i="${p._i}" checked></td>`:""}
+     <td class="nm"><span class="rd">${p.rider?"○":"●"}</span>${esc(p.product||"(未命名)")}${opts.check?`<div><select class="inp scantype" data-i="${p._i}" style="padding:2px 6px;font-size:12px;width:auto;margin-top:4px">${PTYPES.map(t=>`<option ${t===p.type?"selected":""}>${t}</option>`).join("")}</select></div>`:(active(p)?"":` <span class="tag r">${esc(p.status)}</span>`)}</td>
+     <td class="g">${num(p.payYears)?String(num(p.payYears)).padStart(2,"0")+"年":""}</td><td class="g">${esc(p.target||"本人")}</td><td class="g">${esc(rocDate(p.start))}</td>
+     <td class="g">${esc(sumLabel(p))}</td><td class="g">${p.premium!==""&&p.premium!=null?fmt(num(p.premium))+"元":""}</td><td class="g">${esc(FREQ_SHORT[p.freq||12]||"")}</td><td class="bf">${esc(p.beneficiary||"")}</td></tr>`).join("")}
+   </tbody></table></div></div>`}).join("");
+}
 function lastContactDays(c){const d=pd(c.lastContact);return d?daysBetween(d,today()):9999}
 
 /* ========== 儲存層（Firebase 雲端同步 / 本機模式） ========== */
@@ -568,22 +609,19 @@ function mInfo(){
 function mPol(){
   const c=M.c;if(M.editPol)return polForm(M.editPol);
   const ps=c.policies||[];
-  return `<div class="row" style="margin-bottom:12px"><span class="sub">有效保單 ${ps.filter(active).length} 張・年化保費 ${fmt(annualSum(c))} 元</span><span class="sp"></span><button class="btn p" data-act="newPol">＋ 新增保單</button></div>
-  ${ps.length?ps.map(p=>{const n=nextDue(p);const e=paidUpDate(p);const cv=COV.filter(x=>num((p.cov||{})[x.k])>0);
-   return `<div class="pol"><div class="h"><span class="tag">${esc(p.type||"其他")}</span><b>${esc(p.product||"(未命名商品)")}</b><span class="sub">${esc(p.company||"")}</span><span class="sp"></span><span class="tag ${active(p)?"g":"r"}">${esc(p.status||"有效")}</span><button class="btn sm" data-act="editPol" data-pid="${p.id}">編輯</button></div>
-   <div class="meta">${FREQ[p.freq||12]} ${fmt(num(p.premium))} 元（年化 ${fmt(annual(p))}）${p.payMethod?"・"+esc(p.payMethod):""}${p.start?"・生效 "+esc(p.start):""}${num(p.payYears)?"・繳費 "+num(p.payYears)+" 年":""}${p.holder?"・要保人 "+esc(p.holder):""}${p.policyNo?"・保單號 "+esc(p.policyNo):""}</div>
-   <div class="meta">${n?"下次繳費 <b>"+ds(n)+"</b>":""}${e?"　繳費期滿 "+ds(e):""}</div>
-   ${cv.length?`<div style="margin-top:6px">${cv.map(x=>`<span class="tag o">${x.n} ${fmt(num(p.cov[x.k]))}${x.u}</span>`).join("")}</div>`:""}
-   ${p.note?`<div class="meta">📝 ${esc(p.note)}</div>`:""}</div>`}).join(""):`<div class="empty"><b>尚無保單</b>把客戶手上的保單整理進來，系統會自動算保障總覽、繳費提醒與缺口。</div>`}`;
+  return `<div class="row" style="margin-bottom:6px"><span class="sub">有效保單 ${policyGroups(ps.filter(active)).length} 張（${ps.filter(active).length} 項）・年化保費 ${fmt(annualSum(c))} 元</span><span class="sp"></span><button class="btn a" data-act="scanPol">📷 拍照匯入</button><button class="btn p" data-act="newPol">＋ 新增</button></div>
+  ${ps.length?`<div class="insh"><span>被保險人:</span><b>${esc(c.name)}</b>${c.gender?`<span>${c.gender==="女"?"小姐":"先生"}</span>`:""}${c.birthday?`<span>🎂 ${esc(rocBirth(c.birthday))}</span>`:""}<span class="hint" style="margin-left:auto">點任一列可編輯</span></div>`+sheetHtml(c,ps):`<div class="empty"><b>尚無保單</b>按「📷 拍照匯入」拍下保單整理表，系統會自動辨識並填入；也可以按「＋ 新增」手動輸入。</div>`}`;
 }
 function polForm(p){
   const f=(k,n,t,ph)=>`<label>${n}<input class="inp" name="${k}" type="${t||"text"}" value="${esc(p[k])}" placeholder="${esc(ph||"")}"></label>`;
   const sel=(k,n,opts,vals)=>`<label>${n}<select class="inp" name="${k}">${opts.map((o,i)=>{const v=vals?vals[i]:o;return `<option value="${esc(v)}" ${String(p[k])===String(v)?"selected":""}>${o}</option>`}).join("")}</select></label>`;
   return `<form id="polForm"><h3>${p._new?"新增保單":"編輯保單"}</h3><div class="form">
-    ${f("company","保險公司","text","例：國泰人壽")}${f("product","商品名稱","text")}${sel("type","險種",PTYPES)}
-    ${f("policyNo","保單號碼")}${f("holder","要保人","text","空白＝本人")}${sel("status","狀態",["有效","停效","繳清","終止"])}
-    ${f("start","生效日","date")}${f("payYears","繳費年期（年）","number","例：20")}${sel("freq","繳別",["年繳","半年繳","季繳","月繳"],[12,6,3,1])}
-    ${f("premium","每期保費（元）","number")}${sel("payMethod","繳費方式",["","信用卡","銀行轉帳","自行繳費","業務收費"])}
+    ${f("policyNo","保單號碼")}${f("holder","要保人","text","空白＝本人")}<label>繳費方式<input class="inp" name="payMethod" list="pmlist" value="${esc(p.payMethod)}" placeholder="例：自繳件、國泰世華（卡扣件）"><datalist id="pmlist"><option value="自繳件"><option value="信用卡（卡扣件）"><option value="銀行（轉帳件）"><option value="業務收費"></datalist></label>
+    ${f("company","保險公司","text","例：國泰人壽")}${f("product","商品名稱","text")}${sel("rider","主約 / 附約",["主約","附約"],["0","1"])}
+    ${sel("type","險種",PTYPES)}${f("target","對象","text","本人")}${sel("status","狀態",["有效","停效","繳清","終止"])}
+    ${f("start","投保日期","date")}${f("payYears","繳費年期（年）","number","例：20")}${sel("freq","繳別",["年繳","半年繳","季繳","月繳"],[12,6,3,1])}
+    ${f("sumText","保額（顯示用）","text","例：95萬、600元")}${f("premium","下期保費（元）","number")}
+    <label class="w3">受益人<textarea class="inp" name="beneficiary" rows="2" placeholder="例：身故:法定繼承人">${esc(p.beneficiary)}</textarea></label>
     <div class="sec">保障額度（被保險人＝${esc(M.c.name||"本客戶")}；沒有的留空）</div>
     ${COV.map(x=>`<label>${x.n}（${x.u}）<input class="inp" type="number" min="0" step="any" name="cov_${x.k}" value="${esc((p.cov||{})[x.k])}"></label>`).join("")}
     <label class="w3">備註<textarea class="inp" name="note" rows="2">${esc(p.note)}</textarea></label>
@@ -626,6 +664,85 @@ function covSummary(c){
   return `${c.name}您好，幫您整理目前的保障：\n${lines.join("\n")}\n年繳保費合計約 ${fmt(annualSum(c))} 元。\n標示建議額度的項目，我們可以找時間一起看看～\n— ${agentName()}`;
 }
 function commitM(){const c=M.c;delete c.isNew;return saveClient(clone(c))}
+
+/* ========== 拍照匯入保單 ========== */
+const SCAN_PROMPT=`你是台灣保險業務助理。圖片是客戶的保單整理表、保單首頁或保單明細（可能多張）。請擷取所有保單，只回傳一個 JSON 物件，不要其他文字。格式：
+{"insured":"被保險人姓名","insuredBirth":"生日原文","company":"保險公司（可判斷才填）","policies":[{"policyNo":"保單號碼","holder":"要保人","payMethod":"繳費方式","items":[{"product":"商品名稱（含括號代碼）","rider":false,"payYears":20,"target":"本人","start":"1987-01-26","sumText":"95萬","premium":0,"freq":"半年","beneficiary":"滿期:王小明\\n身故:王大明50%","type":"壽險","cov":{"life":95}}]}]}
+規則：
+1. 同一個保單號碼底下：主約 rider=false（通常第一列或標示●），附約 rider=true（標示○、名稱含「附約」）。
+2. start：民國年加 1911 轉成西元 YYYY-MM-DD（例 76/01/26 → 1987-01-26；112/07/11 → 2023-07-11）。
+3. premium：「下期保費」的數字（元，去掉逗號），沒有就填 0。payYears：繳費年期數字（01年 → 1）。freq 只能是 年、半年、季、月 其中之一。
+4. type 從這些選一個：壽險、醫療、重疾/重大傷病、癌症、意外、失能、長照、儲蓄/年金、投資型、產險、其他。
+5. cov 把保額換算到對應保障：life 壽險身故(萬)、acc 意外身故失能(萬)、med 實支實付(萬/次)、hosp 住院日額(元/日)、ci 重大傷病/重疾(萬)、cancer 癌症一次金(萬)、dis 失能扶助(萬/月)、ltc 長照(萬/月)。對應不到（手術、儲蓄、豁免等）就給 {}。例：終身壽險 95萬 → {"life":95}；住院日額附約 600元 → {"hosp":600}；日額型住院醫療 1000元 → {"hosp":1000}；手術醫療 1000元 → {}。
+6. beneficiary 保留原文，多位受益人用 \\n 分行。payMethod 只保留方式與銀行名稱，例如「自繳件」「國泰世華（卡扣件）」「玉山銀行（轉帳件）」，不要輸出卡號、帳號或末四碼。
+7. 看不清楚的欄位填空字串，不要猜。`;
+async function shrink(file){
+  try{const bmp=await createImageBitmap(file);const k=Math.min(1,2000/Math.max(bmp.width,bmp.height));const cv=document.createElement("canvas");cv.width=Math.round(bmp.width*k);cv.height=Math.round(bmp.height*k);cv.getContext("2d").drawImage(bmp,0,0,cv.width,cv.height);
+    return await new Promise(r=>cv.toBlob(b=>r(b||file),"image/jpeg",0.88))}catch(e){return file}
+}
+async function aiExtract(blobs){
+  if(window.StarkAI&&typeof getCfg==="function"&&getCfg()){
+    let models=["gemini-flash-latest","gemini-3.6-flash","gemini-3.5-flash","gemini-2.5-flash"];
+    const custom=(typeof lsGet==="function"&&lsGet("stark-ai-model"))||"";if(custom)models=[custom].concat(models);
+    const r=await window.StarkAI.extract(getCfg(),models,SCAN_PROMPT,blobs);
+    const t=r.text.trim().replace(/^```(json)?/,"").replace(/```$/,"");return JSON.parse(t.slice(t.indexOf("{"),t.lastIndexOf("}")+1));
+  }
+  const sample=window.claude&&window.claude.use?await window.claude.use("sample"):null;
+  if(sample)return await sample.json(SCAN_PROMPT,{images:blobs,modelTier:"default"});
+  throw new Error("這個版本無法使用拍照辨識");
+}
+function scanErr(e){const m=String((e&&(e.code||e.message))||e);
+  if(/not_granted/.test(m))return "你沒有允許使用 Claude 辨識";
+  if(/rate_limited|429|quota|RESOURCE_EXHAUSTED/i.test(m))return "辨識次數暫時用完了，請稍後再試";
+  if(/API has not been used|disabled|PERMISSION_DENIED|403|firebasevertexai|AI Logic/i.test(m))return "Firebase 尚未開啟 AI Logic（Gemini Developer API），請照說明開啟後再試";
+  if(/JSON|Unexpected token|invalid_json/i.test(m))return "照片內容沒辦法整理成保單，請拍清楚一點或換一張";
+  if(/network|Failed to fetch/i.test(m))return "網路連線失敗";
+  return "辨識失敗："+m.slice(0,160)}
+function openScan(){
+  const box=document.createElement("div");document.getElementById("modalRoot").appendChild(box);
+  let files=[],data=null,flat=[];
+  const close=()=>box.remove();
+  const draw=(state,msg)=>{
+    let body="";
+    if(state==="pick"||state==="busy")body=`<div class="scanbox"><div style="font-size:34px">📷</div><b>拍下保單整理表或保單明細</b><div class="hint" style="margin:6px 0 12px">可以一次選多張；照片越清楚、越正，辨識越準</div>
+      <label class="btn a" style="cursor:pointer">選擇照片 / 拍照<input type="file" accept="image/*" multiple id="scanFile" style="display:none"></label>
+      <div class="thumbs">${files.map(f=>`<img src="${f.url}">`).join("")}</div></div>
+      ${state==="busy"?`<div class="banner" style="margin-top:12px">🔍 AI 辨識中，約 10～40 秒，請稍候…</div>`:""}${msg?`<div class="banner err" style="margin-top:12px">${esc(msg)}</div>`:""}
+      <div class="hint" style="margin-top:10px">照片只用來辨識，不會存進系統。辨識結果會先讓你確認，勾選後才會匯入。</div>`;
+    if(state==="review"){
+      const ins=(data.insured||"").trim();
+      body=`${ins&&ins!==M.c.name?`<div class="banner">⚠ 照片上的被保險人是「${esc(ins)}」，目前客戶是「${esc(M.c.name)}」，請確認沒有放錯客戶。</div>`:""}
+      <div class="insh"><span>被保險人:</span><b>${esc(ins||M.c.name)}</b>${data.insuredBirth?`<span>🎂 ${esc(data.insuredBirth)}</span>`:""}<span class="hint" style="margin-left:auto">共辨識 ${flat.length} 項，取消勾選就不匯入；險種可在這裡修正</span></div>
+      ${sheetHtml(M.c,flat,{check:true})}<div class="hint">辨識結果可能有誤，匯入後點該列即可修改。同保單號碼＋同商品名稱的舊資料會被更新。</div>`;
+    }
+    box.innerHTML=`<div class="mask"><div class="modal" style="max-width:980px"><div class="mh"><b>📷 拍照匯入保單</b><button class="btn ghost x" data-x>✕</button></div><div class="mb">${body}</div>
+      <div class="mf">${state==="review"?`<button class="btn" data-again>重新選照片</button><button class="btn p" data-import>匯入勾選的保單</button>`:`<button class="btn" data-x>取消</button><button class="btn p" data-go ${files.length&&state!=="busy"?"":"disabled"}>${state==="busy"?"辨識中…":"開始辨識"}</button>`}</div></div></div>`;
+    box.querySelectorAll("[data-x]").forEach(b=>b.onclick=close);
+    const fi=box.querySelector("#scanFile");if(fi)fi.onchange=()=>{files=[...fi.files].slice(0,6).map(f=>({f,url:URL.createObjectURL(f)}));draw("pick")};
+    const go=box.querySelector("[data-go]");if(go)go.onclick=async()=>{
+      draw("busy");
+      try{const blobs=[];for(const x of files)blobs.push(await shrink(x.f));
+        data=await aiExtract(blobs);
+        flat=[];(data.policies||[]).forEach(pp=>(pp.items||[]).forEach(it=>{flat.push(Object.assign({},it,{_i:flat.length,id:"tmp"+flat.length,policyNo:pp.policyNo||"",holder:pp.holder||"",payMethod:pp.payMethod||"",freq:({"年":12,"年繳":12,"半年":6,"半年繳":6,"季":3,"季繳":3,"月":1,"月繳":1})[it.freq]||12,status:"有效"}))}));
+        if(!flat.length)throw new Error("JSON: 沒有找到保單");
+        draw("review");
+      }catch(e){draw("pick",scanErr(e))}
+    };
+    const ag=box.querySelector("[data-again]");if(ag)ag.onclick=()=>{files=[];draw("pick")};
+    const im=box.querySelector("[data-import]");if(im)im.onclick=async()=>{
+      const on=[...box.querySelectorAll(".scanchk")].filter(x=>x.checked).map(x=>+x.dataset.i);
+      box.querySelectorAll(".scantype").forEach(sel=>{flat[+sel.dataset.i].type=sel.value});
+      if(!on.length){toast("沒有勾選任何保單");return}
+      M.c.policies=M.c.policies||[];let added=0,upd=0;
+      on.forEach(i=>{const it=flat[i];const cov={};Object.keys(it.cov||{}).forEach(k=>{if(COV.some(x=>x.k===k)&&num(it.cov[k])>0)cov[k]=num(it.cov[k])});
+        const np={company:data.company||"",product:it.product||"",type:PTYPES.includes(it.type)?it.type:"其他",policyNo:it.policyNo,holder:it.holder,payMethod:it.payMethod,rider:!!it.rider,target:it.target||"本人",start:/^\d{4}-\d{2}-\d{2}$/.test(it.start||"")?it.start:"",payYears:num(it.payYears)||"",freq:it.freq,premium:it.premium===""||it.premium==null?"":num(it.premium),sumText:it.sumText||"",beneficiary:it.beneficiary||"",status:"有效",cov,note:""};
+        const ex=M.c.policies.find(p=>p.policyNo&&p.policyNo===np.policyNo&&p.product===np.product);
+        if(ex){Object.assign(ex,np);upd++}else{M.c.policies.push(Object.assign({id:"p"+uid()},np));added++}});
+      await commitM();close();M.tab="pol";drawModal();toast(`已匯入 ${added} 筆${upd?`、更新 ${upd} 筆`:""}`);
+    };
+  };
+  draw("pick");
+}
 
 /* ========== 小彈窗 ========== */
 function openText(title,text,editable,onOk){
@@ -689,8 +806,9 @@ document.addEventListener("click",async e=>{
     case "copyCard":copy(cardText());break;
     case "copyCov":copy(covSummary(M.c));break;
     case "gotoClaim":S.claimCid=M.c.id;closeModal();location.hash="claims";break;
-    case "newPol":M.editPol={id:"p"+uid(),_new:true,status:"有效",freq:12,cov:{}};drawModal();break;
-    case "editPol":M.editPol=clone(M.c.policies.find(p=>p.id===el.dataset.pid));drawModal();break;
+    case "scanPol":openScan();break;
+    case "newPol":M.editPol={id:"p"+uid(),_new:true,status:"有效",freq:12,cov:{},rider:"0",target:"本人"};drawModal();break;
+    case "editPol":M.editPol=clone(M.c.policies.find(p=>p.id===el.dataset.pid));M.editPol.rider=M.editPol.rider?"1":"0";drawModal();break;
     case "cancelPol":M.editPol=null;drawModal();break;
     case "delPol":confirmBox("確定刪除這張保單？",async()=>{M.c.policies=M.c.policies.filter(p=>p.id!==el.dataset.pid);M.editPol=null;await commitM();drawModal();toast("已刪除保單")});break;
     case "delClient":confirmBox("確定刪除客戶「"+M.c.name+"」及其所有保單與紀錄？此動作無法復原。",async()=>{const id=M.c.id;closeModal();await delClient(id);toast("已刪除")});break;
@@ -733,7 +851,7 @@ document.addEventListener("submit",async e=>{
   }
   if(f.id==="polForm"){
     const p=M.editPol;const c={};COV.forEach(x=>{const v=fd["cov_"+x.k];if(v!==""&&v!=null)c[x.k]=num(v)});
-    const np={id:p.id,company:fd.company,product:fd.product,type:fd.type,policyNo:fd.policyNo,holder:fd.holder,status:fd.status,start:fd.start,payYears:fd.payYears,freq:+fd.freq,premium:fd.premium,payMethod:fd.payMethod,note:fd.note,cov:c};
+    const np={id:p.id,company:fd.company,product:fd.product,type:fd.type,policyNo:fd.policyNo,holder:fd.holder,status:fd.status,start:fd.start,payYears:fd.payYears,freq:+fd.freq,premium:fd.premium,payMethod:fd.payMethod,note:fd.note,cov:c,rider:fd.rider==="1",target:fd.target,sumText:fd.sumText,beneficiary:fd.beneficiary};
     M.c.policies=M.c.policies||[];const i=M.c.policies.findIndex(x=>x.id===p.id);if(i>=0)M.c.policies[i]=np;else M.c.policies.push(np);
     M.editPol=null;await commitM();toast("保單已儲存");drawModal();
   }
