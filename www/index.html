@@ -648,7 +648,7 @@ function mInfo(){
 function mPol(){
   const c=M.c;if(M.editPol)return polForm(M.editPol);
   const ps=c.policies||[];
-  return `<div class="row" style="margin-bottom:6px"><span class="sub">有效保單 ${policyGroups(ps.filter(active)).length} 張（${ps.filter(active).length} 項）・年化保費 ${fmt(annualSum(c))} 元</span><span class="sp"></span><button class="btn" data-act="report">📄 健檢報表</button><button class="btn a" data-act="scanPol">📷 拍照匯入</button><button class="btn p" data-act="newPol">＋ 新增</button></div>
+  return `<div class="row" style="margin-bottom:6px"><span class="sub">有效保單 ${policyGroups(ps.filter(active)).length} 張（${ps.filter(active).length} 項）・年化保費 ${fmt(annualSum(c))} 元</span><span class="sp"></span><button class="btn" data-act="report">📄 健檢報表</button><button class="btn a" data-act="scanPol">📷 拍照／PDF 匯入</button><button class="btn p" data-act="newPol">＋ 新增</button></div>
   ${ps.length?`<div class="insh"><span>被保險人:</span><b>${esc(c.name)}</b>${c.gender?`<span>${c.gender==="女"?"小姐":"先生"}</span>`:""}${c.birthday?`<span>🎂 ${esc(rocBirth(c.birthday))}</span>`:""}<span class="hint" style="margin-left:auto">點任一列可編輯</span></div>`+sheetHtml(c,ps):`<div class="empty"><b>尚無保單</b>按「📷 拍照匯入」拍下保單整理表，系統會自動辨識並填入；也可以按「＋ 新增」手動輸入。</div>`}`;
 }
 function polForm(p){
@@ -799,7 +799,7 @@ function openReport(members){
 }
 
 /* ========== 拍照匯入保單 ========== */
-const SCAN_PROMPT=`你是台灣保險業務助理。圖片是客戶的保單整理表、保單首頁或保單明細（可能多張）。請擷取所有保單，只回傳一個 JSON 物件，不要其他文字。格式：
+const SCAN_PROMPT=`你是台灣保險業務助理。附件（圖片或 PDF）是客戶的保單整理表、保單健檢報告、保單首頁或保單明細（可能多張或多頁）。請擷取所有保單，只回傳一個 JSON 物件，不要其他文字。格式：
 {"insured":"被保險人姓名","insuredBirth":"生日原文","company":"保險公司（可判斷才填）","policies":[{"policyNo":"保單號碼","holder":"要保人","payMethod":"繳費方式","items":[{"product":"商品名稱（含括號代碼）","rider":false,"payYears":20,"target":"本人","start":"1987-01-26","sumText":"95萬","premium":0,"listPremium":"","currency":"TWD","freq":"半年","beneficiary":"滿期:王小明\\n身故:王大明50%","type":"壽險","cov":{"life":95}}]}],"coverage":{}}
 規則：
 1. 同一個保單號碼底下：主約 rider=false（通常第一列或標示●），附約 rider=true（標示○、名稱含「附約」）。
@@ -815,6 +815,11 @@ async function shrink(file){
   try{const bmp=await createImageBitmap(file);const k=Math.min(1,2000/Math.max(bmp.width,bmp.height));const cv=document.createElement("canvas");cv.width=Math.round(bmp.width*k);cv.height=Math.round(bmp.height*k);cv.getContext("2d").drawImage(bmp,0,0,cv.width,cv.height);
     return await new Promise(r=>cv.toBlob(b=>r(b||file),"image/jpeg",0.88))}catch(e){return file}
 }
+let _pdfjs=null;
+function loadPdfJs(){if(_pdfjs)return _pdfjs;_pdfjs=new Promise((res,rej)=>{const sc=document.createElement("script");sc.src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";sc.onload=()=>{window.pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";res(window.pdfjsLib)};sc.onerror=()=>{_pdfjs=null;rej(new Error("PDF 元件載入失敗"))};document.head.appendChild(sc)});return _pdfjs}
+async function pdfToImages(file){const lib=await loadPdfJs();const doc=await lib.getDocument({data:await file.arrayBuffer()}).promise;const out=[];
+  for(let i=1;i<=Math.min(doc.numPages,6);i++){const pg=await doc.getPage(i);const vp=pg.getViewport({scale:2});const cv=document.createElement("canvas");cv.width=vp.width;cv.height=vp.height;await pg.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;out.push(await new Promise(r=>cv.toBlob(r,"image/jpeg",0.88)))}
+  return out}
 async function aiExtract(blobs){
   if(window.StarkAI&&typeof getCfg==="function"&&getCfg()){
     let models=["gemini-flash-latest","gemini-3.6-flash","gemini-3.5-flash","gemini-2.5-flash"];
@@ -842,24 +847,24 @@ function openScan(){
   const close=()=>box.remove();
   const draw=(state,msg)=>{
     let body="";
-    if(state==="pick"||state==="busy")body=`<div class="scanbox"><div style="font-size:34px">📷</div><b>拍下保單整理表或保單明細</b><div class="hint" style="margin:6px 0 12px">可以一次選多張；照片越清楚、越正，辨識越準</div>
-      <label class="btn a" style="cursor:pointer">選擇照片 / 拍照<input type="file" accept="image/*" multiple id="scanFile" style="display:none"></label>
-      <div class="thumbs">${files.map(f=>`<img src="${f.url}">`).join("")}</div></div>
+    if(state==="pick"||state==="busy")body=`<div class="scanbox"><div style="font-size:34px">📷</div><b>拍照，或選擇保單 PDF 檔</b><div class="hint" style="margin:6px 0 12px">可以一次選多個檔案（照片或 PDF）；PDF 原檔辨識最準，照片越清楚、越正越好</div>
+      <label class="btn a" style="cursor:pointer">選擇照片 / PDF<input type="file" accept="image/*,application/pdf,.pdf" multiple id="scanFile" style="display:none"></label>
+      <div class="thumbs">${files.map(f=>f.pdf?`<div style="width:90px;height:90px;border:1px solid var(--line);border-radius:8px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;padding:4px;overflow:hidden"><span style="font-size:28px">📄</span>${esc(f.f.name.slice(0,18))}</div>`:`<img src="${f.url}">`).join("")}</div></div>
       ${state==="busy"?`<div class="banner" style="margin-top:12px">🔍 AI 辨識中，約 10～40 秒，請稍候…</div>`:""}${msg?`<div class="banner err" style="margin-top:12px">${esc(msg)}</div>`:""}
-      <div class="hint" style="margin-top:10px">照片只用來辨識，不會存進系統。辨識結果會先讓你確認，勾選後才會匯入。</div>`;
+      <div class="hint" style="margin-top:10px">照片／PDF 只用來辨識，不會存進系統。辨識結果會先讓你確認，勾選後才會匯入。</div>`;
     if(state==="review"){
       const ins=(data.insured||"").trim();
       body=`${ins&&ins!==M.c.name?`<div class="banner">⚠ 照片上的被保險人是「${esc(ins)}」，目前客戶是「${esc(M.c.name)}」，請確認沒有放錯客戶。</div>`:""}
       <div class="insh"><span>被保險人:</span><b>${esc(ins||M.c.name)}</b>${data.insuredBirth?`<span>🎂 ${esc(data.insuredBirth)}</span>`:""}<span class="hint" style="margin-left:auto">共辨識 ${flat.length} 項，取消勾選就不匯入；險種可在這裡修正</span></div>
       ${sheetHtml(M.c,flat,{check:true})}<div class="hint">辨識結果可能有誤，匯入後點該列即可修改。同保單號碼＋同商品名稱的舊資料會被更新。</div>`;
     }
-    box.innerHTML=`<div class="mask"><div class="modal" style="max-width:980px"><div class="mh"><b>📷 拍照匯入保單</b><button class="btn ghost x" data-x>✕</button></div><div class="mb">${body}</div>
+    box.innerHTML=`<div class="mask"><div class="modal" style="max-width:980px"><div class="mh"><b>📷 拍照／PDF 匯入保單</b><button class="btn ghost x" data-x>✕</button></div><div class="mb">${body}</div>
       <div class="mf">${state==="review"?`<button class="btn" data-again>重新選照片</button><button class="btn p" data-import>匯入勾選的保單</button>`:`<button class="btn" data-x>取消</button><button class="btn p" data-go ${files.length&&state!=="busy"?"":"disabled"}>${state==="busy"?"辨識中…":"開始辨識"}</button>`}</div></div></div>`;
     box.querySelectorAll("[data-x]").forEach(b=>b.onclick=close);
-    const fi=box.querySelector("#scanFile");if(fi)fi.onchange=()=>{files=[...fi.files].slice(0,6).map(f=>({f,url:URL.createObjectURL(f)}));draw("pick")};
+    const fi=box.querySelector("#scanFile");if(fi)fi.onchange=()=>{files=[...fi.files].slice(0,6).map(f=>{const pdf=f.type==="application/pdf"||/\.pdf$/i.test(f.name);return {f,pdf,url:pdf?"":URL.createObjectURL(f)}});draw("pick")};
     const go=box.querySelector("[data-go]");if(go)go.onclick=async()=>{
       draw("busy");
-      try{const blobs=[];for(const x of files)blobs.push(await shrink(x.f));
+      try{const blobs=[];const direct=!!(window.StarkAI&&typeof getCfg==="function"&&getCfg());for(const x of files){if(x.pdf){if(direct)blobs.push(x.f.type==="application/pdf"?x.f:new Blob([x.f],{type:"application/pdf"}));else for(const b of await pdfToImages(x.f))blobs.push(b)}else blobs.push(await shrink(x.f))}
         data=await aiExtract(blobs);
         flat=[];(data.policies||[]).forEach(pp=>(pp.items||[]).forEach(it=>{flat.push(Object.assign({},it,{_i:flat.length,id:"tmp"+flat.length,policyNo:pp.policyNo||"",holder:pp.holder||"",payMethod:pp.payMethod||"",freq:({"年":12,"年繳":12,"半年":6,"半年繳":6,"季":3,"季繳":3,"月":1,"月繳":1,"躉繳":0,"躉":0})[it.freq]??12,status:"有效"}))}));
         if(!flat.length&&!(data.coverage&&Object.keys(data.coverage).length))throw new Error("JSON: 沒有找到保單");
