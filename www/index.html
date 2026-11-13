@@ -135,6 +135,39 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{outline:2px solid #bcd3ee;bo
 .ptbl td.bf{font-size:12px;color:#1f8a3c;text-align:left;white-space:pre-line;min-width:110px}
 .ptbl .rd{color:#2fa84f;margin-right:6px}
 .ptbl tr.off td{opacity:.4}
+.rov{position:fixed;inset:0;background:#5b6573;z-index:80;display:flex;flex-direction:column}
+.rbar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--pri);color:#fff}
+.rscroll{flex:1;overflow:auto;padding:12px 8px}
+.rpages{width:794px;margin:0 auto}
+.a4{width:794px;height:1123px;background:#fff;margin:0 auto 14px;padding:30px 34px 20px;display:flex;flex-direction:column;box-shadow:0 4px 18px rgba(0,0,0,.25);color:#222;font-size:13px;overflow:hidden}
+.rh{display:flex;align-items:center;gap:10px;border-bottom:2px solid #2fa84f;padding-bottom:6px;margin-bottom:10px}
+.rh .ric{font-size:28px}.rh .rt{font-size:22px;font-weight:900}.rh .rsub{font-size:13px;color:#555}
+.rh .rbox{margin-left:auto;border:1px solid #999;padding:2px 8px;font-size:11px;white-space:nowrap}
+.rbody{flex:1;overflow:hidden}
+.rco{text-align:center;color:#1f8a3c;font-weight:900;font-size:17px;border-bottom:1px solid #2fa84f;margin:2px 0 8px;padding-bottom:4px}
+.a4 .insh{margin:4px 0 8px}.a4 .insh b{font-size:15px}
+.a4 .psheet{margin-bottom:10px}.a4 .ptbl{min-width:0;font-size:12.5px}.a4 .ptbl td{padding:5px 4px}.a4 .phead{font-size:13px}
+.rf{border-top:1px solid #ddd;padding-top:6px;margin-top:6px}
+.rdis{color:#d0493f;font-size:10px}
+.rfb{display:flex;align-items:flex-end;justify-content:space-between;margin-top:6px}
+.rno{border:1px solid #999;padding:1px 6px;font-size:10.5px}
+.rbrand{display:flex;align-items:center;gap:8px;font-size:11px;color:#333}.rbrand b{font-size:13px}
+.rlogo{background:var(--pri);color:#fff;font-weight:900;letter-spacing:2px;padding:4px 8px;border-radius:5px;border-bottom:3px solid var(--acc)}
+.rcov{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:10.5px}
+.rcov th,.rcov td{border:1px solid #9fd4ad;padding:1px 3px;height:16px;line-height:1.25;white-space:nowrap;overflow:hidden}
+.rcov .rins{background:#eaf6ee;color:#1f8a3c;font-size:15px;font-weight:900}
+.rcov .rname{font-size:14px;font-weight:700;text-align:center}
+.rcov .rg{background:#2fa84f;color:#fff;font-weight:700;font-size:12px;line-height:1.3;white-space:normal}
+.rcov td.ri{font-size:10.5px}.rcov td{text-align:center}.rcov td.ri{text-align:left}
+.rcov tbody.gap td{border:0;height:4px;padding:0}
+.rmon{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11.5px}
+.rmon th,.rmon td{border:1px solid #9fd4ad;padding:3px 3px;text-align:center}
+.rmon thead th{font-size:14px;font-weight:700}
+.rmon tbody th{background:#eaf6ee;font-weight:500;text-align:left}
+.rmon tr.rprod td{color:#1f8a3c;font-weight:700;font-size:11px;height:40px}
+.rmon tr.rmh td{text-align:left;font-weight:900;font-size:15px;background:#fff;border-left:0;border-right:0}
+.rmon tr.rmr td,.rmon tr.rmr th{height:34px}
+.rmon .cal{display:inline-block;border:1px solid #d0493f;border-top:5px solid #d0493f;border-radius:3px;padding:0 5px;font-size:11px;background:#fff}
 .scanbox{border:2px dashed #b8c4d4;border-radius:12px;padding:22px;text-align:center;background:#f8fafc}
 .thumbs{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px}
 .thumbs img{width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
@@ -194,6 +227,8 @@ body.gate .side{display:none}
 <script src="vendor/firebase-auth-compat.js"></script>
 <script src="vendor/firebase-firestore-compat.js"></script>
 <script src="vendor/stark-ai.js" defer></script>
+<script src="vendor/jspdf.umd.min.js" defer></script>
+<script src="vendor/html2canvas.min.js" defer></script>
 <script src="firebase-config.js"></script>
 <script>
 (function(){
@@ -218,7 +253,7 @@ const COV=[
   {k:"ltc",n:"長照",u:"萬/月",t:3}
 ];
 const PTYPES=["壽險","醫療","重疾/重大傷病","癌症","意外","失能","長照","儲蓄/年金","投資型","產險","其他"];
-const FREQ={12:"年繳",6:"半年繳",3:"季繳",1:"月繳"};
+const FREQ={12:"年繳",6:"半年繳",3:"季繳",1:"月繳",0:"躉繳"};
 const STAGES=["潛在","洽談中","已成交","轉介紹來源"];
 const STAGE_TAG={"潛在":"y","洽談中":"o","已成交":"g","轉介紹來源":""};
 const SVC_TYPES=["理賠申請","扣款變更","契約變更","保單借款","受益人變更","其他"];
@@ -251,15 +286,19 @@ function addMonths(d,m){const r=new Date(d.getFullYear(),d.getMonth()+m,1);const
 function daysBetween(a,b){return Math.round((b-a)/86400000)}
 function age(b){const d=pd(b);if(!d)return "";const t=today();let a=t.getFullYear()-d.getFullYear();if(t<new Date(t.getFullYear(),d.getMonth(),d.getDate()))a--;return a}
 function nextBday(b){const d=pd(b);if(!d)return null;const t=today();let n=new Date(t.getFullYear(),d.getMonth(),d.getDate());if(n<t)n=new Date(t.getFullYear()+1,d.getMonth(),d.getDate());return n}
-function annual(p){const f=+p.freq||12;return num(p.premium)*(12/f)}
+function fq(p){return (p.freq===0||p.freq==="0")?0:(+p.freq||12)}
+function usdRate(){return num((S.profile||{}).usdRate)||32}
+function isUSD(p){return p.currency==="USD"}
+function annualRaw(p){const f=fq(p);return f?num(p.premium)*(12/f):0}
+function annual(p){return annualRaw(p)*(isUSD(p)?usdRate():1)}
 function active(p){return !p.status||p.status==="有效"}
-function paidUpDate(p){const s=pd(p.start);if(!s||!num(p.payYears))return null;return addMonths(s,num(p.payYears)*12)}
+function paidUpDate(p){const s=pd(p.start);if(!s||num(p.payYears)<=1)return null;return addMonths(s,num(p.payYears)*12)}
 function nextDue(p){
-  const s=pd(p.start);if(!s||!active(p))return null;const f=+p.freq||12;const t=today();const end=paidUpDate(p);
+  const s=pd(p.start);if(!s||!active(p))return null;const f=fq(p);if(!f)return null;const t=today();const end=paidUpDate(p);
   let d=new Date(s);let i=0;while(d<t&&i<2000){d=addMonths(s,f*(++i))}
   if(end&&d>=end)return null;return d;
 }
-function cov(c){const r={};COV.forEach(x=>r[x.k]=0);(c.policies||[]).filter(active).forEach(p=>{COV.forEach(x=>{r[x.k]+=num((p.cov||{})[x.k])})});return r}
+function cov(c){const r={};COV.forEach(x=>r[x.k]=0);(c.policies||[]).filter(active).forEach(p=>{const k=isUSD(p)?usdRate():1;COV.forEach(x=>{r[x.k]+=num((p.cov||{})[x.k])*k})});return r}
 function target(k){const t=(S.profile.targets||{})[k];return t!=null&&t!==""?num(t):COV.find(x=>x.k===k).t}
 function lifeTarget(c){const inc=num(c.income);return inc?Math.max(inc*10,target("life")):target("life")}
 function annualSum(c){return (c.policies||[]).filter(active).reduce((a,p)=>a+annual(p),0)}
@@ -282,7 +321,7 @@ function idCheck(v){
 function maskId(v){return v&&v.length>=6?v.slice(0,3)+"****"+v.slice(-3):(v||"")}
 function rocDate(s){const d=pd(s);return d?(d.getFullYear()-1911)+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0"):""}
 function rocBirth(s){const d=pd(s);return d?(d.getFullYear()-1911)+"."+(d.getMonth()+1)+"."+d.getDate():""}
-const FREQ_SHORT={12:"年繳",6:"半年",3:"季繳",1:"月繳"};
+const FREQ_SHORT={12:"年繳",6:"半年",3:"季繳",1:"月繳",0:"躉繳"};
 function sumLabel(p){if(p.sumText)return p.sumText;const c=p.cov||{};const k=COV.find(x=>num(c[x.k])>0);return k?fmt(num(c[k.k]))+(k.u==="元/日"?"元":k.u.replace("/次","").replace("/月","")):""}
 function policyGroups(ps){const g=[],map={};ps.forEach(p=>{const k=(p.policyNo||"").trim()||("_"+p.id);if(!map[k]){map[k]={no:(p.policyNo||"").trim(),items:[]};g.push(map[k])}map[k].items.push(p)});
   g.forEach(x=>x.items.sort((a,b)=>(!!a.rider-!!b.rider)||(a.start||"").localeCompare(b.start||"")));return g}
@@ -294,8 +333,8 @@ function sheetHtml(c,ps,opts){opts=opts||{};
    ${g.items.map(p=>`<tr class="${p.rider?"":"main"} ${opts.check?"":"click"} ${active(p)?"":"off"}" ${opts.check?"":`data-act="editPol" data-pid="${p.id}"`}>
      ${opts.check?`<td><input type="checkbox" class="scanchk" data-i="${p._i}" checked></td>`:""}
      <td class="nm"><span class="rd">${p.rider?"○":"●"}</span>${esc(p.product||"(未命名)")}${opts.check?`<div><select class="inp scantype" data-i="${p._i}" style="padding:2px 6px;font-size:12px;width:auto;margin-top:4px">${PTYPES.map(t=>`<option ${t===p.type?"selected":""}>${t}</option>`).join("")}</select></div>`:(active(p)?"":` <span class="tag r">${esc(p.status)}</span>`)}</td>
-     <td class="g">${num(p.payYears)?String(num(p.payYears)).padStart(2,"0")+"年":""}</td><td class="g">${esc(p.target||"本人")}</td><td class="g">${esc(rocDate(p.start))}</td>
-     <td class="g">${esc(sumLabel(p))}</td><td class="g">${p.premium!==""&&p.premium!=null?fmt(num(p.premium))+"元":""}</td><td class="g">${esc(FREQ_SHORT[p.freq||12]||"")}</td><td class="bf">${esc(p.beneficiary||"")}</td></tr>`).join("")}
+     <td class="g">${num(p.payYears)?String(num(p.payYears)).padStart(2,"0")+"年":(fq(p)===0?"--":"")}</td><td class="g">${esc(p.target||"本人")}</td><td class="g">${esc(rocDate(p.start))}</td>
+     <td class="g">${esc(sumLabel(p))}</td><td class="g">${p.premium!==""&&p.premium!=null?fmt(num(p.premium))+(isUSD(p)?"美元":"元"):""}</td><td class="g">${esc(FREQ_SHORT[fq(p)]||"")}</td><td class="bf">${esc(p.beneficiary||"")}</td></tr>`).join("")}
    </tbody></table></div></div>`}).join("");
 }
 function lastContactDays(c){const d=pd(c.lastContact);return d?daysBetween(d,today()):9999}
@@ -384,7 +423,7 @@ function reminders(days){
     if(f&&f<=lim)out.push({kind:"follow",d:f,c,overdue:f<t,t:"📞 追蹤 "+c.name,sub:(f<t?"已逾期 "+daysBetween(f,t)+" 天｜":"")+(c.followNote||"約訪 / 回覆"),msg:fill(tpl("follow"),{name:c.name,agent:agentName()})});
     (c.policies||[]).forEach(p=>{
       const n=nextDue(p);
-      if(n&&n<=lim)out.push({kind:"payment",d:n,c,t:"💳 "+c.name+"｜"+(p.product||p.type)+" 繳費",sub:(FREQ[p.freq||12]||"")+" "+fmt(num(p.premium))+" 元"+(p.payMethod?"｜"+p.payMethod:""),msg:fill(tpl("payment"),{name:c.name,agent:agentName(),product:p.product||p.type,amount:fmt(num(p.premium)),date:md(n)})});
+      if(n&&n<=lim)out.push({kind:"payment",d:n,c,t:"💳 "+c.name+"｜"+(p.product||p.type)+" 繳費",sub:(FREQ[fq(p)]||"")+" "+fmt(num(p.premium))+" 元"+(p.payMethod?"｜"+p.payMethod:""),msg:fill(tpl("payment"),{name:c.name,agent:agentName(),product:p.product||p.type,amount:fmt(num(p.premium)),date:md(n)})});
       const e=paidUpDate(p);
       if(e&&e>=t&&e<=lim&&active(p))out.push({kind:"paidup",d:e,c,t:"🎉 "+c.name+"｜"+(p.product||p.type)+" 繳費期滿",sub:"好時機：重新檢視保障",msg:fill(tpl("paidup"),{name:c.name,agent:agentName(),product:p.product||p.type,date:md(e)})});
     });
@@ -557,7 +596,7 @@ function vSetup(){
   return `<div class="top"><div><h1>設定</h1><div class="sub">個人資料、保障建議目標、訊息範本、備份</div></div></div>
   <form class="card" id="profForm"><h2>個人資料（名片與訊息署名用）</h2><div class="form">
     ${f("agent","姓名","例：Justin")}${f("title","職稱","例：資深副總")}${f("company","公司","")}${f("phone","手機","")}${f("line","LINE ID","")}${f("email","Email","")}
-    <label class="w2">一句話介紹<input class="inp" name="slogan" value="${esc(p.slogan)}" placeholder="用心規劃，做您一輩子的保險顧問"></label>${f("area","服務區域","例：雙北")}
+    <label class="w2">一句話介紹<input class="inp" name="slogan" value="${esc(p.slogan)}" placeholder="用心規劃，做您一輩子的保險顧問"></label>${f("area","服務區域","例：雙北")}<label>美元匯率（換算台幣用）<input class="inp" type="number" step="0.01" name="usdRate" value="${esc(p.usdRate||"")}" placeholder="預設 32"></label>
     <div class="sec">保障建議目標（用於缺口分析，可依你的規劃理念調整）</div>
     ${COV.map(x=>`<label>${x.n}（${x.u}）<input class="inp" type="number" min="0" name="t_${x.k}" value="${(p.targets||{})[x.k]!=null?esc(p.targets[x.k]):""}" placeholder="預設 ${x.t}"></label>`).join("")}
     <div class="hint w3">壽險目標：若客戶有填年收入，取「年收入 × 10」與上方設定的較大值。</div>
@@ -609,7 +648,7 @@ function mInfo(){
 function mPol(){
   const c=M.c;if(M.editPol)return polForm(M.editPol);
   const ps=c.policies||[];
-  return `<div class="row" style="margin-bottom:6px"><span class="sub">有效保單 ${policyGroups(ps.filter(active)).length} 張（${ps.filter(active).length} 項）・年化保費 ${fmt(annualSum(c))} 元</span><span class="sp"></span><button class="btn a" data-act="scanPol">📷 拍照匯入</button><button class="btn p" data-act="newPol">＋ 新增</button></div>
+  return `<div class="row" style="margin-bottom:6px"><span class="sub">有效保單 ${policyGroups(ps.filter(active)).length} 張（${ps.filter(active).length} 項）・年化保費 ${fmt(annualSum(c))} 元</span><span class="sp"></span><button class="btn" data-act="report">📄 健檢報表</button><button class="btn a" data-act="scanPol">📷 拍照匯入</button><button class="btn p" data-act="newPol">＋ 新增</button></div>
   ${ps.length?`<div class="insh"><span>被保險人:</span><b>${esc(c.name)}</b>${c.gender?`<span>${c.gender==="女"?"小姐":"先生"}</span>`:""}${c.birthday?`<span>🎂 ${esc(rocBirth(c.birthday))}</span>`:""}<span class="hint" style="margin-left:auto">點任一列可編輯</span></div>`+sheetHtml(c,ps):`<div class="empty"><b>尚無保單</b>按「📷 拍照匯入」拍下保單整理表，系統會自動辨識並填入；也可以按「＋ 新增」手動輸入。</div>`}`;
 }
 function polForm(p){
@@ -619,8 +658,8 @@ function polForm(p){
     ${f("policyNo","保單號碼")}${f("holder","要保人","text","空白＝本人")}<label>繳費方式<input class="inp" name="payMethod" list="pmlist" value="${esc(p.payMethod)}" placeholder="例：自繳件、國泰世華（卡扣件）"><datalist id="pmlist"><option value="自繳件"><option value="信用卡（卡扣件）"><option value="銀行（轉帳件）"><option value="業務收費"></datalist></label>
     ${f("company","保險公司","text","例：國泰人壽")}${f("product","商品名稱","text")}${sel("rider","主約 / 附約",["主約","附約"],["0","1"])}
     ${sel("type","險種",PTYPES)}${f("target","對象","text","本人")}${sel("status","狀態",["有效","停效","繳清","終止"])}
-    ${f("start","投保日期","date")}${f("payYears","繳費年期（年）","number","例：20")}${sel("freq","繳別",["年繳","半年繳","季繳","月繳"],[12,6,3,1])}
-    ${f("sumText","保額（顯示用）","text","例：95萬、600元")}${f("premium","下期保費（元）","number")}
+    ${f("start","投保日期","date")}${f("payYears","繳費年期（年）","number","例：20")}${sel("freq","繳別",["年繳","半年繳","季繳","月繳","躉繳"],[12,6,3,1,0])}
+    ${f("sumText","保額（顯示用）","text","例：95萬、600元、25萬美元")}${f("premium","下期保費","number")}${sel("currency","幣別",["新台幣","美元"],["TWD","USD"])}${f("listPremium","表定保費（每期，可空白）","number")}
     <label class="w3">受益人<textarea class="inp" name="beneficiary" rows="2" placeholder="例：身故:法定繼承人">${esc(p.beneficiary)}</textarea></label>
     <div class="sec">保障額度（被保險人＝${esc(M.c.name||"本客戶")}；沒有的留空）</div>
     ${COV.map(x=>`<label>${x.n}（${x.u}）<input class="inp" type="number" min="0" step="any" name="cov_${x.k}" value="${esc((p.cov||{})[x.k])}"></label>`).join("")}
@@ -636,7 +675,7 @@ function mCov(){
   return `<div class="row"><h3 style="margin:0">保障總覽 vs 建議目標</h3><span class="sp"></span><span class="hint">目標可在「設定」調整</span></div>
   ${COV.map(x=>{const t=x.k==="life"?lifeTarget(c):target(x.k);const r=t?v[x.k]/t:1;const cls=r>=1?"ok":r>=.5?"mid":"low";
     return `<div class="covrow"><div class="n">${x.n}</div><div class="bar"><i class="${cls}" style="width:${Math.min(100,r*100)}%"></i></div><div class="x"><b style="color:var(--ink)">${fmt(v[x.k])}</b> / ${fmt(t)} ${x.u}${r<1?` <span style="color:var(--bad)">缺 ${fmt(t-v[x.k])}</span>`:" ✓"}</div></div>`}).join("")}
-  <div class="row" style="margin-top:12px"><button class="btn" data-act="copyCov">複製保障摘要給客戶</button><button class="btn" data-act="gotoClaim">→ 理賠情境試算</button></div>${famRows}`;
+  <div class="row" style="margin-top:12px"><button class="btn" data-act="copyCov">複製保障摘要給客戶</button><button class="btn" data-act="gotoClaim">→ 理賠情境試算</button><button class="btn a" data-act="report">📄 保單健檢報表</button></div>${famRows}${mCovDetail()}`;
 }
 function mLog(){
   const c=M.c;const ls=(c.logs||[]).slice().sort((a,b)=>(b.date||"").localeCompare(a.date||""));
@@ -665,9 +704,103 @@ function covSummary(c){
 }
 function commitM(){const c=M.c;delete c.isNew;return saveClient(clone(c))}
 
+/* ========== 詳細保障項目 ========== */
+const COVD=[
+ ["身故給付",[["d_gen","一般身故"],["d_acc","意外身故(含一般身故)"],["d_can","癌症身故(含一般身故)"]]],
+ ["生存給付",[["s_ann","年金"],["s_mat","滿期金"]]],
+ ["意外醫療",[["a_hosp","住院日額保險金"],["a_disc","出院療養金"],["a_visit","回診金"],["a_icu","每日加護病房"],["a_frac","意外骨折"]]],
+ ["疾病醫療",[["i_hosp","住院日額保險金"],["i_disc","出院療養金"],["i_icu","每日加護病房"],["i_opd","住院前後門診"],["i_er","急診保險金"]]],
+ ["手術醫療",[["o_proc","特定處置保險金"],["o_dev","特定醫材補助保險金"],["o_opd","門診手術"],["o_in","住院手術"],["o_major","重大手術"]]],
+ ["實支實付",[["r_room","每日住院限額"],["r_misc","醫療及雜費限額"],["r_misc10","醫療及雜費限額(需扣自負額10萬)"],["r_misc20","醫療及雜費限額(需扣自負額20萬)"],["r_opd","門診手術限額"],["r_surg","手術保險金限額(最高倍數)"],["r_inj","傷害醫療限額"]]],
+ ["重疾給付",[["c_ci","重大疾病給付"],["c_sp","特定傷病"],["c_cisp","重大疾病暨特定傷病保險金"],["c_major","重大傷病"]]],
+ ["癌症醫療",[["k_first","初次罹癌"],["k_early","初期或輕度癌症保險金"],["k_severe","重度癌症保險金"],["k_surg","癌症住院手術"],["k_hosp","住院日額保險金"],["k_disc","出院療養金"],["k_home","在家療養金"],["k_opd","門診保險金"]]],
+ ["長照給付",[["l_once","長期照顧復健保險金(一次)"],["l_year","長期照顧保險金(分期-年)"]]],
+ ["失能給付",[["x_year","失能生活扶助保險金(分期-年)"],["x_month","失能生活扶助保險金(分期-月)"],["x_acc","意外失能生活扶助保險金(分期-月)"]]]
+];
+const COVD_KEYS=COVD.flatMap(g=>g[1].map(i=>i[0]));
+function wan(n){return n?(Math.floor(n*100)/100).toLocaleString("zh-TW")+"萬":""}
+function yuan(n){return n?fmt(n)+"元":""}
+function covAuto(c){const v=cov(c);return {d_gen:wan(v.life),d_acc:wan(v.life+v.acc),d_can:wan(v.life),a_hosp:yuan(v.hosp),i_hosp:yuan(v.hosp),r_misc:wan(v.med),c_ci:wan(v.ci),k_first:wan(v.cancer),l_year:wan(v.ltc*12),x_month:wan(v.dis)}}
+function covVal(c,k){const d=(c.covDetail||{})[k];return d!=null&&d!==""?d:(covAuto(c)[k]||"")}
+function mCovDetail(){const c=M.c;const au=covAuto(c);
+  return `<h3 style="margin-top:22px">詳細保障項目（保單健檢報表用）</h3><div class="hint" style="margin-bottom:8px">空白的會依上方保障自動估算（灰字）；拍照匯入「保障總覽」頁也會自動填入。可直接修改。</div>
+  <form id="covdForm">${COVD.map(g=>`<div class="sec" style="margin:8px 0 4px">${g[0]}</div><div class="form">${g[1].map(i=>`<label>${i[1]}<input class="inp" name="${i[0]}" value="${esc((c.covDetail||{})[i[0]]||"")}" placeholder="${esc(au[i[0]]||"")}"></label>`).join("")}</div>`).join("")}
+  <div class="row" style="margin-top:12px"><span class="sp"></span><button class="btn p" type="submit">儲存詳細保障</button></div></form>`}
+
+/* ========== 保單健檢報表 ========== */
+function stripCode(n){return String(n||"").replace(/\s*[（(][A-Z0-9_]{1,6}[)）]\s*$/,"")}
+function companyLabel(n){n=(n||"").trim();return n?n.replace(/(人壽|產險|保險).*$/,"")+"保單":"保單"}
+function moneyCur(n,usd){return n||n===0?fmt(n)+(usd?"美元":""):""}
+function monthPlan(items){const m=Array(12).fill(0);const t=today();
+  items.filter(active).forEach(p=>{const f=fq(p);const st=pd(p.start);if(!f||!st||!num(p.premium))return;const end=paidUpDate(p);if(end&&end<t)return;
+    for(let i=0;i<12;i++){if(((i-st.getMonth())%f+12)%f===0)m[i]+=num(p.premium)}});return m}
+function rptFoot(no){const p=S.profile;return `<div class="rf"><div class="rdis">＊表列資料僅供參考，詳細內容、費率、理賠或滿期金等保障，以保險公司實際保單條款為準。外幣保單金額以原幣別列示。</div>
+  <div class="rfb"><span class="rno">${no}</span><span class="rbrand"><span class="rlogo">STARK</span><span>顧問 ${esc(p.agent||"")}<br><b>${esc(p.phone||"")}</b></span></span></div></div>`}
+function rptHead(title,sub){return `<div class="rh"><span class="ric">📋</span><span class="rt">${title}</span>${sub?`<span class="rsub">${sub}</span>`:""}<span class="rbox">家庭保單健檢規劃書　第 <b class="pgn"></b> 頁/共 <b class="pgt"></b> 頁</span></div>`}
+function buildReport(members){
+  const no="S"+ds(today()).replace(/-/g,"")+String(new Date().getHours()).padStart(2,"0")+String(new Date().getMinutes()).padStart(2,"0");
+  const sections=[];
+  // 1. 契約內容一覽表
+  const blocks=[];
+  members.forEach(c=>{const ps=(c.policies||[]);if(!ps.length)return;
+    const byCo={};ps.forEach(p=>{const k=companyLabel(p.company);(byCo[k]=byCo[k]||[]).push(p)});
+    Object.keys(byCo).forEach(co=>{
+      blocks.push(`<div class="rco">${esc(co)}</div><div class="insh"><b>被保險人: ${esc(c.name)}</b>${c.gender?`<span>${c.gender==="女"?"小姐":"先生"}</span>`:""}${c.birthday?`<span>🎂 ${esc(rocBirth(c.birthday))}</span>`:""}</div>`);
+      policyGroups(byCo[co]).forEach(g=>blocks.push(sheetHtml(c,g.items)));
+    })});
+  sections.push({title:"契約內容一覽表-完整版",blocks:blocks.length?blocks:['<div class="empty">尚無保單資料</div>']});
+  // 2. 保障總覽
+  const cols=members.slice();while(cols.length%5)cols.push(null);
+  for(let i=0;i<cols.length;i+=5){const cs=cols.slice(i,i+5);
+    sections.push({title:"當年度保障總覽-精簡版",sub:"",blocks:[`<table class="rcov"><colgroup><col style="width:42px"><col style="width:190px"><col span="5"></colgroup><thead><tr><th colspan="2" class="rins">被保險人</th>${cs.map(c=>`<th class="rname">${c?esc(c.name):""}</th>`).join("")}</tr></thead>
+      ${COVD.map(g=>`<tbody class="rgrp">${g[1].map((it,j)=>`<tr>${j===0?`<th rowspan="${g[1].length}" class="rg">${g[0].slice(0,2)}<br>${g[0].slice(2)}</th>`:""}<td class="ri">${it[1]}</td>${cs.map(c=>`<td>${c?esc(covVal(c,it[0])):""}</td>`).join("")}</tr>`).join("")}</tbody><tbody class="gap"><tr><td colspan="7"></td></tr></tbody>`).join("")}</table>`]});}
+  // 3. 逐月保費一覽表
+  const gs=[];members.forEach(c=>policyGroups(c.policies||[]).forEach(g=>{if(g.items.some(active))gs.push({c,g})}));
+  const tw={list:0,ann:0,m:Array(12).fill(0)},us={list:0,ann:0,m:Array(12).fill(0)};
+  const colHtml=gs.map(({c,g})=>{const main=g.items.find(x=>!x.rider)||g.items[0];const usd=isUSD(main);const m=monthPlan(g.items);
+    const ann=g.items.filter(active).reduce((a,p)=>a+annualRaw(p),0);const lst=g.items.filter(active).reduce((a,p)=>a+(num(p.listPremium)?num(p.listPremium)*(fq(p)?12/fq(p):1):0),0);
+    const T=usd?us:tw;T.ann+=ann;T.list+=lst;m.forEach((v,i)=>T.m[i]+=v);
+    return {name:c.name,co:main.company||"",no:g.no,prod:stripCode(main.product),py:num(main.payYears)?String(num(main.payYears)).padStart(2,"0")+"年":(fq(main)===0?"--":""),sum:sumLabel(main),start:rocDate(main.start),fr:"主約："+(FREQ[fq(main)]||""),holder:main.holder||c.name,list:lst?moneyCur(lst,usd):"",ann:ann?moneyCur(ann,usd):"",pay:main.payMethod||"",m:m.map(v=>v?moneyCur(v,usd):""),usd}});
+  const ROWS=[["保險公司","co"],["保單號碼","no"],["主約險種","prod"],["繳費年期","py"],["保額","sum"],["投保日期","start"],["繳別","fr"],["要保人","holder"],["表定保費","list"],["年繳保費","ann"],["繳費資訊","pay"]];
+  const mtbl=(cs,totals)=>`<table class="rmon"><colgroup><col style="width:70px"><col span="6"></colgroup><thead><tr><th></th>${cs.map(x=>`<th class="rname">${x?esc(x.name):""}</th>`).join("")}</tr></thead><tbody>
+    ${ROWS.map(r=>`<tr class="${r[1]==="prod"?"rprod":""}"><th>${r[0]}</th>${cs.map(x=>`<td>${x?esc(x[r[1]]):""}</td>`).join("")}</tr>`).join("")}
+    <tr class="rmh"><td colspan="7">🪙 逐月保費</td></tr>
+    ${Array.from({length:12},(_,i)=>`<tr class="rmr"><th><span class="cal">${i+1} 月</span></th>${cs.map(x=>`<td>${x?esc(x.m[i]):""}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  const all=colHtml.slice();
+  for(let i=0;i<Math.max(all.length,1);i+=6){const cs=all.slice(i,i+6);while(cs.length<6)cs.push(null);sections.push({title:"逐月保費一覽表",blocks:[mtbl(cs)]})}
+  const tot=[{name:"合計(僅台幣保單)",co:"",no:"",prod:"",py:"",sum:"",start:"",fr:"",holder:"",list:tw.list?fmt(tw.list):"",ann:fmt(tw.ann),pay:"",m:tw.m.map(v=>v?fmt(v):"")}];
+  if(us.ann)tot.push({name:"合計(美元保單)",co:"",no:"",prod:"",py:"",sum:"",start:"",fr:"",holder:"",list:us.list?fmt(us.list)+"美元":"",ann:fmt(us.ann)+"美元",pay:"",m:us.m.map(v=>v?fmt(v)+"美元":"")});
+  while(tot.length<6)tot.push(null);sections.push({title:"逐月保費一覽表",sub:"合計",blocks:[mtbl(tot)]});
+  return {no,sections};
+}
+function openReport(members){
+  const rep=buildReport(members);const ov=document.createElement("div");ov.className="rov";
+  const canPdf=!!(window.jspdf&&window.html2canvas);
+  ov.innerHTML=`<div class="rbar"><b>保單健檢報表</b><span class="sp"></span>${canPdf?`<button class="btn a" data-pdf>⬇ 下載 / 分享 PDF</button>`:`<span class="hint" style="color:#fff">PDF 下載請用 App 或網頁版</span>`}<button class="btn" data-close>關閉</button></div><div class="rscroll"><div class="rpages"></div></div>`;
+  document.body.appendChild(ov);const host=ov.querySelector(".rpages");
+  // paginate
+  rep.sections.forEach(sec=>{let pg=null,body=null;const newPage=()=>{pg=document.createElement("div");pg.className="a4";pg.innerHTML=rptHead(sec.title,sec.sub)+`<div class="rbody"></div>`+rptFoot(rep.no);host.appendChild(pg);body=pg.querySelector(".rbody")};
+    newPage();sec.blocks.forEach(b=>{const d=document.createElement("div");d.innerHTML=b;body.appendChild(d);if(body.scrollHeight>body.clientHeight+2&&body.children.length>1){body.removeChild(d);newPage();body.appendChild(d)}})});
+  const pages=[...host.querySelectorAll(".a4")];pages.forEach((p,i)=>{p.querySelector(".pgn").textContent=i+1;p.querySelector(".pgt").textContent=pages.length});
+  const fit=()=>{const k=Math.min(1,(ov.querySelector(".rscroll").clientWidth-16)/794);host.style.transform=`scale(${k})`;host.style.height=(host.scrollHeight*k)+"px";host.style.marginBottom=(-host.scrollHeight*(1-k))+"px"};
+  host.style.transformOrigin="top left";setTimeout(fit,30);window.addEventListener("resize",fit);
+  ov.querySelector("[data-close]").onclick=()=>{window.removeEventListener("resize",fit);ov.remove()};
+  const pb=ov.querySelector("[data-pdf]");if(pb)pb.onclick=async()=>{pb.disabled=true;pb.textContent="產生中…";
+    const tr=host.style.transform;host.style.transform="none";
+    try{const {jsPDF}=window.jspdf;const pdf=new jsPDF({unit:"pt",format:"a4"});
+      for(let i=0;i<pages.length;i++){const cv=await window.html2canvas(pages[i],{scale:2,backgroundColor:"#ffffff",useCORS:true});if(i)pdf.addPage();pdf.addImage(cv.toDataURL("image/jpeg",0.92),"JPEG",0,0,595.28,841.89)}
+      const fname=`保單健檢_${members[0].name}_${ds(today())}.pdf`;
+      const Cap=window.Capacitor,FS=Cap&&Cap.Plugins&&Cap.Plugins.Filesystem,SH=Cap&&Cap.Plugins&&Cap.Plugins.Share;
+      if(Cap&&Cap.isNativePlatform&&Cap.isNativePlatform()&&FS&&SH){const b64=pdf.output("datauristring").split(",")[1];const w=await FS.writeFile({path:fname,data:b64,directory:"CACHE"});await SH.share({title:fname,url:w.uri,dialogTitle:"分享保單健檢報表"})}
+      else pdf.save(fname);
+      toast("PDF 已產生");
+    }catch(e){toast("產生 PDF 失敗："+(e.message||e))}
+    host.style.transform=tr;pb.disabled=false;pb.textContent="⬇ 下載 / 分享 PDF"};
+}
+
 /* ========== 拍照匯入保單 ========== */
 const SCAN_PROMPT=`你是台灣保險業務助理。圖片是客戶的保單整理表、保單首頁或保單明細（可能多張）。請擷取所有保單，只回傳一個 JSON 物件，不要其他文字。格式：
-{"insured":"被保險人姓名","insuredBirth":"生日原文","company":"保險公司（可判斷才填）","policies":[{"policyNo":"保單號碼","holder":"要保人","payMethod":"繳費方式","items":[{"product":"商品名稱（含括號代碼）","rider":false,"payYears":20,"target":"本人","start":"1987-01-26","sumText":"95萬","premium":0,"freq":"半年","beneficiary":"滿期:王小明\\n身故:王大明50%","type":"壽險","cov":{"life":95}}]}]}
+{"insured":"被保險人姓名","insuredBirth":"生日原文","company":"保險公司（可判斷才填）","policies":[{"policyNo":"保單號碼","holder":"要保人","payMethod":"繳費方式","items":[{"product":"商品名稱（含括號代碼）","rider":false,"payYears":20,"target":"本人","start":"1987-01-26","sumText":"95萬","premium":0,"listPremium":"","currency":"TWD","freq":"半年","beneficiary":"滿期:王小明\\n身故:王大明50%","type":"壽險","cov":{"life":95}}]}],"coverage":{}}
 規則：
 1. 同一個保單號碼底下：主約 rider=false（通常第一列或標示●），附約 rider=true（標示○、名稱含「附約」）。
 2. start：民國年加 1911 轉成西元 YYYY-MM-DD（例 76/01/26 → 1987-01-26；112/07/11 → 2023-07-11）。
@@ -675,7 +808,9 @@ const SCAN_PROMPT=`你是台灣保險業務助理。圖片是客戶的保單整�
 4. type 從這些選一個：壽險、醫療、重疾/重大傷病、癌症、意外、失能、長照、儲蓄/年金、投資型、產險、其他。
 5. cov 把保額換算到對應保障：life 壽險身故(萬)、acc 意外身故失能(萬)、med 實支實付(萬/次)、hosp 住院日額(元/日)、ci 重大傷病/重疾(萬)、cancer 癌症一次金(萬)、dis 失能扶助(萬/月)、ltc 長照(萬/月)。對應不到（手術、儲蓄、豁免等）就給 {}。例：終身壽險 95萬 → {"life":95}；住院日額附約 600元 → {"hosp":600}；日額型住院醫療 1000元 → {"hosp":1000}；手術醫療 1000元 → {}。
 6. beneficiary 保留原文，多位受益人用 \\n 分行。payMethod 只保留方式與銀行名稱，例如「自繳件」「國泰世華（卡扣件）」「玉山銀行（轉帳件）」，不要輸出卡號、帳號或末四碼。
-7. 看不清楚的欄位填空字串，不要猜。`;
+7. currency：金額或保額有「美元/USD」填 "USD"，否則 "TWD"。freq 若為躉繳填 "躉繳"。listPremium：若圖片有「表定保費」就填數字，否則空字串。
+8. 若圖片包含「保障總覽」表格，把被保險人 insured 那一欄的數值原文（例如 "1,428.59萬"、"1,200元~1,800元"）填進 coverage，key 對照：${COVD.map(g=>g[1].map(i=>i[0]+"="+g[0]+"/"+i[1]).join("、")).join("、")}。沒有保障總覽就給 {}。
+9. 看不清楚的欄位填空字串，不要猜。`;
 async function shrink(file){
   try{const bmp=await createImageBitmap(file);const k=Math.min(1,2000/Math.max(bmp.width,bmp.height));const cv=document.createElement("canvas");cv.width=Math.round(bmp.width*k);cv.height=Math.round(bmp.height*k);cv.getContext("2d").drawImage(bmp,0,0,cv.width,cv.height);
     return await new Promise(r=>cv.toBlob(b=>r(b||file),"image/jpeg",0.88))}catch(e){return file}
@@ -723,8 +858,8 @@ function openScan(){
       draw("busy");
       try{const blobs=[];for(const x of files)blobs.push(await shrink(x.f));
         data=await aiExtract(blobs);
-        flat=[];(data.policies||[]).forEach(pp=>(pp.items||[]).forEach(it=>{flat.push(Object.assign({},it,{_i:flat.length,id:"tmp"+flat.length,policyNo:pp.policyNo||"",holder:pp.holder||"",payMethod:pp.payMethod||"",freq:({"年":12,"年繳":12,"半年":6,"半年繳":6,"季":3,"季繳":3,"月":1,"月繳":1})[it.freq]||12,status:"有效"}))}));
-        if(!flat.length)throw new Error("JSON: 沒有找到保單");
+        flat=[];(data.policies||[]).forEach(pp=>(pp.items||[]).forEach(it=>{flat.push(Object.assign({},it,{_i:flat.length,id:"tmp"+flat.length,policyNo:pp.policyNo||"",holder:pp.holder||"",payMethod:pp.payMethod||"",freq:({"年":12,"年繳":12,"半年":6,"半年繳":6,"季":3,"季繳":3,"月":1,"月繳":1,"躉繳":0,"躉":0})[it.freq]??12,status:"有效"}))}));
+        if(!flat.length&&!(data.coverage&&Object.keys(data.coverage).length))throw new Error("JSON: 沒有找到保單");
         draw("review");
       }catch(e){draw("pick",scanErr(e))}
     };
@@ -735,10 +870,11 @@ function openScan(){
       if(!on.length){toast("沒有勾選任何保單");return}
       M.c.policies=M.c.policies||[];let added=0,upd=0;
       on.forEach(i=>{const it=flat[i];const cov={};Object.keys(it.cov||{}).forEach(k=>{if(COV.some(x=>x.k===k)&&num(it.cov[k])>0)cov[k]=num(it.cov[k])});
-        const np={company:data.company||"",product:it.product||"",type:PTYPES.includes(it.type)?it.type:"其他",policyNo:it.policyNo,holder:it.holder,payMethod:it.payMethod,rider:!!it.rider,target:it.target||"本人",start:/^\d{4}-\d{2}-\d{2}$/.test(it.start||"")?it.start:"",payYears:num(it.payYears)||"",freq:it.freq,premium:it.premium===""||it.premium==null?"":num(it.premium),sumText:it.sumText||"",beneficiary:it.beneficiary||"",status:"有效",cov,note:""};
+        const np={company:data.company||"",product:it.product||"",type:PTYPES.includes(it.type)?it.type:"其他",policyNo:it.policyNo,holder:it.holder,payMethod:it.payMethod,rider:!!it.rider,target:it.target||"本人",start:/^\d{4}-\d{2}-\d{2}$/.test(it.start||"")?it.start:"",payYears:num(it.payYears)||"",freq:it.freq,premium:it.premium===""||it.premium==null?"":num(it.premium),sumText:it.sumText||"",beneficiary:it.beneficiary||"",status:"有效",cov,note:"",currency:it.currency==="USD"?"USD":"TWD",listPremium:it.listPremium===""||it.listPremium==null?"":num(it.listPremium)};
         const ex=M.c.policies.find(p=>p.policyNo&&p.policyNo===np.policyNo&&p.product===np.product);
         if(ex){Object.assign(ex,np);upd++}else{M.c.policies.push(Object.assign({id:"p"+uid()},np));added++}});
-      await commitM();close();M.tab="pol";drawModal();toast(`已匯入 ${added} 筆${upd?`、更新 ${upd} 筆`:""}`);
+      let cd=0;if(data.coverage&&typeof data.coverage==="object"){M.c.covDetail=M.c.covDetail||{};Object.keys(data.coverage).forEach(k=>{const v=String(data.coverage[k]||"").trim();if(v&&COVD_KEYS.includes(k)){M.c.covDetail[k]=v;cd++}})}
+      await commitM();close();M.tab="pol";drawModal();toast(`已匯入 ${added} 筆${upd?`、更新 ${upd} 筆`:""}${cd?`、保障明細 ${cd} 項`:""}`);
     };
   };
   draw("pick");
@@ -762,7 +898,7 @@ function confirmBox(msg,onYes){
 /* ========== 匯出 ========== */
 function csv(rows){return rows.map(r=>r.map(v=>{v=String(v==null?"":v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(",")).join("\n")}
 function exportCsv(){copy(csv([["姓名","身分證字號","性別","生日","年齡","手機","LINE","Email","職業","年收入(萬)","家庭","身分","階段","來源","標籤","上次聯絡","下次追蹤","有效保單數","年化保費","備註"]].concat(S.clients.map(c=>[c.name,c.idNo,c.gender,c.birthday,age(c.birthday),c.phone,c.line,c.email,c.job,c.income,c.family,c.relation,c.stage,c.source,(c.tags||[]).join("、"),c.lastContact,c.nextFollow,(c.policies||[]).filter(active).length,Math.round(annualSum(c)),c.notes]))))}
-function exportPol(){const h=["客戶","保險公司","商品","險種","保單號","要保人","狀態","生效日","繳費年期","繳別","每期保費","年化保費","繳費方式"].concat(COV.map(x=>x.n+"("+x.u+")"));copy(csv([h].concat(S.clients.flatMap(c=>(c.policies||[]).map(p=>[c.name,p.company,p.product,p.type,p.policyNo,p.holder,p.status,p.start,p.payYears,FREQ[p.freq||12],p.premium,Math.round(annual(p)),p.payMethod].concat(COV.map(x=>(p.cov||{})[x.k]||"")))))))}
+function exportPol(){const h=["客戶","保險公司","商品","險種","保單號","要保人","狀態","生效日","繳費年期","繳別","每期保費","年化保費","繳費方式"].concat(COV.map(x=>x.n+"("+x.u+")"));copy(csv([h].concat(S.clients.flatMap(c=>(c.policies||[]).map(p=>[c.name,p.company,p.product,p.type,p.policyNo,p.holder,p.status,p.start,p.payYears,FREQ[fq(p)],p.premium,Math.round(annual(p)),p.payMethod].concat(COV.map(x=>(p.cov||{})[x.k]||"")))))))}
 function exportJson(){openText("完整備份（請複製後存成文字檔）",JSON.stringify({v:1,exported:new Date().toISOString(),profile:S.profile,clients:S.clients}))}
 function importJson(){openText("貼上 JSON 備份內容（同 ID 客戶會被覆蓋）","",true,async t=>{
   try{const j=JSON.parse(t);const cs=j.clients||[];for(const c of cs){if(!c.id)c.id=uid();await saveClient(c)}if(j.profile){S.profile=Object.assign(clone(DEF_PROFILE),j.profile);await saveProfile()}toast("已匯入 "+cs.length+" 位客戶")}catch(e){toast("格式錯誤，無法匯入")}
@@ -807,6 +943,10 @@ document.addEventListener("click",async e=>{
     case "copyCov":copy(covSummary(M.c));break;
     case "gotoClaim":S.claimCid=M.c.id;closeModal();location.hash="claims";break;
     case "scanPol":openScan();break;
+    case "report":{const c=M.c;const fam=c.family?S.clients.filter(x=>x.family===c.family):[];
+      if(fam.length>1){const box=document.createElement("div");box.innerHTML=`<div class="mask"><div class="modal sm"><div class="mh"><b>產生保單健檢報表</b></div><div class="mb">要只做 ${esc(c.name)} 本人，還是 ${esc(c.family)} 全家（${fam.length} 人）？</div><div class="mf"><button class="btn" data-one>只有本人</button><button class="btn p" data-all>全家</button></div></div></div>`;document.getElementById("modalRoot").appendChild(box);
+        box.querySelector("[data-one]").onclick=()=>{box.remove();openReport([c])};box.querySelector("[data-all]").onclick=()=>{box.remove();openReport([c].concat(fam.filter(x=>x.id!==c.id)))}}
+      else openReport([c]);break}
     case "newPol":M.editPol={id:"p"+uid(),_new:true,status:"有效",freq:12,cov:{},rider:"0",target:"本人"};drawModal();break;
     case "editPol":M.editPol=clone(M.c.policies.find(p=>p.id===el.dataset.pid));M.editPol.rider=M.editPol.rider?"1":"0";drawModal();break;
     case "cancelPol":M.editPol=null;drawModal();break;
@@ -851,17 +991,18 @@ document.addEventListener("submit",async e=>{
   }
   if(f.id==="polForm"){
     const p=M.editPol;const c={};COV.forEach(x=>{const v=fd["cov_"+x.k];if(v!==""&&v!=null)c[x.k]=num(v)});
-    const np={id:p.id,company:fd.company,product:fd.product,type:fd.type,policyNo:fd.policyNo,holder:fd.holder,status:fd.status,start:fd.start,payYears:fd.payYears,freq:+fd.freq,premium:fd.premium,payMethod:fd.payMethod,note:fd.note,cov:c,rider:fd.rider==="1",target:fd.target,sumText:fd.sumText,beneficiary:fd.beneficiary};
+    const np={id:p.id,company:fd.company,product:fd.product,type:fd.type,policyNo:fd.policyNo,holder:fd.holder,status:fd.status,start:fd.start,payYears:fd.payYears,freq:+fd.freq,premium:fd.premium,payMethod:fd.payMethod,note:fd.note,cov:c,rider:fd.rider==="1",target:fd.target,sumText:fd.sumText,beneficiary:fd.beneficiary,currency:fd.currency,listPremium:fd.listPremium};
     M.c.policies=M.c.policies||[];const i=M.c.policies.findIndex(x=>x.id===p.id);if(i>=0)M.c.policies[i]=np;else M.c.policies.push(np);
     M.editPol=null;await commitM();toast("保單已儲存");drawModal();
   }
+  if(f.id==="covdForm"){M.c.covDetail={};COVD_KEYS.forEach(k=>{const v=(fd[k]||"").trim();if(v)M.c.covDetail[k]=v});await commitM();toast("詳細保障已儲存");drawModal();return}
   if(f.id==="logForm"){
     M.c.logs=M.c.logs||[];M.c.logs.push({id:"l"+uid(),date:fd.date,type:fd.type,content:fd.content});
     if(!M.c.lastContact||fd.date>M.c.lastContact)M.c.lastContact=fd.date;await commitM();drawModal();
   }
   if(f.id==="svcForm"){M.c.services=M.c.services||[];M.c.services.push({id:"s"+uid(),date:fd.date,type:fd.type,status:fd.status,note:fd.note});await commitM();drawModal();toast("已新增服務件")}
   if(f.id==="profForm"){
-    const p=S.profile;["agent","title","company","phone","line","email","slogan","area"].forEach(k=>p[k]=fd[k]||"");
+    const p=S.profile;["agent","title","company","phone","line","email","slogan","area","usdRate"].forEach(k=>p[k]=fd[k]||"");
     p.targets={};COV.forEach(x=>{const v=fd["t_"+x.k];if(v!=="")p.targets[x.k]=num(v)});
     p.tpl={};Object.keys(DEF_TPL).forEach(k=>{const v=(fd["tpl_"+k]||"").trim();if(v&&v!==DEF_TPL[k])p.tpl[k]=v});
     p.type="profile";await saveProfile();toast("設定已儲存");
