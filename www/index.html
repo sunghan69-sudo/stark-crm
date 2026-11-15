@@ -315,7 +315,12 @@ details.fold{align-self:start}details.fold>summary{list-style:none;cursor:pointe
 .rmon .cal{border-color:var(--pri);border-top-color:var(--pri)}
 .rdis{color:#5f6b7a}
 .mkt{margin-bottom:14px}.mkh{display:flex;align-items:center;gap:10px}.mkh b{font-size:16px;white-space:nowrap}.mkh .sub{margin-left:auto;text-align:right;font-size:12px}
-.mkg{display:grid;grid-template-columns:1fr 1.2fr 1.2fr 1.2fr;gap:12px;margin-top:12px}
+.mkg{display:grid;grid-template-columns:1.5fr 1fr 1.1fr 1.2fr;gap:12px;margin-top:12px}
+.mkrt{order:-1}.mkg>.mkrt{grid-column:auto}
+.rtb{font-size:11px;font-weight:700;background:#e7ebf0;color:#5f6b7a;border-radius:10px;padding:1px 8px;margin-left:6px}.rtb.on{background:#fde8e7;color:#d0302b}
+.rtt{float:right;font-size:11px;color:var(--muted);font-weight:500}
+.rtmain{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;padding:4px 0 8px;border-bottom:1px solid #dbe3ec;margin-bottom:4px}
+.rthl{font-size:12px;color:var(--muted);text-align:right;line-height:1.7}.rthl b{color:var(--ink);font-variant-numeric:tabular-nums}
 .mkc{background:var(--soft);border-radius:10px;padding:12px 14px}.mkt1{font-size:13px;font-weight:700;color:var(--pri);margin-bottom:6px}
 .mkbig{font-size:30px;font-weight:900;color:var(--pri);line-height:1.2}.mkbig small{font-size:13px;color:var(--muted);font-weight:600}
 .mtb{width:100%;border-collapse:collapse;font-size:13.5px}.mtb td{padding:4px 2px;border-bottom:1px dashed #dbe3ec}.mtb tr:last-child td{border-bottom:0}
@@ -715,7 +720,26 @@ async function loadMarket(force){if(!force&&Date.now()-mktAt<20*60*1000)return;m
 function mktChg(q){if(!q||q.chg==null)return"";const up=q.chg>0,dn=q.chg<0;const cls=up?"mup":dn?"mdn":"mfl";
   return `<span class="${cls}">${up?"▲":dn?"▼":"－"}${mktPrice(Math.abs(q.chg))}${q.pct!=null?`（${up?"+":dn?"-":""}${Math.abs(q.pct).toFixed(2)}%）`:""}</span>`}
 function mktPrice(v){return v==null?"—":Number(v).toLocaleString("en-US",{maximumFractionDigits:2})}
-function vMarket(){loadMarket();const m=MKT;let open=true;try{open=localStorage.getItem("stark-fold-mkt")!=="0"}catch(e){}
+/* 台股即時（鉅亨網報價 API，盤中每 30 秒更新） */
+const TWRT_SYMS=[["TWS:TSE01:INDEX","加權指數"],["TWS:OTC01:INDEX","櫃買指數"],["TWS:2330:STOCK","台積電"],["TWS:2317:STOCK","鴻海"],["TWS:2454:STOCK","聯發科"],["TWS:2308:STOCK","台達電"],["TWS:2382:STOCK","廣達"]];
+let TWRT=null,twrtAt=0,twrtTimer=null;try{TWRT=JSON.parse(localStorage.getItem("stark-twrt")||"null")}catch(e){}
+function twOpenNow(){const d=new Date(Date.now()+(new Date().getTimezoneOffset()+480)*60000);const w=d.getDay(),m=d.getHours()*60+d.getMinutes();return w>=1&&w<=5&&m>=540&&m<=815}
+async function loadTwRt(force){const gap=twOpenNow()?25000:10*60000;if(!force&&Date.now()-twrtAt<gap)return;twrtAt=Date.now();
+  try{const r=await fetch("https://ws.api.cnyes.com/ws/api/v1/quote/quotes/"+TWRT_SYMS.map(x=>x[0]).join(",")+"?column=G",{cache:"no-store"});if(!r.ok)return;const j=await r.json();
+    const map={};(j.data||[]).forEach(d=>map[d[0]]=d);
+    const rows=TWRT_SYMS.map(([k,n])=>{const d=map[k];if(!d||d[6]==null)return null;return {key:k,name:n,code:String(d[200010]||""),price:d[6],chg:d[11],pct:d[56],high:d[12],low:d[13],vol:k.includes("STOCK")?d[200013]:null,t:d[200007]*1000}}).filter(Boolean);
+    if(rows.length){TWRT={at:Date.now(),rows};try{localStorage.setItem("stark-twrt",JSON.stringify(TWRT))}catch(e){}
+      const el=document.getElementById("twrtBox");if(el)el.outerHTML=twrtHtml()}}catch(e){}}
+function twrtTick(){if(twrtTimer)return;twrtTimer=setInterval(()=>{if(S.view==="dashboard"&&document.visibilityState!=="hidden")loadTwRt()},30000)}
+function twrtHtml(){const t=TWRT;if(!t||!t.rows.length)return `<div class="mkc" id="twrtBox"><div class="mkt1">台股即時行情</div><div class="hint">讀取中…</div></div>`;
+  const idx=t.rows.filter(r=>r.key.includes("INDEX")),stk=t.rows.filter(r=>r.key.includes("STOCK"));const main=idx[0];const open=twOpenNow();
+  const tm=new Date(Math.max(...t.rows.map(r=>r.t||0)));const tms=`${tm.getMonth()+1}/${tm.getDate()} ${String(tm.getHours()).padStart(2,"0")}:${String(tm.getMinutes()).padStart(2,"0")}`;
+  return `<div class="mkc mkrt" id="twrtBox"><div class="mkt1">台股即時行情 <span class="rtb ${open?"on":""}">${open?"● 盤中即時":"已收盤"}</span><span class="rtt">${tms}</span></div>
+   ${main?`<div class="rtmain"><div><div class="sub">${esc(main.name)}</div><div class="mkbig ${main.chg>0?"mup":main.chg<0?"mdn":""}">${mktPrice(main.price)}</div><div>${mktChg(main)}</div></div>
+     <div class="rthl"><div>最高 <b>${mktPrice(main.high)}</b></div><div>最低 <b>${mktPrice(main.low)}</b></div><div>昨收 <b>${mktPrice(main.price-main.chg)}</b></div></div></div>`:""}
+   <table class="mtb">${idx.slice(1).map(q=>`<tr><td><b>${esc(q.name)}</b></td><td class="mp">${mktPrice(q.price)}</td><td class="mc">${mktChg(q)}</td></tr>`).join("")}
+   ${stk.map(q=>`<tr><td><b>${esc(q.name)}</b><small>${esc(q.code)}${q.vol?"・"+fmt(Math.round(q.vol))+" 張":""}</small></td><td class="mp">${mktPrice(q.price)}</td><td class="mc">${mktChg(q)}</td></tr>`).join("")}</table></div>`}
+function vMarket(){loadMarket();loadTwRt();twrtTick();const m=MKT;let open=true;try{open=localStorage.getItem("stark-fold-mkt")!=="0"}catch(e){}
   const head=`<summary class="mkh"><b>📈 市場快訊</b><span class="sub">${m?`資料日 ${esc((m.index[0]||m.tw[0]||{}).date||"")}・更新 ${esc(new Date(m.updated).toLocaleString("zh-TW",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}))}`:"載入中…"}</span><span class="fchev">▾</span></summary>`;
   if(!m)return `<details class="card mkt fold" ${open?"open":""} ontoggle="try{localStorage.setItem('stark-fold-mkt',this.open?'1':'0')}catch(e){}">${head}<div class="hint" style="padding:8px 0">正在讀取行情資料…</div></details>`;
   const fx=m.fx||{},b=fx.bot||{};
@@ -724,10 +748,10 @@ function vMarket(){loadMarket();const m=MKT;let open=true;try{open=localStorage.
   <div class="mkg">
     <div class="mkc"><div class="mkt1">💵 今日美金匯率</div><div class="mkbig">${mktPrice(fx.market)}<small> TWD</small></div><div>${mktChg({chg:fx.chg})}<span class="sub"> 市場價</span></div>
       ${b.spotBuy?`<table class="mtb fxt"><tr><th></th><th>買入</th><th>賣出</th></tr><tr><td>台銀即期</td><td>${b.spotBuy}</td><td>${b.spotSell}</td></tr><tr><td>台銀現金</td><td>${b.cashBuy}</td><td>${b.cashSell}</td></tr></table>`:""}</div>
-    <div class="mkc"><div class="mkt1">📊 昨日收盤行情</div>${rows(m.index||[])}</div>
-    <div class="mkc"><div class="mkt1">🇹🇼 台股權值前五大</div>${rows(m.tw||[],true)}</div>
+    <div class="mkc"><div class="mkt1">📊 美股昨日收盤</div>${rows((m.index||[]).filter(q=>!/^\^TW/.test(q.sym||"")))}</div>
+    ${twrtHtml()}
     <div class="mkc"><div class="mkt1">🇺🇸 美股科技前五大</div>${rows(m.us||[],true)}</div>
-  </div><div class="hint" style="margin-top:8px">資料來源：Yahoo Finance、臺灣銀行牌告匯率；每日自動更新，僅供參考。紅漲綠跌。</div></details>`}
+  </div><div class="hint" style="margin-top:8px">台股為即時報價（盤中每 30 秒更新，來源：鉅亨網）；美股與匯率每日更新（Yahoo Finance、臺灣銀行）。僅供參考，紅漲綠跌。</div></details>`}
 function vDash(){
   const cs=S.clients;const pols=cs.flatMap(c=>(c.policies||[]).filter(active));
   const prem=cs.reduce((a,c)=>a+annualSum(c),0);const rem30=reminders(30);const rem7=reminders(7);
