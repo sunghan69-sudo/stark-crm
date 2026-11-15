@@ -373,7 +373,8 @@ function coShort(n){n=String(n||"").trim();const m=CO_STYLE.find(x=>n.startsWith
 function coColor(n){n=String(n||"").trim();const m=CO_STYLE.find(x=>n.startsWith(x[0]));if(m)return m[1];let h=0;for(const ch of n)h=(h*31+ch.charCodeAt(0))%360;return n?`hsl(${h},45%,40%)`:"#9aa3ad"}
 function coBadge(n,sz){sz=sz||22;return `<span class="cob" style="background:${coColor(n)};width:${sz}px;height:${sz}px;font-size:${Math.round(sz*0.42)}px" title="${esc(n||"")}">${esc(coShort(n))}</span>`}
 function coName(n){return `<span class="con">${coBadge(n)}<span>${esc(n||"未填公司")}</span></span>`}
-function byCompany(ps){const m={},order=[];ps.forEach(p=>{const k=(p.company||"").trim()||"未填公司";if(!m[k]){m[k]=[];order.push(k)}m[k].push(p)});return order.map(k=>({co:k,items:m[k]}))}
+function polCo(p){const c=String(p.company||"").trim(),n=String(p.product||"").trim();const m=n.match(/^(.{2,6}?)(人壽|產物|產險)/);if(m){const nm=m[1]+m[2];if(!c||!c.startsWith(m[1].slice(0,2)))return nm}return c||"未填公司"}
+function byCompany(ps){const m={},order=[];ps.forEach(p=>{const k=polCo(p);if(!m[k]){m[k]=[];order.push(k)}m[k].push(p)});return order.map(k=>({co:k,items:m[k]}))}
 function policyGroups(ps){const g=[],map={};ps.forEach(p=>{const k=(p.policyNo||"").trim()||("_"+p.id);if(!map[k]){map[k]={no:(p.policyNo||"").trim(),items:[]};g.push(map[k])}map[k].items.push(p)});
   g.forEach(x=>x.items.sort((a,b)=>(!!a.rider-!!b.rider)||(a.start||"").localeCompare(b.start||"")));return g}
 function sheetHtml(c,ps,opts){opts=opts||{};
@@ -828,7 +829,7 @@ const RULE_MODES=[["","—"],["mult","保額×倍數"],["range","保額×倍數�
 function coKey(n){n=n||"";if(/國泰/.test(n))return "國泰人壽";if(/全球/.test(n))return "全球人壽";if(/安聯/.test(n))return "安聯人壽";if(/新光/.test(n))return "新光人壽";return n.trim()?"其他":""}
 function prodCode(name){const g=[...String(name||"").matchAll(/[（(]([^()（）]+)[)）]/g)].map(m=>m[1].trim()).filter(x=>/^[A-Z0-9][A-Z0-9_\-]{0,7}$/i.test(x)&&/[A-Z_]/i.test(x));return g.length?g[g.length-1].toUpperCase():""}
 function baseName(name){return String(name||"").replace(/[（(][^()（）]*[)）]/g,"").trim()}
-function matchProduct(p){if(!S.products.length)return null;const code=prodCode(p.product),co=coKey(p.company),bn=baseName(p.product);
+function matchProduct(p){if(!S.products.length)return null;const code=prodCode(p.product),co=coKey(polCo(p)),bn=baseName(p.product);
   let cand=S.products.filter(x=>x.status!=="停用"&&((code&&x.code&&x.code.toUpperCase()===code)||(bn&&(x.name===bn||(x.aliases||[]).includes(bn)||(x.aliases||[]).includes(p.product)))));
   if(co){const same=cand.filter(x=>x.company===co);if(same.length)cand=same;else cand=cand.filter(x=>!x.company||x.company==="其他")}
   if(!cand.length)return null;const st=p.start||"9999";cand.sort((a,b)=>(b.status==="已核對")-(a.status==="已核對")||(b.effective||"").localeCompare(a.effective||""));
@@ -845,7 +846,7 @@ function computeFromProduct(p,pr){const base=policyBase(p);const t=String(p.sumT
     if(v)out[r.key]=v});return out}
 function prodUsage(pr){let n=0;S.clients.forEach(c=>(c.policies||[]).forEach(p=>{if(active(p)&&matchProduct(p)===pr)n++}));return n}
 function missingProducts(){const m={};S.clients.forEach(c=>(c.policies||[]).forEach(p=>{if(!active(p)||!p.product)return;const pr=matchProduct(p);if(pr&&pr.status==="已核對")return;
-  const code=prodCode(p.product),co=coKey(p.company)||"未填公司",bn=baseName(p.product);const k=co+"|"+(code||bn);if(!m[k])m[k]={co,code,name:bn,full:p.product,clients:new Set(),draft:pr||null};m[k].clients.add(c.name)}));
+  const code=prodCode(p.product),co=coKey(polCo(p))||"未填公司",bn=baseName(p.product);const k=co+"|"+(code||bn);if(!m[k])m[k]={co,code,name:bn,full:p.product,clients:new Set(),draft:pr||null};m[k].clients.add(c.name)}));
   return Object.values(m).sort((a,b)=>b.clients.size-a.clients.size)}
 function finfoSearchUrl(co,name,code){return "https://www.google.com/search?q="+encodeURIComponent(["site:finfo.tw",co==="未填公司"?"":co,name,code].filter(Boolean).join(" "))}
 function termsSearchUrl(co,name,code){return "https://www.google.com/search?q="+encodeURIComponent([co==="未填公司"?"":co,name,code,"條款"].filter(Boolean).join(" "))}
@@ -943,7 +944,7 @@ function buildReport(members){
   const blocks=[];
   const allPs=[];members.forEach(c=>(c.policies||[]).forEach(p=>allPs.push(p)));
   byCompany(allPs).forEach(({co})=>{let first=true;
-    members.forEach(c=>{const mine=(c.policies||[]).filter(p=>((p.company||"").trim()||"未填公司")===co);if(!mine.length)return;
+    members.forEach(c=>{const mine=(c.policies||[]).filter(p=>polCo(p)===co);if(!mine.length)return;
       blocks.push(`${first?`<div class="rco">${coBadge(co,30)}<span>${esc(co)}</span></div>`:""}<div class="insh"><b>被保險人: ${esc(c.name)}</b>${c.gender?`<span>${c.gender==="女"?"小姐":"先生"}</span>`:""}${c.birthday?`<span>🎂 ${esc(rocBirth(c.birthday))}</span>`:""}<span class="insco">${coBadge(co,16)} ${esc(co)}</span></div>`);first=false;
       policyGroups(mine).forEach(g=>blocks.push(sheetHtml(c,g.items)));
     })});
@@ -963,12 +964,12 @@ function buildReport(members){
     sections.push({title:"當年度保障總覽-精簡版",sub:"",blocks});}
   // 3. 逐月保費一覽表
   const gs=[];members.forEach(c=>policyGroups(c.policies||[]).forEach(g=>{if(g.items.some(active))gs.push({c,g})}));
-  const coOrder=byCompany(allPs).map(x=>x.co);const coOf=g=>((g.items.find(x=>!x.rider)||g.items[0]).company||"").trim()||"未填公司";gs.sort((a,b)=>coOrder.indexOf(coOf(a.g))-coOrder.indexOf(coOf(b.g)));
+  const coOrder=byCompany(allPs).map(x=>x.co);const coOf=g=>polCo(g.items.find(x=>!x.rider)||g.items[0]);gs.sort((a,b)=>coOrder.indexOf(coOf(a.g))-coOrder.indexOf(coOf(b.g)));
   const tw={list:0,ann:0,m:Array(12).fill(0)},us={list:0,ann:0,m:Array(12).fill(0)};
   const colHtml=gs.map(({c,g})=>{const main=g.items.find(x=>!x.rider)||g.items[0];const usd=isUSD(main);const m=monthPlan(g.items);
     const ann=g.items.filter(active).reduce((a,p)=>a+annualRaw(p),0);const lst=g.items.filter(active).reduce((a,p)=>a+(num(p.listPremium)?num(p.listPremium)*(fq(p)?12/fq(p):1):0),0);
     const T=usd?us:tw;T.ann+=ann;T.list+=lst;m.forEach((v,i)=>T.m[i]+=v);
-    return {name:c.name,co:main.company||"",no:g.no,prod:stripCode(main.product),py:num(main.payYears)?String(num(main.payYears)).padStart(2,"0")+"年":(fq(main)===0?"--":""),sum:sumLabel(main),start:rocDate(main.start),fr:"主約："+(FREQ[fq(main)]||""),holder:main.holder||c.name,list:lst?moneyCur(lst,usd):"",ann:ann?moneyCur(ann,usd):"",pay:main.payMethod||"",m:m.map(v=>v?moneyCur(v,usd):""),usd}});
+    return {name:c.name,co:polCo(main),no:g.no,prod:stripCode(main.product),py:num(main.payYears)?String(num(main.payYears)).padStart(2,"0")+"年":(fq(main)===0?"--":""),sum:sumLabel(main),start:rocDate(main.start),fr:"主約："+(FREQ[fq(main)]||""),holder:main.holder||c.name,list:lst?moneyCur(lst,usd):"",ann:ann?moneyCur(ann,usd):"",pay:main.payMethod||"",m:m.map(v=>v?moneyCur(v,usd):""),usd}});
   const ROWS=[["保險公司","co"],["保單號碼","no"],["主約險種","prod"],["繳費年期","py"],["保額","sum"],["投保日期","start"],["繳別","fr"],["要保人","holder"],["表定保費","list"],["年繳保費","ann"],["繳費資訊","pay"]];
   const mtbl=(cs,totals)=>`<table class="rmon"><colgroup><col style="width:70px"><col span="6"></colgroup><thead><tr><th></th>${cs.map(x=>`<th class="rname">${x?esc(x.name):""}</th>`).join("")}</tr></thead><tbody>
     ${ROWS.map(r=>`<tr class="${r[1]==="prod"?"rprod":""}"><th>${r[0]}</th>${cs.map(x=>`<td>${x?(r[1]==="co"&&x.co?`<span class="con sm">${coBadge(x.co,16)}<span>${esc(x.co)}</span></span>`:esc(x[r[1]])):""}</td>`).join("")}</tr>`).join("")}
