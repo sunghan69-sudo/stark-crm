@@ -123,6 +123,7 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{outline:2px solid #bcd3ee;bo
 .phead .no{background:#2fa84f;color:#fff;font-weight:700;padding:6px 12px;letter-spacing:1px;white-space:nowrap}
 .phead .hd{padding:6px 12px;display:flex;align-items:center;gap:6px;white-space:nowrap}
 .phead .hd i{font-style:normal;color:#1f8a3c}
+.phead .pco{margin-left:auto;display:flex;align-items:center;gap:6px;padding:6px 10px;border-left:1px solid #cfe9d6;color:#333}.phead .pco+.pm{margin-left:0}
 .phead .pm{margin-left:auto;padding:6px 12px;border-left:1px solid #cfe9d6;color:#333}
 .pwrap{overflow-x:auto}
 .ptbl{width:100%;border-collapse:collapse;margin-top:6px;font-size:14px;min-width:680px;table-layout:fixed}
@@ -380,7 +381,7 @@ function policyGroups(ps){const g=[],map={};ps.forEach(p=>{const k=(p.policyNo||
 function sheetHtml(c,ps,opts){opts=opts||{};
   if(!ps.length)return "";
   return policyGroups(ps).map(g=>{const f=g.items.find(x=>!x.rider)||g.items[0];
-   return `<div class="psheet"><div class="phead"><span class="no">保 單 號 碼 ▷ ${esc(g.no||"（未填）")}</span><span class="hd">要保人 <i>▶</i> <b>${esc(f.holder||c.name||"")}</b></span>${opts.check?`<span class="pm">${esc(f.payMethod||"")}</span>`:`<span class="pm pmedit" data-act="editPay" data-pid="${f.id}" title="點一下修改扣款方式">${esc(f.payMethod||"未填扣款方式")} <span style="color:#2fa84f">✎</span></span>`}</div>
+   return `<div class="psheet"><div class="phead"><span class="no">保 單 號 碼 ▷ ${esc(g.no||"（未填）")}</span><span class="hd">要保人 <i>▶</i> <b>${esc(f.holder||c.name||"")}</b></span>${opts.check||opts.report?"":`<span class="pco pmedit" data-act="editCo" data-pid="${f.id}" title="點一下修改保險公司">${coBadge(polCo(f),20)}<span>${esc(polCo(f))}</span><span style="color:#2fa84f">✎</span></span>`}${opts.check||opts.report?`<span class="pm">${esc(f.payMethod||"")}</span>`:`<span class="pm pmedit" data-act="editPay" data-pid="${f.id}" title="點一下修改扣款方式">${esc(f.payMethod||"未填扣款方式")} <span style="color:#2fa84f">✎</span></span>`}</div>
    <div class="pwrap"><table class="ptbl"><colgroup>${opts.check?'<col style="width:34px">':""}<col style="width:30%"><col style="width:8%"><col style="width:7%"><col style="width:10%"><col style="width:8%"><col style="width:10%"><col style="width:7%"><col></colgroup><thead><tr>${opts.check?"<th></th>":""}<th style="text-align:left">商品</th><th>繳費年期</th><th>對象</th><th>投保日期</th><th>保額</th><th>下期保費</th><th>繳別</th><th>受益人</th></tr></thead><tbody>
    ${g.items.map(p=>`<tr class="${p.rider?"":"main"} ${opts.check?"":"click"} ${active(p)?"":"off"}" ${opts.check?"":`data-act="editPol" data-pid="${p.id}"`}>
      ${opts.check?`<td><input type="checkbox" class="scanchk" data-i="${p._i}" checked></td>`:""}
@@ -946,7 +947,7 @@ function buildReport(members){
   byCompany(allPs).forEach(({co})=>{let first=true;
     members.forEach(c=>{const mine=(c.policies||[]).filter(p=>polCo(p)===co);if(!mine.length)return;
       blocks.push(`${first?`<div class="rco">${coBadge(co,30)}<span>${esc(co)}</span></div>`:""}<div class="insh"><b>被保險人: ${esc(c.name)}</b>${c.gender?`<span>${c.gender==="女"?"小姐":"先生"}</span>`:""}${c.birthday?`<span>🎂 ${esc(rocBirth(c.birthday))}</span>`:""}<span class="insco">${coBadge(co,16)} ${esc(co)}</span></div>`);first=false;
-      policyGroups(mine).forEach(g=>blocks.push(sheetHtml(c,g.items)));
+      policyGroups(mine).forEach(g=>blocks.push(sheetHtml(c,g.items,{report:true})));
     })});
   sections.push({title:"契約內容一覽表-完整版",blocks:blocks.length?blocks:['<div class="empty">尚無保單資料</div>']});
   // 2. 保障總覽
@@ -1180,6 +1181,11 @@ document.addEventListener("click",async e=>{
     case "copyCard":copy(cardText());break;
     case "copyCov":copy(covSummary(M.c));break;
     case "gotoClaim":S.claimCid=M.c.id;closeModal();location.hash="claims";break;
+    case "editCo":{const base=M.c.policies.find(x=>x.id===el.dataset.pid);if(!base)break;const no=(base.policyNo||"").trim();
+      const grp=M.c.policies.filter(x=>no?x.policyNo===no:x.id===base.id);const cur=polCo(base);
+      const opts=[...new Set(["國泰人壽","全球人壽","新光人壽","安聯人壽","富邦人壽","南山人壽","台灣人壽","中國人壽","三商美邦人壽","遠雄人壽","凱基人壽","元大人壽","友邦人壽","保誠人壽","第一金人壽","合作金庫人壽","宏泰人壽","安達人壽","法國巴黎人壽","全美人壽"].concat(S.clients.flatMap(c=>(c.policies||[]).map(p=>(p.company||"").trim())).filter(Boolean)))];
+      famDialog("修改保險公司"+(no?"｜保單 "+esc(no):""),`<label class="sub">保險公司<input class="inp" name="co" list="coList" value="${esc(cur==="未填公司"?"":cur)}" placeholder="選擇或輸入"></label><datalist id="coList">${opts.map(o=>`<option value="${esc(o)}">`).join("")}</datalist><div class="hint" style="margin-top:8px">會套用到這張保單的主約與所有附約（共 ${grp.length} 項）</div>`,
+        async d=>{const co=(d.co||"").trim();grp.forEach(p=>p.company=co);await commitM();drawModal();toast("已改為 "+(co||"未填公司"))});break}
     case "editPay":{const base=M.c.policies.find(x=>x.id===el.dataset.pid);if(!base)break;const no=(base.policyNo||"").trim();
       const grp=M.c.policies.filter(x=>no?x.policyNo===no:x.id===base.id);
       const box=document.createElement("div");box.innerHTML=`<div class="mask"><div class="modal sm"><div class="mh"><b>修改扣款方式${no?"｜保單 "+esc(no):""}</b><button class="btn ghost x" data-x>✕</button></div>
