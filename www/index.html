@@ -157,8 +157,13 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{outline:2px solid #bcd3ee;bo
 .rcov{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:10.5px}
 .rcov th,.rcov td{border:1px solid #9fd4ad;padding:1px 3px;height:16px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rcov .rv{font-weight:600}.rcov .rplus{color:#888;margin:0 1px}.rcov .rtxt{color:#666}
-.rfn{color:#1f8a3c;font-size:8.5px;font-weight:700;margin-left:1px}
-.rnotes{margin-top:8px;font-size:9.5px;line-height:1.45;color:#444;border-top:1px dashed #9fd4ad;padding-top:5px}.rnotes b{color:#1f8a3c;margin-right:6px}.rnotes div{padding-left:2px}.rnotes .rfn{font-size:9.5px;margin-right:3px}
+.rfn{display:inline-block;background:#1f8a3c;color:#fff;border-radius:3px;font-size:8.5px;font-weight:700;padding:0 3px;line-height:1.4;margin-left:2px;vertical-align:1px}
+.rnh{margin:14px 0 6px;font-size:14px;font-weight:800;color:#1f8a3c}.rnh span{font-size:11px;font-weight:400;color:#777}
+.rnt{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px;line-height:1.5}
+.rnt th{background:#2fa84f;color:#fff;font-weight:700;padding:4px 6px;border:1px solid #2fa84f;text-align:left}
+.rnt td{border:1px solid #cfe9d6;padding:5px 6px;vertical-align:top}.rnt tr:nth-child(even) td{background:#f6fbf7}
+.rnt .rn{color:#1f8a3c;font-weight:800;text-align:center}.rnt .rw{font-weight:700}.rnt .rit{color:#333}
+.rnt .rl+.rl{margin-top:3px;padding-top:3px;border-top:1px dotted #cfe9d6}.rnt .rl b{display:inline-block;background:#eaf6ee;color:#1f8a3c;border-radius:4px;padding:0 5px;margin-right:6px;font-size:11px;font-weight:700}
 .rcov .rins{background:#eaf6ee;color:#1f8a3c;font-size:15px;font-weight:900}
 .rcov .rname{font-size:14px;font-weight:700;text-align:center}
 .rcov .rg{background:#2fa84f;color:#fff;font-weight:700;font-size:12px;line-height:1.3;white-space:normal}
@@ -797,8 +802,8 @@ function covFromPolicies(c,k){const vals=[];(c.policies||[]).filter(active).forE
   let mn=0,mx=0,ok=true;vals.forEach(v=>{const r=parseRange(v.t);if(!r){ok=false;return}const k2=v.usd?usdRate():1;mn+=r.min*k2;mx+=r.max*k2});
   return ok?fmtRange({min:mn,max:mx}):vals.map(v=>v.t).join(" + ")}
 function covParts(c,k){let raw=[];const d=(c.covDetail||{})[k];
-  if(d!=null&&d!=="")raw=[{t:String(d),usd:false}];else{(c.policies||[]).filter(active).forEach(p=>{const t=String(policyCovd(p)[k]||"").trim();if(t)raw.push({t,usd:isUSD(p)})});if(!raw.length){const a=covAuto(c)[k];if(a)raw=[{t:a,usd:false}]}}
-  let mn=0,mx=0,has=false;const notes=[];raw.forEach(v=>String(v.t).split(/\s*[+＋]\s*/).forEach(part=>{part=part.trim();if(!part)return;const r=parseRange(part);if(r){const k2=v.usd?usdRate():1;mn+=r.min*k2;mx+=r.max*k2;has=true}else if(!notes.includes(part))notes.push(part)}));
+  if(d!=null&&d!=="")raw=[{t:String(d),usd:false,src:""}];else{(c.policies||[]).filter(active).forEach(p=>{const t=String(policyCovd(p)[k]||"").trim();if(t)raw.push({t,usd:isUSD(p),src:stripCode(p.product||"")})});if(!raw.length){const a=covAuto(c)[k];if(a)raw=[{t:a,usd:false,src:""}]}}
+  let mn=0,mx=0,has=false;const notes=[];raw.forEach(v=>String(v.t).split(/\s*[+＋]\s*/).forEach(part=>{part=part.trim();if(!part)return;const r=parseRange(part);if(r){const k2=v.usd?usdRate():1;mn+=r.min*k2;mx+=r.max*k2;has=true}else{const ex=notes.find(n=>n.t===part);if(ex){if(v.src&&!ex.src.includes(v.src))ex.src.push(v.src)}else notes.push({t:part,src:v.src?[v.src]:[]})}}));
   return {num:has?fmtRange({min:mn,max:mx}):"",notes}}
 function covVal(c,k){const d=(c.covDetail||{})[k];if(d!=null&&d!=="")return d;return covFromPolicies(c,k)||covAuto(c)[k]||""}
 function mCovDetail(){const c=M.c;const au0=covAuto(c);const au={};COVD_KEYS.forEach(k=>au[k]=covFromPolicies(c,k)||au0[k]||"");
@@ -936,12 +941,16 @@ function buildReport(members){
   // 2. 保障總覽
   const cols=members.slice();while(cols.length%5)cols.push(null);
   for(let i=0;i<cols.length;i+=5){const cs=cols.slice(i,i+5);const fn=[];
-    const cell=(c,key,label)=>{if(!c)return"";const p=covParts(c,key);const marks=p.notes.map(t=>{let n=fn.findIndex(x=>x.t===t&&x.who===c.name);if(n<0){fn.push({t,who:c.name,item:label});n=fn.length-1}return `<sup class="rfn">註${n+1}</sup>`}).join("");
-      return p.num?`<span class="rv">${esc(p.num)}</span>${marks?`<span class="rplus">＋</span>${marks}`:""}`:(marks?`<span class="rtxt">依條款</span>${marks}`:"")};
+    const cell=(c,key,label)=>{if(!c)return"";const p=covParts(c,key);let mark="";
+      if(p.notes.length){fn.push({who:c.name,item:label,lines:p.notes});mark=`<span class="rfn">註${fn.length}</span>`}
+      return p.num?`<span class="rv">${esc(p.num)}</span>${mark?`<span class="rplus">＋</span>${mark}`:""}`:(mark?`<span class="rtxt">依條款</span>${mark}`:"")};
     const tbl=`<table class="rcov"><colgroup><col style="width:40px"><col style="width:150px"><col span="5"></colgroup><thead><tr><th colspan="2" class="rins">被保險人</th>${cs.map(c=>`<th class="rname">${c?esc(c.name):""}</th>`).join("")}</tr></thead>
       ${COVD.map(g=>`<tbody class="rgrp">${g[1].map((it,j)=>`<tr>${j===0?`<th rowspan="${g[1].length}" class="rg">${g[0].slice(0,2)}<br>${g[0].slice(2)}</th>`:""}<td class="ri">${it[1]}</td>${cs.map(c=>`<td>${cell(c,it[0],it[1])}</td>`).join("")}</tr>`).join("")}</tbody><tbody class="gap"><tr><td colspan="7"></td></tr></tbody>`).join("")}</table>`;
-    const notes=fn.length?`<div class="rnotes"><b>附註</b>${fn.map((x,n)=>`<div><span class="rfn">註${n+1}</span> ${esc(x.who)}／${esc(x.item)}：${esc(x.t)}</div>`).join("")}</div>`:"";
-    sections.push({title:"當年度保障總覽-精簡版",sub:"",blocks:notes?[tbl,notes]:[tbl]});}
+    const blocks=[tbl];
+    if(fn.length){const head=`<div class="rnh">📋 條件型給付說明 <span>（表中「註」的項目，金額需依保費、年齡或實際狀況計算）</span></div>`;
+      const row=(x,n)=>`<tr><td class="rn">註${n+1}</td><td class="rw">${esc(x.who)}</td><td class="rit">${esc(x.item)}</td><td class="rd">${x.lines.map(l=>`<div class="rl">${l.src.length?`<b>${esc(l.src.join("、"))}</b>`:""}${esc(l.t)}</div>`).join("")}</td></tr>`;
+      const PER=9;for(let k=0;k<fn.length;k+=PER)blocks.push((k===0?head:`<div class="rnh">📋 條件型給付說明（續）</div>`)+`<table class="rnt"><colgroup><col style="width:44px"><col style="width:70px"><col style="width:120px"><col></colgroup><thead><tr><th>註</th><th>被保險人</th><th>項目</th><th>給付說明</th></tr></thead><tbody>${fn.slice(k,k+PER).map((x,j)=>row(x,k+j)).join("")}</tbody></table>`)}
+    sections.push({title:"當年度保障總覽-精簡版",sub:"",blocks});}
   // 3. 逐月保費一覽表
   const gs=[];members.forEach(c=>policyGroups(c.policies||[]).forEach(g=>{if(g.items.some(active))gs.push({c,g})}));
   const tw={list:0,ann:0,m:Array(12).fill(0)},us={list:0,ann:0,m:Array(12).fill(0)};
