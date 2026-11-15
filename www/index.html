@@ -967,8 +967,8 @@ function buildReport(members,opt){opt=opt||{};const SEC=opt.sec||[1,2,4];
   const no="S"+ds(today()).replace(/-/g,"")+String(new Date().getHours()).padStart(2,"0")+String(new Date().getMinutes()).padStart(2,"0");
   const sections=[];
   // 1. 契約內容一覽表
-  const blocks=[];if(SEC.includes(1)){
   const allPs=[];members.forEach(c=>(c.policies||[]).forEach(p=>allPs.push(p)));
+  const blocks=[];if(SEC.includes(1)){
   byCompany(allPs).forEach(({co})=>{let first=true;
     members.forEach(c=>{const mine=(c.policies||[]).filter(p=>polCo(p)===co);if(!mine.length)return;
       blocks.push(`${first?`<div class="rco">${coBadge(co,30)}<span>${esc(co)}</span></div>`:""}<div class="insh"><b>被保險人: ${esc(c.name)}</b>${c.gender?`<span>${c.gender==="女"?"小姐":"先生"}</span>`:""}${c.birthday?`<span>🎂 ${esc(rocBirth(c.birthday))}</span>`:""}<span class="insco">${coBadge(co,16)} ${esc(co)}</span></div>`);first=false;
@@ -1025,7 +1025,7 @@ function buildReport(members,opt){opt=opt||{};const SEC=opt.sec||[1,2,4];
     else{const byY={};rows.forEach(r=>{(byY[r.year]=byY[r.year]||[]).push(r)});const ys=Object.keys(byY).map(Number).sort((a,b)=>a-b);
       const sumBy=rs=>{const tw=rs.filter(r=>!r.usd).reduce((a,r)=>a+r.amt,0),us=rs.filter(r=>r.usd).reduce((a,r)=>a+r.amt,0);return [tw?fmt(Math.round(tw))+"元":"",us?fmt(Math.round(us))+"美元":""].filter(Boolean).join("＋")};
       blocks.push(`<div class="rann-sum">總計可領 <b>${rows.length}</b> 筆，合計 <b>${esc(sumBy(rows))}</b>（${ys[0]}～${ys[ys.length-1]} 年）</div>`);
-      const PER=26;let chunk=[];const flush=()=>{if(!chunk.length)return;blocks.push(`<table class="rann"><colgroup><col style="width:92px"><col style="width:64px"><col style="width:58px"><col style="width:70px"><col><col style="width:120px"></colgroup><thead><tr><th>年度</th><th>保單年度</th><th>年齡</th><th>被保險人</th><th>商品／項目</th><th>金額</th></tr></thead><tbody>${chunk.join("")}</tbody></table>`);chunk=[]};
+      const PER=20;let chunk=[];const flush=()=>{if(!chunk.length)return;blocks.push(`<table class="rann"><colgroup><col style="width:92px"><col style="width:64px"><col style="width:58px"><col style="width:70px"><col><col style="width:120px"></colgroup><thead><tr><th>年度</th><th>保單年度</th><th>年齡</th><th>被保險人</th><th>商品／項目</th><th>金額</th></tr></thead><tbody>${chunk.join("")}</tbody></table>`);chunk=[]};
       ys.forEach(y=>{const rs=byY[y];rs.forEach((r,i)=>chunk.push(`<tr${i===0?' class="ry"':""}>${i===0?`<td rowspan="${rs.length}" class="ryr"><b>${y}</b><small>民國 ${y-1911}</small></td>`:""}<td>第 ${r.py} 年</td><td>${r.age!=null?r.age+" 歲":""}</td><td>${esc(r.c.name)}</td><td>${coBadge(polCo(r.p),14)} ${esc(stripCode(r.p.product||""))}<small>${esc(r.label)}</small></td><td class="ramt">${fmt(Math.round(r.amt))}${r.usd?" 美元":" 元"}</td></tr>`));
         if(rs.length>1)chunk.push(`<tr class="rysum"><td colspan="5">${y} 年小計</td><td class="ramt">${esc(sumBy(rs))}</td></tr>`);
         if(chunk.length>=PER)flush()});flush()}
