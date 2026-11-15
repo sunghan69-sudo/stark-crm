@@ -236,6 +236,8 @@ body.gate .side{display:none}
   .covrow .x{grid-column:1/-1;text-align:left}
   .hide-m{display:none}
 }
+.kpi .vu{font-size:15px;font-weight:600;margin-left:4px;color:var(--muted,#6b7280)}.knames{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.kname{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;background:var(--soft,#f2f6f9);font-size:13px;font-weight:600;cursor:pointer;color:inherit;text-decoration:none}.kname small{font-weight:400;color:var(--muted,#6b7280);font-size:11.5px}
+details.fold>summary{list-style:none;cursor:pointer;user-select:none}details.fold>summary::-webkit-details-marker{display:none}.fold .fchev{margin-left:8px;font-size:18px;color:var(--muted,#6b7280);transition:transform .2s}details.fold:not([open]) .fchev{transform:rotate(-90deg)}details.fold[open]>summary{margin-bottom:8px}.fold .fcount{font-size:13px;font-weight:600;color:var(--acc);margin-left:6px}
 </style>
 </head>
 <body>
@@ -530,12 +532,17 @@ function vDash(){
   <div class="grid k4">
     <div class="card kpi"><div class="l">客戶數</div><div class="v">${cs.length}</div><div class="s">家庭 ${new Set(cs.map(c=>c.family).filter(Boolean)).size} 組</div></div>
     <div class="card kpi"><div class="l">有效保單</div><div class="v">${pols.length}</div><div class="s">平均每人 ${(pols.length/Math.max(1,cs.length)).toFixed(1)} 張</div></div>
-    <div class="card kpi"><div class="l">年化保費總額</div><div class="v">${fmt(prem)}</div><div class="s">元 / 年</div></div>
-    <div class="card kpi"><div class="l">30 天內待辦</div><div class="v" style="color:var(--acc)">${rem30.length}</div><div class="s">7 天內 ${rem7.length} 件</div></div>
+    ${(()=>{const t=today();const t0=new Date(t.getFullYear(),t.getMonth(),t.getDate());const lim=new Date(t0);lim.setDate(lim.getDate()+30);
+      const up=cs.map(c=>{const d=pd(c.birthday);if(!d)return null;let n=new Date(t0.getFullYear(),d.getMonth()+6,d.getDate());if(n<t0)n=new Date(t0.getFullYear()+1,d.getMonth()+6,d.getDate());if(n>lim)return null;
+        const ia=n.getFullYear()-d.getFullYear()-(new Date(n.getFullYear(),d.getMonth(),d.getDate())>n?1:0)+1;return {c,n,ia,days:Math.round((n-t0)/864e5)}}).filter(Boolean).sort((x,y)=>x.n-y.n);
+      const bm=cs.filter(c=>{const d=pd(c.birthday);return d&&d.getMonth()===t.getMonth()}).sort((x,y)=>pd(x.birthday).getDate()-pd(y.birthday).getDate());
+      const nm=(c,extra)=>`<a class="kname" data-act="openClient" data-id="${c.id}">${esc(c.name)}${extra?`<small>${extra}</small>`:""}</a>`;
+      return `<div class="card kpi"><div class="l">保險年齡即將增齡（30 日內）</div><div class="v" style="color:var(--acc)">${up.length}<span class="vu">人</span></div><div class="knames">${up.length?up.map(x=>nm(x.c,`${x.n.getMonth()+1}/${x.n.getDate()} 起 ${x.ia} 歲${x.days<=7?"・剩"+x.days+"天":""}`)).join(""):`<span class="s">近 30 天沒有人增齡</span>`}</div></div>
+    <div class="card kpi"><div class="l">本月生日（${t.getMonth()+1} 月）</div><div class="v">${bm.length}<span class="vu">人</span></div><div class="knames">${bm.length?bm.map(c=>nm(c,`${pd(c.birthday).getMonth()+1}/${pd(c.birthday).getDate()}`)).join(""):`<span class="s">本月沒有壽星</span>`}</div></div>`})()}
   </div>
   <div class="grid g2" style="margin-top:14px">
-    <div class="card"><div class="row"><h2 style="margin:0">本週提醒</h2><span class="sp"></span><a href="#reminders" class="btn sm ghost">全部 →</a></div>
-      ${rem7.length?rem7.slice(0,8).map(remItem).join(""):`<div class="empty" style="padding:24px">這 7 天沒有待辦 👍</div>`}</div>
+    <details class="card fold" ${(()=>{try{return localStorage.getItem("stark-fold-rem7")==="0"?"":"open"}catch(e){return "open"}})()} ontoggle="try{localStorage.setItem('stark-fold-rem7',this.open?'1':'0')}catch(e){}"><summary class="row"><h2 style="margin:0">本週提醒 <span class="fcount">${rem7.length} 件</span></h2><span class="sp"></span><a href="#reminders" class="btn sm ghost" onclick="event.stopPropagation()">全部 →</a><span class="fchev">▾</span></summary>
+      ${rem7.length?rem7.slice(0,8).map(remItem).join(""):`<div class="empty" style="padding:24px">這 7 天沒有待辦 👍</div>`}</details>
     <div class="grid" style="gap:14px;align-content:start">
       <div class="card"><h2>客戶階段</h2><div class="funnel">${st.map(x=>`<div><b>${x.n}</b><span>${x.s}</span></div>`).join("")}</div></div>
       <div class="card"><h2>保障缺口商機</h2><div class="hint" style="margin-bottom:8px">點一下直接列出名單</div>
