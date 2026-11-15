@@ -131,7 +131,8 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{outline:2px solid #bcd3ee;bo
 .ptbl tr.main td{background:#f1f3f1}
 .ptbl tr.click{cursor:pointer}.ptbl tr.click:hover td{background:#e8f5ec}
 .ptbl td.nm{text-align:left;font-weight:500}
-.ptbl td.g{color:#1f8a3c;font-weight:700;white-space:nowrap}
+.ptbl td.g{color:#1f8a3c;font-weight:700;word-break:break-word;overflow-wrap:anywhere;line-height:1.3}
+.pmedit{cursor:pointer}.pmedit:hover{background:#eaf6ee}
 .ptbl td.bf{font-size:12px;color:#1f8a3c;text-align:left;white-space:pre-line;min-width:110px}
 .ptbl .rd{color:#2fa84f;margin-right:6px}
 .ptbl tr.off td{opacity:.4}
@@ -319,6 +320,17 @@ function idCheck(v){
   let sum=Math.floor(n/10)+(n%10)*9;for(let i=1;i<9;i++)sum+=+v[i]*(9-i);sum+=+v[9];return sum%10===0;
 }
 function maskId(v){return v&&v.length>=6?v.slice(0,3)+"****"+v.slice(-3):(v||"")}
+const BANKS=["台灣銀行","土地銀行","合作金庫","第一銀行","華南銀行","彰化銀行","兆豐銀行","國泰世華","中國信託","台北富邦","玉山銀行","台新銀行","永豐銀行","元大銀行","凱基銀行","星展銀行","渣打銀行","聯邦銀行","遠東商銀","新光銀行","上海商銀","王道銀行","安泰銀行","將來銀行","LINE Bank","樂天銀行","中華郵政"];
+const PAY_TYPES=["銀行轉帳","信用卡轉帳","其他"];
+function parsePay(s){s=(s||"").trim();const m=/^(.*?)[（(](轉帳件?|卡扣件?)[）)]/.exec(s);
+  if(m)return {type:/卡扣/.test(m[2])?"信用卡轉帳":"銀行轉帳",bank:m[1].trim(),other:""};
+  if(/信用卡|卡扣/.test(s))return {type:"信用卡轉帳",bank:s.replace(/信用卡|卡扣件?|[（()）]/g,"").trim(),other:""};
+  if(/轉帳/.test(s))return {type:"銀行轉帳",bank:s.replace(/銀行轉帳|轉帳件?|[（()）]/g,"").trim(),other:""};
+  return {type:"其他",bank:"",other:s}}
+function composePay(type,bank,other){bank=(bank||"").trim();if(type==="銀行轉帳")return (bank||"銀行")+"（轉帳件）";if(type==="信用卡轉帳")return (bank||"信用卡")+"（卡扣件）";return (other||"").trim()||"自繳件"}
+function payFields(pm){const v=parsePay(pm);return `<label>扣款方式<select class="inp" name="payType">${PAY_TYPES.map(t=>`<option ${t===v.type?"selected":""}>${t}</option>`).join("")}</select></label>
+  <label>銀行 / 發卡銀行<input class="inp" name="payBank" list="banklist" value="${esc(v.bank)}" placeholder="例：台新銀行"><datalist id="banklist">${BANKS.map(b=>`<option value="${b}">`).join("")}</datalist></label>
+  <label>其他說明（選「其他」時）<input class="inp" name="payOther" value="${esc(v.other)}" placeholder="例：自繳件、業務收費"></label>`}
 function rocDate(s){const d=pd(s);return d?(d.getFullYear()-1911)+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0"):""}
 function rocBirth(s){const d=pd(s);return d?(d.getFullYear()-1911)+"."+(d.getMonth()+1)+"."+d.getDate():""}
 const FREQ_SHORT={12:"年繳",6:"半年",3:"季繳",1:"月繳",0:"躉繳"};
@@ -328,7 +340,7 @@ function policyGroups(ps){const g=[],map={};ps.forEach(p=>{const k=(p.policyNo||
 function sheetHtml(c,ps,opts){opts=opts||{};
   if(!ps.length)return "";
   return policyGroups(ps).map(g=>{const f=g.items.find(x=>!x.rider)||g.items[0];
-   return `<div class="psheet"><div class="phead"><span class="no">保 單 號 碼 ▷ ${esc(g.no||"（未填）")}</span><span class="hd">要保人 <i>▶</i> <b>${esc(f.holder||c.name||"")}</b></span><span class="pm">${esc(f.payMethod||"")}</span></div>
+   return `<div class="psheet"><div class="phead"><span class="no">保 單 號 碼 ▷ ${esc(g.no||"（未填）")}</span><span class="hd">要保人 <i>▶</i> <b>${esc(f.holder||c.name||"")}</b></span>${opts.check?`<span class="pm">${esc(f.payMethod||"")}</span>`:`<span class="pm pmedit" data-act="editPay" data-pid="${f.id}" title="點一下修改扣款方式">${esc(f.payMethod||"未填扣款方式")} <span style="color:#2fa84f">✎</span></span>`}</div>
    <div class="pwrap"><table class="ptbl"><colgroup>${opts.check?'<col style="width:34px">':""}<col style="width:30%"><col style="width:8%"><col style="width:7%"><col style="width:10%"><col style="width:8%"><col style="width:10%"><col style="width:7%"><col></colgroup><thead><tr>${opts.check?"<th></th>":""}<th style="text-align:left">商品</th><th>繳費年期</th><th>對象</th><th>投保日期</th><th>保額</th><th>下期保費</th><th>繳別</th><th>受益人</th></tr></thead><tbody>
    ${g.items.map(p=>`<tr class="${p.rider?"":"main"} ${opts.check?"":"click"} ${active(p)?"":"off"}" ${opts.check?"":`data-act="editPol" data-pid="${p.id}"`}>
      ${opts.check?`<td><input type="checkbox" class="scanchk" data-i="${p._i}" checked></td>`:""}
@@ -655,7 +667,8 @@ function polForm(p){
   const f=(k,n,t,ph)=>`<label>${n}<input class="inp" name="${k}" type="${t||"text"}" value="${esc(p[k])}" placeholder="${esc(ph||"")}"></label>`;
   const sel=(k,n,opts,vals)=>`<label>${n}<select class="inp" name="${k}">${opts.map((o,i)=>{const v=vals?vals[i]:o;return `<option value="${esc(v)}" ${String(p[k])===String(v)?"selected":""}>${o}</option>`}).join("")}</select></label>`;
   return `<form id="polForm"><h3>${p._new?"新增保單":"編輯保單"}</h3><div class="form">
-    ${f("policyNo","保單號碼")}${f("holder","要保人","text","空白＝本人")}<label>繳費方式<input class="inp" name="payMethod" list="pmlist" value="${esc(p.payMethod)}" placeholder="例：自繳件、國泰世華（卡扣件）"><datalist id="pmlist"><option value="自繳件"><option value="信用卡（卡扣件）"><option value="銀行（轉帳件）"><option value="業務收費"></datalist></label>
+    ${f("policyNo","保單號碼")}${f("holder","要保人","text","空白＝本人")}<span></span>
+    ${payFields(p.payMethod)}
     ${f("company","保險公司","text","例：國泰人壽")}${f("product","商品名稱","text")}${sel("rider","主約 / 附約",["主約","附約"],["0","1"])}
     ${sel("type","險種",PTYPES)}${f("target","對象","text","本人")}${sel("status","狀態",["有效","停效","繳清","終止"])}
     ${f("start","投保日期","date")}${f("payYears","繳費年期（年）","number","例：20")}${sel("freq","繳別",["年繳","半年繳","季繳","月繳","躉繳"],[12,6,3,1,0])}
@@ -950,6 +963,14 @@ document.addEventListener("click",async e=>{
     case "copyCard":copy(cardText());break;
     case "copyCov":copy(covSummary(M.c));break;
     case "gotoClaim":S.claimCid=M.c.id;closeModal();location.hash="claims";break;
+    case "editPay":{const base=M.c.policies.find(x=>x.id===el.dataset.pid);if(!base)break;const no=(base.policyNo||"").trim();
+      const grp=M.c.policies.filter(x=>no?x.policyNo===no:x.id===base.id);
+      const box=document.createElement("div");box.innerHTML=`<div class="mask"><div class="modal sm"><div class="mh"><b>修改扣款方式${no?"｜保單 "+esc(no):""}</b><button class="btn ghost x" data-x>✕</button></div>
+        <form class="mb" id="payForm"><div class="form" style="grid-template-columns:1fr">${payFields(base.payMethod)}</div><div class="hint" style="margin-top:8px">會套用到這張保單的主約與所有附約（共 ${grp.length} 項）</div>
+        <div class="row" style="margin-top:14px;justify-content:flex-end"><button type="button" class="btn" data-x>取消</button><button class="btn p" type="submit">儲存</button></div></form></div></div>`;
+      document.getElementById("modalRoot").appendChild(box);box.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>box.remove());
+      box.querySelector("#payForm").onsubmit=async ev=>{ev.preventDefault();const d=Object.fromEntries(new FormData(ev.target).entries());const pm=composePay(d.payType,d.payBank,d.payOther);
+        grp.forEach(x=>x.payMethod=pm);box.remove();await commitM();drawModal();toast("扣款方式已更新："+pm)};break}
     case "scanPol":openScan();break;
     case "report":{const c=M.c;const fam=c.family?S.clients.filter(x=>x.family===c.family):[];
       if(fam.length>1){const box=document.createElement("div");box.innerHTML=`<div class="mask"><div class="modal sm"><div class="mh"><b>產生保單健檢報表</b></div><div class="mb">要只做 ${esc(c.name)} 本人，還是 ${esc(c.family)} 全家（${fam.length} 人）？</div><div class="mf"><button class="btn" data-one>只有本人</button><button class="btn p" data-all>全家</button></div></div></div>`;document.getElementById("modalRoot").appendChild(box);
@@ -999,7 +1020,7 @@ document.addEventListener("submit",async e=>{
   }
   if(f.id==="polForm"){
     const p=M.editPol;const c={};COV.forEach(x=>{const v=fd["cov_"+x.k];if(v!==""&&v!=null)c[x.k]=num(v)});
-    const np={id:p.id,company:fd.company,product:fd.product,type:fd.type,policyNo:fd.policyNo,holder:fd.holder,status:fd.status,start:fd.start,payYears:fd.payYears,freq:+fd.freq,premium:fd.premium,payMethod:fd.payMethod,note:fd.note,cov:c,rider:fd.rider==="1",target:fd.target,sumText:fd.sumText,beneficiary:fd.beneficiary,currency:fd.currency,listPremium:fd.listPremium};
+    const np={id:p.id,company:fd.company,product:fd.product,type:fd.type,policyNo:fd.policyNo,holder:fd.holder,status:fd.status,start:fd.start,payYears:fd.payYears,freq:+fd.freq,premium:fd.premium,payMethod:composePay(fd.payType,fd.payBank,fd.payOther),note:fd.note,cov:c,rider:fd.rider==="1",target:fd.target,sumText:fd.sumText,beneficiary:fd.beneficiary,currency:fd.currency,listPremium:fd.listPremium};
     M.c.policies=M.c.policies||[];const i=M.c.policies.findIndex(x=>x.id===p.id);if(i>=0)M.c.policies[i]=np;else M.c.policies.push(np);
     M.editPol=null;await commitM();toast("保單已儲存");drawModal();
   }
