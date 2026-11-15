@@ -169,6 +169,16 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{outline:2px solid #bcd3ee;bo
 .rmon tr.rmh td{text-align:left;font-weight:900;font-size:15px;background:#fff;border-left:0;border-right:0}
 .rmon tr.rmr td,.rmon tr.rmr th{height:34px}
 .rmon .cal{display:inline-block;border:1px solid #d0493f;border-top:5px solid #d0493f;border-radius:3px;padding:0 5px;font-size:11px;background:#fff}
+.famgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.famcard{border:1.5px solid var(--line);border-radius:12px;padding:14px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.05)}
+.famcard.head{border-color:#2fa84f}.famcard.me{background:#f2faf4}
+.famcard .fn{font-size:20px;font-weight:900;color:#1f8a3c;text-decoration:underline;cursor:pointer}
+.famcard .fr{display:flex;justify-content:space-between;margin-top:8px;font-size:14px}
+.famcard .fs{font-size:12px;color:var(--muted);margin-top:4px}
+.famcard .fb{text-align:right;margin-top:6px}.famcard .fb .btn{color:var(--acc)}
+.famadd{display:flex;flex-direction:column;gap:8px;justify-content:center}.famadd .btn{justify-content:center;padding:12px}
+.scangrp{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:14px;background:#fcfdfc}
+.scangrp .sgh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
 .scanbox{border:2px dashed #b8c4d4;border-radius:12px;padding:22px;text-align:center;background:#f8fafc}
 .thumbs{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px}
 .thumbs img{width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
@@ -331,6 +341,15 @@ function composePay(type,bank,other){bank=(bank||"").trim();if(type==="銀行轉
 function payFields(pm){const v=parsePay(pm);return `<label>扣款方式<select class="inp" name="payType">${PAY_TYPES.map(t=>`<option ${t===v.type?"selected":""}>${t}</option>`).join("")}</select></label>
   <label>銀行 / 發卡銀行<input class="inp" name="payBank" list="banklist" value="${esc(v.bank)}" placeholder="例：台新銀行"><datalist id="banklist">${BANKS.map(b=>`<option value="${b}">`).join("")}</datalist></label>
   <label>其他說明（選「其他」時）<input class="inp" name="payOther" value="${esc(v.other)}" placeholder="例：自繳件、業務收費"></label>`}
+const REL_OPTS=["","戶長","配偶","子女","父母","兄弟姊妹","祖父母","孫子女","其他"];
+const REL_ORDER={"戶長":0,"本人/戶長":0,"配偶":1,"子女":2,"父母":3,"祖父母":4,"兄弟姊妹":5,"孫子女":6,"其他":7};
+function isHead(c){return c&&(c.relation==="戶長"||c.relation==="本人/戶長")}
+function relName(c){return c.relation==="本人/戶長"?"戶長":(c.relation||"成員")}
+function liveC(c){return M&&M.c&&c.id===M.c.id?M.c:c}
+function famMembers(fam){if(!fam)return [];const arr=S.clients.filter(x=>x.family===fam).map(liveC);if(M&&M.c&&M.c.family===fam&&!arr.some(x=>x.id===M.c.id))arr.push(M.c);
+  return arr.sort((a,b)=>((REL_ORDER[a.relation]??8)-(REL_ORDER[b.relation]??8))||((age(b.birthday)||0)-(age(a.birthday)||0)))}
+function famHead(fam){return famMembers(fam).find(isHead)||null}
+function avatar(c){const a=age(c.birthday);if(a!==""&&a<18)return "🧒";return c.gender==="女"?"👩":c.gender==="男"?"👨":"🙂"}
 function rocDate(s){const d=pd(s);return d?(d.getFullYear()-1911)+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0"):""}
 function rocBirth(s){const d=pd(s);return d?(d.getFullYear()-1911)+"."+(d.getMonth()+1)+"."+d.getDate():""}
 const FREQ_SHORT={12:"年繳",6:"半年",3:"季繳",1:"月繳",0:"躉繳"};
@@ -627,20 +646,40 @@ function applyId(){const sh=M&&M.showId;const d=document.getElementById("idDisp"
 function openClient(id,tab){const c=id?clone(cById(id)):{id:uid(),name:"",stage:"潛在",tags:[],policies:[],logs:[],services:[],isNew:true};M={c,tab:tab||(id?"pol":"info"),editPol:null,showId:false};drawModal()}
 function closeModal(){M=null;document.getElementById("modalRoot").innerHTML="";render()}
 function drawModal(){
-  const c=M.c;const tabs=[["info","基本資料"],["pol","保單 ("+(c.policies||[]).length+")"],["cov","保障總覽"],["log","互動紀錄"]];
+  const c=M.c;const tabs=[["info","基本資料"],["fam","家戶關係"],["pol","保單 ("+(c.policies||[]).length+")"],["cov","保障總覽"],["log","互動紀錄"]];
   const fam=c.family?S.clients.filter(x=>x.family===c.family&&x.id!==c.id):[];
-  const body={info:mInfo,pol:mPol,cov:mCov,log:mLog,svc:mSvc}[M.tab]();
+  const body={info:mInfo,fam:mFam,pol:mPol,cov:mCov,log:mLog,svc:mSvc}[M.tab]();
   document.getElementById("modalRoot").innerHTML=`<div class="mask" data-act="maskClose"><div class="modal">
     <div class="mh"><span class="av" style="width:44px;height:44px;font-size:16px">${esc((c.name||"新").slice(-2))}</span><div><div class="nm" style="font-size:18px">${esc(c.name||"新增客戶")}</div><div class="sub">${c.birthday?age(c.birthday)+" 歲・":""}${c.idNo?`<span id="idDisp" data-full="${esc(c.idNo)}" data-mask="${esc(maskId(c.idNo))}">${esc(maskId(c.idNo))}</span><button type="button" class="eye" data-act="toggleId" title="顯示 / 隱藏身分證字號">👁</button>・`:""}${esc(c.stage||"")}${c.family?"・🏠 "+esc(c.family):""}${!c.isNew?"・年繳保費 "+fmt(annualSum(c))+" 元":""}</div></div>
     ${c.phone&&!c.isNew?`<a class="btn sm x" href="tel:${esc(c.phone.replace(/[^\d+]/g,""))}">📞 撥打</a>`:""}<button class="btn ghost ${c.phone&&!c.isNew?"":"x"}" data-act="close">✕</button></div>
     ${c.isNew?"":`<div class="tabs">${tabs.map(t=>`<button class="${M.tab===t[0]?"on":""}" data-act="mtab" data-t="${t[0]}">${t[1]}</button>`).join("")}</div>`}
-    ${fam.length&&!c.isNew?`<div style="padding:10px 22px 0" class="row"><span class="sub">全家成員：</span>${fam.map(x=>`<button class="chip" data-act="switchClient" data-id="${x.id}">${esc(x.name)}${x.relation?"（"+esc(x.relation)+"）":""}</button>`).join("")}</div>`:""}
+    ${fam.length&&!c.isNew&&M.tab!=="fam"?`<div style="padding:10px 22px 0" class="row"><span class="sub">全家成員：</span>${fam.map(x=>`<button class="chip" data-act="switchClient" data-id="${x.id}">${esc(x.name)}${x.relation?"（"+esc(x.relation)+"）":""}</button>`).join("")}</div>`:""}
     <div class="mb">${body}</div></div></div>`;
   applyId();
 }
+function mFam(){
+  const c=M.c;
+  if(!c.family)return `<div class="empty"><b>${esc(c.name)} 還沒有加入家庭</b>建立家庭後，可以把配偶、子女等成員放在一起，全家保單一次看、一次出報表。
+    <div class="row" style="justify-content:center;margin-top:16px"><button class="btn p" data-act="famCreate">🏠 以 ${esc(c.name)} 為戶長建立家庭</button><button class="btn" data-act="famJoin">加入其他家庭</button></div></div>`;
+  const mem=famMembers(c.family);const head=mem.find(isHead);
+  const tot=mem.reduce((a,x)=>a+annualSum(x),0);
+  return `<div class="row" style="margin-bottom:12px"><div><b style="font-size:17px">🏠 ${esc(c.family)}</b><div class="sub">戶長：${head?esc(head.name):"<span style='color:var(--bad)'>尚未指定</span>"}・共 ${mem.length} 人・全家年繳保費 ${fmt(tot)} 元</div></div><span class="sp"></span><button class="btn" data-act="famRename">✎ 修改家庭名稱</button><button class="btn a" data-act="report">📄 全家健檢報表</button></div>
+  <div class="famgrid">${mem.map(x=>`<div class="famcard ${x.id===c.id?"me":""} ${isHead(x)?"head":""}">
+      <a class="fn" data-act="switchClient" data-id="${x.id}">${esc(x.name)}</a>
+      <div class="fr"><span>${avatar(x)} ${esc(relName(x))}</span><b>${age(x.birthday)!==""?age(x.birthday)+"歲":""}</b></div>
+      <div class="fs">保單 ${policyGroups((x.policies||[]).filter(active)).length} 張・年繳 ${fmt(annualSum(x))} 元</div>
+      <div class="fb"><button class="btn sm ghost" data-act="famMove" data-id="${x.id}">🔄 重新歸戶</button></div></div>`).join("")}
+    <div class="famadd"><button class="btn" data-act="famJoinOther">＋ 加入現有客戶</button><button class="btn" data-act="famNew">＋ 新增客戶</button></div></div>`;
+}
+function famDialog(title,inner,onOk){const box=document.createElement("div");box.innerHTML=`<div class="mask"><div class="modal sm"><div class="mh"><b>${title}</b><button class="btn ghost x" data-x>✕</button></div><form class="mb" id="famForm">${inner}<div class="row" style="margin-top:14px;justify-content:flex-end"><button type="button" class="btn" data-x>取消</button><button class="btn p" type="submit">確定</button></div></form></div></div>`;
+  document.getElementById("modalRoot").appendChild(box);box.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>box.remove());
+  box.querySelector("#famForm").onsubmit=async ev=>{ev.preventDefault();const d=Object.fromEntries(new FormData(ev.target).entries());box.remove();await onOk(d)};return box}
+function relSelect(v){return `<label class="sub">在家中身分<select class="inp" name="relation">${REL_OPTS.filter(Boolean).map(o=>`<option ${o===(v==="本人/戶長"?"戶長":v)?"selected":""}>${o}</option>`).join("")}</select></label>`}
+async function saveMember(x){if(M&&M.c&&x.id===M.c.id){await commitM()}else{await saveClient(clone(x))}}
+async function setHeadIfNeeded(fam,newHead){if(!isHead(newHead))return;for(const o of famMembers(fam)){if(o.id!==newHead.id&&isHead(o)){o.relation="其他";await saveMember(o)}}}
 function mInfo(){
   const c=M.c;const f=(k,n,t,ph)=>`<label>${n}<input class="inp" name="${k}" type="${t||"text"}" value="${esc(c[k])}" placeholder="${esc(ph||"")}"></label>`;
-  const sel=(k,n,opts)=>`<label>${n}<select class="inp" name="${k}">${opts.map(o=>`<option ${c[k]===o?"selected":""}>${o}</option>`).join("")}</select></label>`;
+  const sel=(k,n,opts)=>`<label>${n}<select class="inp" name="${k}">${opts.map(o=>`<option ${(c[k]===o||(o==="戶長"&&c[k]==="本人/戶長"))?"selected":""}>${o}</option>`).join("")}</select></label>`;
   const fams=[...new Set(S.clients.map(x=>x.family).filter(Boolean))];
   return `<form id="infoForm"><div class="form">
     ${f("name","姓名 *","text")}${sel("gender","性別",["","男","女"])}${f("birthday","生日","date")}
@@ -649,7 +688,7 @@ function mInfo(){
     ${f("job","職業","text","例：工程師")}${f("income","年收入（萬）","number")}${sel("stage","客戶階段",STAGES)}
     <div class="sec">家庭（同一個家庭名稱的客戶會整合在一起，方便看全家保單）</div>
     <label>家庭名稱<input class="inp" name="family" list="famlist" value="${esc(c.family)}" placeholder="例：王家"><datalist id="famlist">${fams.map(x=>`<option value="${esc(x)}">`).join("")}</datalist></label>
-    ${sel("relation","在家中身分",["","本人/戶長","配偶","子女","父母","兄弟姊妹","其他"])}${f("source","客戶來源","text","例：轉介紹、社群、陌開")}
+    ${sel("relation","在家中身分",REL_OPTS)}${f("source","客戶來源","text","例：轉介紹、社群、陌開")}
     <div class="sec">經營追蹤</div>
     ${f("lastContact","上次聯絡","date")}${f("nextFollow","下次追蹤日","date")}${f("followNote","追蹤事項","text","例：送建議書")}
     <label class="w3">標籤（用逗號分隔）<input class="inp" name="tags" value="${esc((c.tags||[]).join(", "))}" placeholder="例：VIP, 新手爸媽, 高資產"></label>
@@ -813,7 +852,7 @@ function openReport(members){
 
 /* ========== 拍照匯入保單 ========== */
 const SCAN_PROMPT=`你是台灣保險業務助理。附件（圖片或 PDF）是客戶的保單整理表、保單健檢報告、保單首頁或保單明細（可能多張或多頁）。請擷取所有保單，只回傳一個 JSON 物件，不要其他文字。格式：
-{"insured":"被保險人姓名","insuredBirth":"生日原文","company":"保險公司（可判斷才填）","policies":[{"policyNo":"保單號碼","holder":"要保人","payMethod":"繳費方式","items":[{"product":"商品名稱（含括號代碼）","rider":false,"payYears":20,"target":"本人","start":"1987-01-26","sumText":"95萬","premium":0,"listPremium":"","currency":"TWD","freq":"半年","beneficiary":"滿期:王小明\\n身故:王大明50%","type":"壽險","cov":{"life":95}}]}],"coverage":{}}
+{"insured":"被保險人姓名","insuredBirth":"生日原文","company":"保險公司（可判斷才填）","policies":[{"policyNo":"保單號碼","holder":"要保人","payMethod":"繳費方式","insured":"這張保單的被保險人","items":[{"insured":"這一項的被保險人（同保單可不同）","product":"商品名稱（含括號代碼）","rider":false,"payYears":20,"target":"本人","start":"1987-01-26","sumText":"95萬","premium":0,"listPremium":"","currency":"TWD","freq":"半年","beneficiary":"滿期:王小明\\n身故:王大明50%","type":"壽險","cov":{"life":95}}]}],"coverageByInsured":[{"insured":"姓名","coverage":{}}]}
 規則：
 1. 同一個保單號碼底下：主約 rider=false（通常第一列或標示●），附約 rider=true（標示○、名稱含「附約」）。
 2. start：民國年加 1911 轉成西元 YYYY-MM-DD（例 76/01/26 → 1987-01-26；112/07/11 → 2023-07-11）。
@@ -822,7 +861,7 @@ const SCAN_PROMPT=`你是台灣保險業務助理。附件（圖片或 PDF）是
 5. cov 把保額換算到對應保障：life 壽險身故(萬)、acc 意外身故失能(萬)、med 實支實付(萬/次)、hosp 住院日額(元/日)、ci 重大傷病/重疾(萬)、cancer 癌症一次金(萬)、dis 失能扶助(萬/月)、ltc 長照(萬/月)。對應不到（手術、儲蓄、豁免等）就給 {}。例：終身壽險 95萬 → {"life":95}；住院日額附約 600元 → {"hosp":600}；日額型住院醫療 1000元 → {"hosp":1000}；手術醫療 1000元 → {}。
 6. beneficiary 保留原文，多位受益人用 \\n 分行。payMethod 只保留方式與銀行名稱，例如「自繳件」「國泰世華（卡扣件）」「玉山銀行（轉帳件）」，不要輸出卡號、帳號或末四碼。
 7. currency：金額或保額有「美元/USD」填 "USD"，否則 "TWD"。freq 若為躉繳填 "躉繳"。listPremium：若圖片有「表定保費」就填數字，否則空字串。
-8. 若圖片包含「保障總覽」表格，把被保險人 insured 那一欄的數值原文（例如 "1,428.59萬"、"1,200元~1,800元"）填進 coverage，key 對照：${COVD.map(g=>g[1].map(i=>i[0]+"="+g[0]+"/"+i[1]).join("、")).join("、")}。沒有保障總覽就給 {}。
+8. 每張保單、每一項都要填被保險人姓名（insured），一份文件可能有全家多位被保險人，請逐一判斷。若圖片包含「保障總覽」表格，每位被保險人一欄，請放進 coverageByInsured（每位一筆），把該欄的數值原文（例如 "1,428.59萬"、"1,200元~1,800元"）填進 coverage，key 對照：${COVD.map(g=>g[1].map(i=>i[0]+"="+g[0]+"/"+i[1]).join("、")).join("、")}。沒有保障總覽就給空陣列 []。
 9. 看不清楚的欄位填空字串，不要猜。`;
 async function shrink(file){
   try{const bmp=await createImageBitmap(file);const k=Math.min(1,2000/Math.max(bmp.width,bmp.height));const cv=document.createElement("canvas");cv.width=Math.round(bmp.width*k);cv.height=Math.round(bmp.height*k);cv.getContext("2d").drawImage(bmp,0,0,cv.width,cv.height);
@@ -856,7 +895,7 @@ function scanErr(e){const m=String((e&&((e.code||"")+" "+(e.message||"")))||e);
   return "辨識失敗："+m.slice(0,160)}
 function openScan(){
   const box=document.createElement("div");document.getElementById("modalRoot").appendChild(box);
-  let files=[],data=null,flat=[];
+  let files=[],data=null,flat=[],groups=[];
   const close=()=>box.remove();
   const draw=(state,msg)=>{
     let body="";
@@ -866,10 +905,15 @@ function openScan(){
       ${state==="busy"?`<div class="banner" style="margin-top:12px">🔍 AI 辨識中，約 10～40 秒，請稍候…</div>`:""}${msg?`<div class="banner err" style="margin-top:12px">${esc(msg)}</div>`:""}
       <div class="hint" style="margin-top:10px">照片／PDF 只用來辨識，不會存進系統。辨識結果會先讓你確認，勾選後才會匯入。</div>`;
     if(state==="review"){
-      const ins=(data.insured||"").trim();
-      body=`${ins&&ins!==M.c.name?`<div class="banner">⚠ 照片上的被保險人是「${esc(ins)}」，目前客戶是「${esc(M.c.name)}」，請確認沒有放錯客戶。</div>`:""}
-      <div class="insh"><span>被保險人:</span><b>${esc(ins||M.c.name)}</b>${data.insuredBirth?`<span>🎂 ${esc(data.insuredBirth)}</span>`:""}<span class="hint" style="margin-left:auto">共辨識 ${flat.length} 項，取消勾選就不匯入；險種可在這裡修正</span></div>
-      ${sheetHtml(M.c,flat,{check:true})}<div class="hint">辨識結果可能有誤，匯入後點該列即可修改。同保單號碼＋同商品名稱的舊資料會被更新。</div>`;
+      const mem=M.c.family?famMembers(M.c.family):[M.c];
+      body=`<div class="banner" style="background:#eef6ff;border-color:#c9def5;color:#1f4f80">共辨識 ${groups.length} 位被保險人、${flat.length} 項保單。系統已依姓名對應到${M.c.family?"「"+esc(M.c.family)+"」的成員":"客戶"}，請確認每位要匯入到誰。</div>
+      ${groups.map((g,gi)=>`<div class="scangrp"><div class="sgh"><span>被保險人:</span><b style="background:#fff36b;padding:2px 10px;font-size:16px">${esc(g.name||"（未辨識）")}</b><span class="sub">${g.items.length} 項</span><span class="sp"></span>
+        <label class="sub">匯入到 <select class="inp scantarget" data-g="${gi}" style="width:auto;display:inline-block">
+          ${mem.map(x=>`<option value="${x.id}" ${g.target===x.id?"selected":""}>${esc(x.name)}（${esc(relName(x))}${x.id===M.c.id?"・目前客戶":""}）</option>`).join("")}
+          ${S.clients.filter(x=>!mem.some(m=>m.id===x.id)&&x.name===g.name).map(x=>`<option value="${x.id}" ${g.target===x.id?"selected":""}>${esc(x.name)}（${x.family?esc(x.family):"未分家庭"}）</option>`).join("")}
+          <option value="__new" ${g.target==="__new"?"selected":""}>＋ 新增「${esc(g.name||"新成員")}」為家庭成員</option><option value="__skip" ${g.target==="__skip"?"selected":""}>不匯入</option></select></label></div>
+        ${sheetHtml(M.c,g.items,{check:true})}${g.cov?`<div class="hint">＋ 保障總覽明細 ${Object.keys(g.cov).length} 項</div>`:""}</div>`).join("")}
+      <div class="hint">辨識結果可能有誤，匯入後點該列即可修改。同保單號碼＋同商品名稱的舊資料會被更新。</div>`;
     }
     box.innerHTML=`<div class="mask"><div class="modal" style="max-width:980px"><div class="mh"><b>📷 拍照／PDF 匯入保單</b><button class="btn ghost x" data-x>✕</button></div><div class="mb">${body}</div>
       <div class="mf">${state==="review"?`<button class="btn" data-again>重新選照片</button><button class="btn p" data-import>匯入勾選的保單</button>`:`<button class="btn" data-x>取消</button><button class="btn p" data-go ${files.length&&state!=="busy"?"":"disabled"}>${state==="busy"?"辨識中…":"開始辨識"}</button>`}</div></div></div>`;
@@ -880,22 +924,37 @@ function openScan(){
       try{const blobs=[];const direct=!!(window.StarkAI&&typeof getCfg==="function"&&getCfg());for(const x of files){if(x.pdf){if(direct)blobs.push(x.f.type==="application/pdf"?x.f:new Blob([x.f],{type:"application/pdf"}));else for(const b of await pdfToImages(x.f))blobs.push(b)}else blobs.push(await shrink(x.f))}
         data=await aiExtract(blobs);
         flat=[];(data.policies||[]).forEach(pp=>(pp.items||[]).forEach(it=>{flat.push(Object.assign({},it,{_i:flat.length,id:"tmp"+flat.length,policyNo:pp.policyNo||"",holder:pp.holder||"",payMethod:pp.payMethod||"",freq:({"年":12,"年繳":12,"半年":6,"半年繳":6,"季":3,"季繳":3,"月":1,"月繳":1,"躉繳":0,"躉":0})[it.freq]??12,status:"有效"}))}));
-        if(!flat.length&&!(data.coverage&&Object.keys(data.coverage).length))throw new Error("JSON: 沒有找到保單");
+        flat.forEach((it,i)=>{const pp=(data.policies||[]).find(q=>(q.items||[]).length&&q.policyNo===it.policyNo)||{};it.insured=String(it.insured||pp.insured||data.insured||"").trim()});
+        const covs=Array.isArray(data.coverageByInsured)?data.coverageByInsured.slice():[];if(data.coverage&&typeof data.coverage==="object"&&Object.keys(data.coverage).length)covs.push({insured:data.insured||"",coverage:data.coverage});
+        const gm={};groups=[];const addG=n=>{if(!gm[n]){gm[n]={name:n,items:[],cov:null};groups.push(gm[n])}return gm[n]};
+        flat.forEach(it=>addG(it.insured).items.push(it));covs.forEach(cv=>{if(cv&&cv.coverage&&Object.keys(cv.coverage).length){const g=addG(String(cv.insured||"").trim());g.cov=Object.assign(g.cov||{},cv.coverage)}});
+        if(!groups.length)throw new Error("JSON: 沒有找到保單");
+        const mem=M.c.family?famMembers(M.c.family):[M.c];
+        groups.forEach(g=>{const m=mem.find(x=>x.name===g.name)||S.clients.find(x=>x.name===g.name);g.target=m?m.id:((groups.length===1||!g.name)?M.c.id:"__new")});
         draw("review");
       }catch(e){draw("pick",scanErr(e))}
     };
     const ag=box.querySelector("[data-again]");if(ag)ag.onclick=()=>{files=[];draw("pick")};
     const im=box.querySelector("[data-import]");if(im)im.onclick=async()=>{
-      const on=[...box.querySelectorAll(".scanchk")].filter(x=>x.checked).map(x=>+x.dataset.i);
+      const on=new Set([...box.querySelectorAll(".scanchk")].filter(x=>x.checked).map(x=>+x.dataset.i));
       box.querySelectorAll(".scantype").forEach(sel=>{flat[+sel.dataset.i].type=sel.value});
-      if(!on.length){toast("沒有勾選任何保單");return}
-      M.c.policies=M.c.policies||[];let added=0,upd=0;
-      on.forEach(i=>{const it=flat[i];const cov={};Object.keys(it.cov||{}).forEach(k=>{if(COV.some(x=>x.k===k)&&num(it.cov[k])>0)cov[k]=num(it.cov[k])});
+      box.querySelectorAll(".scantarget").forEach(sel=>{groups[+sel.dataset.g].target=sel.value});
+      if(!on.size&&!groups.some(g=>g.cov&&g.target!=="__skip")){toast("沒有勾選任何保單");return}
+      let added=0,upd=0,cd=0;const touched=new Map();const names=[];
+      const ensureFam=async()=>{if(!M.c.family){M.c.family=M.c.name+"家";M.c.relation=M.c.relation||"戶長"}};
+      for(const g of groups){if(g.target==="__skip")continue;let tgt;
+        if(g.target==="__new"){await ensureFam();tgt={id:uid(),type:"client",name:g.name||"新成員",family:M.c.family,relation:"其他",stage:"已成交",tags:[],policies:[],logs:[],services:[]};}
+        else tgt=g.target===M.c.id?M.c:(touched.get(g.target)||clone(cById(g.target)));
+        if(!tgt)continue;touched.set(tgt.id,tgt);tgt.policies=tgt.policies||[];names.push(tgt.name);
+        g.items.filter(it=>on.has(it._i)).forEach(it=>{const cov={};Object.keys(it.cov||{}).forEach(k=>{if(COV.some(x=>x.k===k)&&num(it.cov[k])>0)cov[k]=num(it.cov[k])});
         const np={company:data.company||"",product:it.product||"",type:PTYPES.includes(it.type)?it.type:"其他",policyNo:it.policyNo,holder:it.holder,payMethod:it.payMethod,rider:!!it.rider,target:it.target||"本人",start:/^\d{4}-\d{2}-\d{2}$/.test(it.start||"")?it.start:"",payYears:num(it.payYears)||"",freq:it.freq,premium:it.premium===""||it.premium==null?"":num(it.premium),sumText:it.sumText||"",beneficiary:it.beneficiary||"",status:"有效",cov,note:"",currency:it.currency==="USD"?"USD":"TWD",listPremium:it.listPremium===""||it.listPremium==null?"":num(it.listPremium)};
-        const ex=M.c.policies.find(p=>p.policyNo&&p.policyNo===np.policyNo&&p.product===np.product);
-        if(ex){Object.assign(ex,np);upd++}else{M.c.policies.push(Object.assign({id:"p"+uid()},np));added++}});
-      let cd=0;if(data.coverage&&typeof data.coverage==="object"){M.c.covDetail=M.c.covDetail||{};Object.keys(data.coverage).forEach(k=>{const v=String(data.coverage[k]||"").trim();if(v&&COVD_KEYS.includes(k)){M.c.covDetail[k]=v;cd++}})}
-      await commitM();close();M.tab="pol";drawModal();toast(`已匯入 ${added} 筆${upd?`、更新 ${upd} 筆`:""}${cd?`、保障明細 ${cd} 項`:""}`);
+        const ex=tgt.policies.find(p=>p.policyNo&&p.policyNo===np.policyNo&&p.product===np.product);
+        if(ex){Object.assign(ex,np);upd++}else{tgt.policies.push(Object.assign({id:"p"+uid()},np));added++}});
+        if(g.cov){tgt.covDetail=tgt.covDetail||{};Object.keys(g.cov).forEach(k=>{const v=String(g.cov[k]||"").trim();if(v&&COVD_KEYS.includes(k)){tgt.covDetail[k]=v;cd++}})}
+      }
+      for(const [id,t] of touched){if(id!==M.c.id)await saveClient(t)}
+      await commitM();close();M.tab=M.c.family&&touched.size>1?"fam":"pol";drawModal();
+      toast(`已匯入 ${added} 筆${upd?`、更新 ${upd} 筆`:""}${cd?`、保障明細 ${cd} 項`:""}｜${[...new Set(names)].join("、")}`);
     };
   };
   draw("pick");
@@ -971,6 +1030,16 @@ document.addEventListener("click",async e=>{
       document.getElementById("modalRoot").appendChild(box);box.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>box.remove());
       box.querySelector("#payForm").onsubmit=async ev=>{ev.preventDefault();const d=Object.fromEntries(new FormData(ev.target).entries());const pm=composePay(d.payType,d.payBank,d.payOther);
         grp.forEach(x=>x.payMethod=pm);box.remove();await commitM();drawModal();toast("扣款方式已更新："+pm)};break}
+    case "famCreate":{M.c.family=M.c.name+"家";M.c.relation="戶長";await commitM();drawModal();toast("已建立「"+M.c.family+"」");break}
+    case "famRename":{const old=M.c.family;famDialog("修改家庭名稱",`<input class="inp" name="name" value="${esc(old)}">`,async d=>{const nn=(d.name||"").trim();if(!nn||nn===old)return;for(const x of famMembers(old)){x.family=nn;await saveMember(x)}drawModal();toast("家庭名稱已改為「"+nn+"」")});break}
+    case "famJoin":{const fams=[...new Set(S.clients.map(x=>x.family).filter(Boolean))];if(!fams.length){toast("目前還沒有其他家庭");break}
+      famDialog("加入其他家庭",`<label class="sub">家庭<select class="inp" name="fam">${fams.map(f=>`<option>${esc(f)}</option>`).join("")}</select></label>${relSelect("其他")}`,async d=>{M.c.family=d.fam;M.c.relation=d.relation;await setHeadIfNeeded(d.fam,M.c);await commitM();drawModal()});break}
+    case "famJoinOther":{const fam=M.c.family;const cand=S.clients.filter(x=>x.family!==fam&&x.id!==M.c.id).sort((a,b)=>(a.name||"").localeCompare(b.name||"","zh-Hant"));if(!cand.length){toast("沒有可加入的客戶");break}
+      famDialog("加入現有客戶到「"+esc(fam)+"」",`<label class="sub">客戶<select class="inp" name="cid">${cand.map(x=>`<option value="${x.id}">${esc(x.name)}${x.family?"（目前在 "+esc(x.family)+"）":""}</option>`).join("")}</select></label>${relSelect("子女")}`,async d=>{const x=cById(d.cid);if(!x)return;const y=clone(x);y.family=fam;y.relation=d.relation;await setHeadIfNeeded(fam,y);await saveClient(y);drawModal();toast(y.name+" 已加入 "+fam)});break}
+    case "famNew":{const fam=M.c.family;M={c:{id:uid(),name:"",stage:"已成交",tags:[],policies:[],logs:[],services:[],isNew:true,family:fam,relation:"子女",address:M.c.address||""},tab:"info",editPol:null,showId:false};drawModal();break}
+    case "famMove":{const x=liveC(cById(el.dataset.id)||M.c);const fams=[...new Set(S.clients.map(y=>y.family).filter(Boolean))];
+      famDialog("重新歸戶｜"+esc(x.name),`<label class="sub">歸到哪個家庭<select class="inp" name="fam">${fams.map(f=>`<option ${f===x.family?"selected":""}>${esc(f)}</option>`).join("")}<option value="__new">＋ 以 ${esc(x.name)} 為戶長另立新家庭</option><option value="__none">移出家庭（獨立）</option></select></label>${relSelect(x.relation||"其他")}`,
+        async d=>{if(d.fam==="__none"){x.family="";x.relation=""}else if(d.fam==="__new"){x.family=x.name+"家";x.relation="戶長"}else{x.family=d.fam;x.relation=d.relation;await setHeadIfNeeded(d.fam,x)}await saveMember(x);drawModal();toast(x.name+" 已更新歸戶")});break}
     case "scanPol":openScan();break;
     case "report":{const c=M.c;const fam=c.family?S.clients.filter(x=>x.family===c.family):[];
       if(fam.length>1){const box=document.createElement("div");box.innerHTML=`<div class="mask"><div class="modal sm"><div class="mh"><b>產生保單健檢報表</b></div><div class="mb">要只做 ${esc(c.name)} 本人，還是 ${esc(c.family)} 全家（${fam.length} 人）？</div><div class="mf"><button class="btn" data-one>只有本人</button><button class="btn p" data-all>全家</button></div></div></div>`;document.getElementById("modalRoot").appendChild(box);
