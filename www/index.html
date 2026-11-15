@@ -494,6 +494,9 @@ function watchApplications(){let first=true,seen=new Set();
     const pend=S.apps.filter(a=>a.status==="pending");
     if(!first)pend.filter(a=>!seen.has(a.uid)).forEach(a=>{toast(`🔔 新的加入申請：${a.name||a.email}，請到「帳號管理」覆核`);try{if(window.Notification&&Notification.permission==="granted")new Notification("史塔克CRM：新的加入申請",{body:(a.name||"")+" "+(a.email||"")})}catch(e){}});
     pend.forEach(a=>seen.add(a.uid));first=false;if(!M)render()},e=>{S.appsErr=e.code||e.message;if(!M)render()});
+  let rFirst=true;const rSeen=new Set();
+  FB.fs.collection("resetRequests").onSnapshot(snap=>{S.resets=snap.docs.map(d=>Object.assign({id:d.id},d.data()));const pend=S.resets.filter(a=>a.status==="pending");
+    if(!rFirst)pend.filter(a=>!rSeen.has(a.id)).forEach(a=>toast(`🔑 ${a.name||a.email} 申請重設密碼，請到「帳號管理」覆核`));pend.forEach(a=>rSeen.add(a.id));rFirst=false;if(!M)render()},()=>{});
   FB.fs.collection("members").onSnapshot(snap=>{S.members={};snap.docs.forEach(d=>S.members[d.id]=d.data());if(!M&&S.view==="admin")render()},()=>{});
   FB.fs.collection("codes").onSnapshot(snap=>{S.codes={};snap.docs.forEach(d=>S.codes[d.id]=d.data());if(!M&&S.view==="admin")render()},()=>{})}
 function vGate(){const g=S.gate||{state:"loading"},a=g.app||{};const out=`<button class="btn ghost sm" data-act="logout" style="margin-top:14px">登出（${esc(S.email||"")}）</button>`;
@@ -522,7 +525,15 @@ function vAdmin(){if(!S.isAdmin)return `<div class="empty">只有管理員可以
   ${S.appsErr?`<div class="banner err">讀取申請失敗（${esc(S.appsErr)}）：請確認 Firebase 的 Firestore 規則已更新。</div>`:""}
   ${pend.length?`<div class="banner" style="background:#fff4e5;border-color:#f7d9a8;color:#8a4b00">🔔 有 ${pend.length} 件新的加入申請等待覆核</div>`:""}
   <div class="card"><div class="pwrap"><table class="tbl"><thead><tr><th>申請人</th><th>聯絡</th><th>備註</th><th>申請時間</th><th>狀態</th><th></th></tr></thead><tbody>${apps.length?apps.map(row).join(""):`<tr><td colspan="6" class="empty">目前沒有申請</td></tr>`}</tbody></table></div></div>
-  <div class="hint" style="margin-top:8px">確認碼只有你看得到；把確認碼用 LINE 或簡訊傳給申請人，對方在登入後的開通畫面輸入即可。</div>`}
+  <div class="hint" style="margin-top:8px">確認碼只有你看得到；把確認碼用 LINE 或簡訊傳給申請人，對方在登入後的開通畫面輸入即可。</div>
+  ${(()=>{const rs=(S.resets||[]).slice().sort((x,y)=>String(y.createdAt||"").localeCompare(String(x.createdAt||"")));const rp=rs.filter(r=>r.status==="pending").length;
+    const lab={pending:["待覆核","background:#eef6ff;color:#1f4f80"],approved:["已核准・待輸入確認碼","background:#fff4e5;color:#b45309"],used:["已寄出重設信",""],rejected:["未通過",""]};
+    return `<h2 style="margin:22px 0 8px">🔑 密碼重設申請</h2>${rp?`<div class="banner" style="background:#fff4e5;border-color:#f7d9a8;color:#8a4b00">有 ${rp} 件重設密碼申請等待覆核</div>`:""}
+    <div class="card"><div class="pwrap"><table class="tbl"><thead><tr><th>申請人</th><th>手機</th><th>申請時間</th><th>狀態</th><th></th></tr></thead><tbody>${rs.length?rs.slice(0,30).map(r=>{const [t,c]=lab[r.status]||[r.status,""];const known=Object.values(S.members||{}).some(m=>String(m.email||"").toLowerCase()===r.email)||(S.apps||[]).some(a=>String(a.email||"").toLowerCase()===r.email);
+      return `<tr><td><b>${esc(r.name||"")}</b><div class="sub">${esc(r.email||"")}${known?"":` <span class="tag r">非系統帳號</span>`}</div></td><td>${esc(r.phone||"")}</td><td class="sub">${esc(String(r.createdAt||"").slice(0,16).replace("T"," "))}</td>
+      <td><span class="tag" style="${c}">${t}</span>${r.status==="approved"&&S.rcodes&&S.rcodes[r.id]?`<div style="margin-top:4px;font:700 16px monospace;letter-spacing:3px">${esc(S.rcodes[r.id])}</div>`:""}</td>
+      <td style="white-space:nowrap">${r.status==="pending"||r.status==="approved"?`<button class="btn sm p" data-act="rstApprove" data-id="${r.id}">${r.status==="approved"?"重新產生確認碼":"核准並產生確認碼"}</button><button class="btn sm ghost" data-act="rstReject" data-id="${r.id}">不通過</button>`:""}</td></tr>`}).join(""):`<tr><td colspan="5" class="empty">目前沒有申請</td></tr>`}</tbody></table></div></div>
+    <div class="hint" style="margin-top:8px">對方輸入正確確認碼後，系統會寄 Firebase 官方的重設密碼信到他的 Email，由他自己設定新密碼（你不會知道他的密碼）。確認碼只在產生當下顯示，請立刻傳給對方。</div>`})()}`}
 async function admAction(a,uid){const ap=(S.apps||[]).find(x=>x.uid===uid)||{};
   if(a==="admApprove"){const code=genCode();await FB.fs.collection("codes").doc(uid).set({code,email:ap.email||"",createdAt:new Date().toISOString()});
     await FB.fs.collection("applications").doc(uid).update({status:"approved",approvedAt:new Date().toISOString()});
@@ -570,6 +581,26 @@ const firebaseConfig = {
   <div class="hint" style="margin-top:14px;text-align:center">還沒有 Firebase？照著說明文件的步驟開一個（免費，約 10 分鐘）。</div>
   <button class="btn ghost" style="width:100%;justify-content:center;margin-top:6px" data-act="useLocal">先用本機模式（資料只存在這台裝置）</button></div></div>`;
 }
+/* ========== 忘記密碼：申請 → 管理員核准給確認碼 → 輸入確認碼後寄出重設信 ========== */
+function sha256(s){const K=[],H=[];let n=2,c=0;const isP=x=>{for(let i=2;i*i<=x;i++)if(x%i===0)return false;return true},fr=x=>(x-Math.floor(x))*4294967296|0;
+  while(c<64){if(isP(n)){if(c<8)H[c]=fr(Math.pow(n,1/2));K[c]=fr(Math.pow(n,1/3));c++}n++}
+  const b=unescape(encodeURIComponent(s)),w=[],l=b.length*8;for(let i=0;i<b.length;i++)w[i>>2]|=b.charCodeAt(i)<<(24-(i%4)*8);w[l>>5]|=0x80<<(24-l%32);w[((l+64>>9)<<4)+15]=l;
+  const h=H.slice();for(let j=0;j<w.length;j+=16){const W=[];let [a,b2,c2,d,e,f,g,hh]=h;
+    for(let i=0;i<64;i++){if(i<16)W[i]=w[j+i]|0;else{const x=W[i-15],y=W[i-2];W[i]=(((x>>>7|x<<25)^(x>>>18|x<<14)^(x>>>3))+W[i-7]+((y>>>17|y<<15)^(y>>>19|y<<13)^(y>>>10))+W[i-16])|0}
+      const t1=hh+((e>>>6|e<<26)^(e>>>11|e<<21)^(e>>>25|e<<7))+((e&f)^(~e&g))+K[i]+W[i]|0,t2=((a>>>2|a<<30)^(a>>>13|a<<19)^(a>>>22|a<<10))+((a&b2)^(a&c2)^(b2&c2))|0;
+      hh=g;g=f;f=e;e=d+t1|0;d=c2;c2=b2;b2=a;a=t1+t2|0}
+    h[0]=h[0]+a|0;h[1]=h[1]+b2|0;h[2]=h[2]+c2|0;h[3]=h[3]+d|0;h[4]=h[4]+e|0;h[5]=h[5]+f|0;h[6]=h[6]+g|0;h[7]=h[7]+hh|0}
+  return h.map(x=>(x>>>0).toString(16).padStart(8,"0")).join("")}
+function rstLoad(){try{return JSON.parse(lsGet("stark-reset")||"null")}catch(e){return null}}
+function vReset(){const r=rstLoad();const st=S.rst||{};
+  const head=`<div class="auth"><div class="card"><div class="logo">STARK</div><h1>史塔克客戶管理系統</h1><div class="sub" style="margin-bottom:16px">忘記密碼</div>${S.authErr?`<div class="banner err">${esc(S.authErr)}</div>`:""}`;
+  const foot=`<div class="row" style="justify-content:space-between;margin-top:14px"><button class="btn ghost sm" data-act="rstBack">← 回登入</button>${r?`<button class="btn ghost sm" data-act="rstCancel">取消這次申請</button>`:""}</div></div></div>`;
+  if(st.done)return head+`<div class="banner" style="background:#f3fbf5;border-color:#cfe9d6;color:#1d6b35">✅ 確認碼正確！重設密碼信已寄到 <b>${esc(st.done)}</b>，請打開信中的連結設定新密碼，再回來登入。</div><div class="hint">沒收到請檢查垃圾郵件匣。</div>`+foot;
+  if(!r)return head+`<div class="sub" style="margin-bottom:12px">送出申請後，管理員會給你一組確認碼；輸入確認碼後即可開始重設密碼。</div>
+    <form id="rstForm" class="grid" style="gap:10px"><input class="inp" name="email" type="email" placeholder="登入用的 Email" required value="${esc(st.email||"")}"><input class="inp" name="name" placeholder="姓名" required><input class="inp" name="phone" placeholder="手機" required>
+    <button class="btn p" style="justify-content:center" type="submit">送出重設申請</button></form>`+foot;
+  return head+`<div class="banner" style="background:#eef6ff;border-color:#c9def5;color:#1f4f80">📨 已送出重設申請（${esc(r.email)}），請向管理員索取確認碼。</div>
+    <form id="rstCodeForm" class="grid" style="gap:10px;margin-top:12px"><input class="inp" name="code" placeholder="輸入 6 碼確認碼" maxlength="8" style="text-align:center;font-size:22px;letter-spacing:6px;text-transform:uppercase" required><button class="btn p" style="justify-content:center" type="submit">確認並開始重設密碼</button></form>`+foot}
 function vLogin(){
   const reg=S.authMode==="reg";
   return `<div class="auth"><div class="card"><div class="logo">STARK</div><h1>史塔克客戶管理系統</h1><div class="sub" style="margin-bottom:18px">Stark Insurance CRM｜${reg?"建立帳號":"登入"}</div>
@@ -624,19 +655,19 @@ function filtered(){
 /* ========== 渲染 ========== */
 function render(){
   const nav=document.getElementById("nav");
-  const pendN=S.isAdmin?(S.apps||[]).filter(a=>a.status==="pending"&&!(S.members||{})[a.uid]).length:0;
+  const pendN=S.isAdmin?(S.apps||[]).filter(a=>a.status==="pending"&&!(S.members||{})[a.uid]).length+(S.resets||[]).filter(a=>a.status==="pending").length:0;
   nav.innerHTML=VIEWS.filter(v=>v.id!=="admin"||S.isAdmin).map(v=>`<a href="#${v.id}" class="${S.view===v.id?"on":""}"><span class="ic">${v.ic}</span>${v.n}${v.id==="admin"&&pendN?`<span class="nbadge">${pendN}</span>`:""}</a>`).join("");
   document.getElementById("brandSub").textContent=S.profile.agent?"Stark Insurance CRM｜"+S.profile.agent:"Stark Insurance CRM";
   const m=document.getElementById("main");
   document.body.classList.toggle("gate",S.mode==="setup"||S.mode==="login"||S.mode==="gate");
   if(S.mode==="gate"){m.innerHTML=vGate();return}
   if(S.mode==="setup"){m.innerHTML=vSetupCloud();return}
-  if(S.mode==="login"){m.innerHTML=vLogin();return}
+  if(S.mode==="login"){m.innerHTML=S.authMode==="reset"?vReset():vLogin();return}
   if(S.mode==="loading"||(S.mode==="cloud"&&!S.loaded)){m.innerHTML=`<div class="empty"><b>載入中…</b>正在讀取你的客戶資料</div>`;return}
   const banner=S.mode==="local"?`<div class="banner">💾 目前為<b>本機模式</b>：資料只存在這台裝置。到「設定」可以改用雲端同步，或匯出備份。</div>`:"";
   const fn={dashboard:vDash,clients:vClients,reminders:vRem,claims:vClaims,services:vSvc,ecard:vCard,setup:vSetup,products:vProducts,admin:vAdmin}[S.view]||vDash;
-  const pendN2=S.isAdmin&&S.view!=="admin"?(S.apps||[]).filter(a=>a.status==="pending"&&!(S.members||{})[a.uid]).length:0;
-  m.innerHTML=banner+(pendN2?`<a href="#admin" class="banner" style="display:block;background:#fff4e5;border-color:#f7d9a8;color:#8a4b00;text-decoration:none">🔔 有 ${pendN2} 件新的加入申請等待你覆核，點這裡處理 ›</a>`:"")+fn();
+  const pendN2=S.isAdmin&&S.view!=="admin"?(S.apps||[]).filter(a=>a.status==="pending"&&!(S.members||{})[a.uid]).length+(S.resets||[]).filter(a=>a.status==="pending").length:0;
+  m.innerHTML=banner+(pendN2?`<a href="#admin" class="banner" style="display:block;background:#fff4e5;border-color:#f7d9a8;color:#8a4b00;text-decoration:none">🔔 有 ${pendN2} 件申請（加入／重設密碼）等待你覆核，點這裡處理 ›</a>`:"")+fn();
 }
 function vDash(){
   const cs=S.clients;const pols=cs.flatMap(c=>(c.policies||[]).filter(active));
@@ -1507,9 +1538,16 @@ document.addEventListener("click",async e=>{
     case "useLocal":lsSet(MODE_KEY,"local");initStore();break;
     case "toCloud":lsSet(MODE_KEY,null);location.reload();break;
     case "authToggle":S.authMode=S.authMode==="reg"?"":"reg";S.authErr="";render();break;
-    case "resetPw":{const em=(document.querySelector("#loginForm [name=email]")||{}).value;if(!em){S.authErr="請先輸入 Email，再按忘記密碼";render();break}
-      try{await FB.auth.sendPasswordResetEmail(em);toast("已寄出重設密碼信")}catch(err){S.authErr=AUTH_ERR[err.code]||err.message;render()}break}
+    case "resetPw":{const em=((document.querySelector("#loginForm [name=email]")||{}).value||"").trim();
+      if(em.toLowerCase()===ADMIN_EMAIL){try{await FB.auth.sendPasswordResetEmail(em);toast("已寄出重設密碼信")}catch(err){S.authErr=AUTH_ERR[err.code]||err.message;render()}break}
+      S.authMode="reset";S.authErr="";S.rst={email:em};render();break}
+    case "rstBack":S.authMode="";S.authErr="";S.rst=null;render();break;
+    case "rstCancel":lsSet("stark-reset",null);S.rst=null;S.authErr="";render();break;
     case "logout":await FB.auth.signOut();location.hash="dashboard";break;
+    case "rstApprove":{const r=(S.resets||[]).find(x=>x.id===el.dataset.id);if(!r)break;const code=genCode();
+      try{await FB.fs.collection("resetRequests").doc(r.id).update({status:"approved",codeHash:sha256(code+"|"+r.id),approvedAt:new Date().toISOString()});S.rcodes=S.rcodes||{};S.rcodes[r.id]=code;
+        openText("重設密碼確認碼",`${r.name||""} 您好，您的「史塔克客戶管理系統」重設密碼申請已核准。\n請在 App 的「忘記密碼」畫面輸入確認碼：${code}\n輸入後系統會寄重設密碼信到 ${r.email}，請點信中連結設定新密碼。`,false)}catch(err){toast("操作失敗："+(err.code||err.message))}break}
+    case "rstReject":try{await FB.fs.collection("resetRequests").doc(el.dataset.id).update({status:"rejected"});toast("已設為不通過")}catch(err){toast("操作失敗："+(err.code||err.message))}break;
     case "admApprove":case "admCopy":case "admReject":case "admDisable":case "admEnable":try{await admAction(a,el.dataset.uid)}catch(err){toast("操作失敗："+(err.code||err.message))}break;
     case "reapply":await FB.fs.collection("applications").doc(S.uid).update({status:"pending",createdAt:new Date().toISOString()}).catch(err=>toast("失敗："+(err.code||"")));break;
   }
@@ -1523,6 +1561,16 @@ document.addEventListener("change",async e=>{
 document.addEventListener("input",e=>{if(e.target.id==="q"){S.q=e.target.value;const pos=e.target.selectionStart;render();const q=document.getElementById("q");q.focus();try{q.setSelectionRange(pos,pos)}catch(_){}}});
 document.addEventListener("submit",async e=>{
   e.preventDefault();const f=e.target;const fd=Object.fromEntries(new FormData(f).entries());
+  if(f.id==="rstForm"){S.authErr="";const btn=f.querySelector("button");btn.disabled=true;
+    try{const ref=FB.fs.collection("resetRequests").doc();await ref.set({email:fd.email.trim().toLowerCase(),name:fd.name.trim(),phone:fd.phone.trim(),status:"pending",createdAt:new Date().toISOString()});
+      lsSet("stark-reset",JSON.stringify({id:ref.id,email:fd.email.trim().toLowerCase()}));render()}catch(err){S.authErr="送出失敗："+(err.code||err.message);render()}return}
+  if(f.id==="rstCodeForm"){S.authErr="";const r=rstLoad();if(!r){render();return}const code=String(fd.code||"").trim().toUpperCase();const btn=f.querySelector("button");btn.disabled=true;
+    try{const d=await FB.fs.collection("resetRequests").doc(r.id).get();const v=d.exists?d.data():null;
+      if(!v)throw new Error("找不到這筆申請，請重新申請");if(v.status==="rejected")throw new Error("管理員未核准這次申請");if(v.status==="used")throw new Error("這組確認碼已經使用過，請重新申請");
+      if(v.status!=="approved"||!v.codeHash)throw new Error("管理員還沒核准，請稍後再試");
+      if(sha256(code+"|"+r.id)!==v.codeHash)throw new Error("確認碼不正確");
+      await FB.auth.sendPasswordResetEmail(r.email);await FB.fs.collection("resetRequests").doc(r.id).update({status:"used",usedAt:new Date().toISOString()}).catch(()=>{});
+      lsSet("stark-reset",null);S.rst={done:r.email};render()}catch(err){S.authErr=AUTH_ERR[err.code]||err.message||String(err);render()}return}
   if(f.id==="applyForm"){S.gateErr="";try{await FB.fs.collection("applications").doc(S.uid).set({email:S.email,name:fd.name.trim(),phone:fd.phone.trim(),company:(fd.company||"").trim(),note:(fd.note||"").trim(),status:"pending",createdAt:new Date().toISOString()})}catch(err){S.gateErr="送出失敗："+(err.code||err.message);render()}return}
   if(f.id==="codeForm"){S.gateErr="";const code=String(fd.code||"").trim().toUpperCase();const btn=f.querySelector("button");btn.disabled=true;
     try{await FB.fs.collection("members").doc(S.uid).set({code,active:true,email:S.email,activatedAt:new Date().toISOString()});toast("帳號已開通，歡迎使用！")}catch(err){S.gateErr=/permission/i.test(err.code||err.message)?"確認碼不正確，或管理員尚未核准":"開通失敗："+(err.code||err.message);render()}return}

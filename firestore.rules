@@ -35,6 +35,20 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // 忘記密碼申請：未登入也能送出；只有管理員能看清單與核准
+    match /resetRequests/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['email','name','phone','status','createdAt'])
+        && request.resource.data.status == 'pending'
+        && request.resource.data.email is string && request.resource.data.email.size() <= 120
+        && request.resource.data.name is string && request.resource.data.name.size() <= 50
+        && request.resource.data.phone is string && request.resource.data.phone.size() <= 30;
+      allow get: if true;
+      allow list, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (resource.data.status == 'approved' && request.resource.data.status == 'used'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','usedAt']));
+    }
+
     // 開通紀錄：本人輸入的確認碼必須和管理員產生的一致
     match /members/{uid} {
       allow read: if isAdmin() || signedIn(uid);
