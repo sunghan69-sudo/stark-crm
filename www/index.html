@@ -819,6 +819,7 @@ function prodUsage(pr){let n=0;S.clients.forEach(c=>(c.policies||[]).forEach(p=>
 function missingProducts(){const m={};S.clients.forEach(c=>(c.policies||[]).forEach(p=>{if(!active(p)||!p.product)return;const pr=matchProduct(p);if(pr&&pr.status==="已核對")return;
   const code=prodCode(p.product),co=coKey(p.company)||"未填公司",bn=baseName(p.product);const k=co+"|"+(code||bn);if(!m[k])m[k]={co,code,name:bn,full:p.product,clients:new Set(),draft:pr||null};m[k].clients.add(c.name)}));
   return Object.values(m).sort((a,b)=>b.clients.size-a.clients.size)}
+function finfoSearchUrl(co,name,code){return "https://www.google.com/search?q="+encodeURIComponent(["site:finfo.tw",co==="未填公司"?"":co,name,code].filter(Boolean).join(" "))}
 function termsSearchUrl(co,name,code){return "https://www.google.com/search?q="+encodeURIComponent([co==="未填公司"?"":co,name,code,"條款"].filter(Boolean).join(" "))}
 function vProducts(){
   const co=S.prodCo;const miss=missingProducts().filter(x=>!co||x.co===co);const list=S.products.filter(x=>!co||x.company===co).sort((a,b)=>(a.company||"").localeCompare(b.company||"")||(a.code||"").localeCompare(b.code||""));
@@ -827,7 +828,7 @@ function vProducts(){
   <div class="card" style="margin-bottom:14px"><h2>⏳ 待補商品 <span class="sub">（客戶保單裡有、但商品庫還沒有已核對規則的）</span></h2>
    ${miss.length?`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>公司</th><th>代碼</th><th>商品名稱</th><th>客戶數</th><th>狀態</th><th></th></tr></thead><tbody>
    ${miss.slice(0,80).map(x=>`<tr><td>${esc(x.co)}</td><td><b>${esc(x.code||"—")}</b></td><td>${esc(x.name)}</td><td>${x.clients.size}</td><td>${x.draft?`<span class="tag y">草稿待核對</span>`:`<span class="tag r">未建立</span>`}</td>
-     <td class="row" style="flex-wrap:nowrap">${x.draft?`<button class="btn sm p" data-act="prodEdit" data-id="${x.draft.id}">核對</button>`:`<a class="btn sm" href="${termsSearchUrl(x.co,x.name,x.code)}" target="_blank" rel="noopener">🔍 查條款</a><button class="btn sm a" data-act="prodImport" data-co="${esc(x.co)}" data-code="${esc(x.code)}" data-name="${esc(x.name)}">📄 上傳條款</button>`}</td></tr>`).join("")}</tbody></table></div>`:`<div class="empty" style="padding:20px">目前沒有待補商品 👍</div>`}</div>
+     <td class="row" style="flex-wrap:nowrap">${x.draft?`<button class="btn sm p" data-act="prodEdit" data-id="${x.draft.id}">核對</button>`:`<a class="btn sm" href="${termsSearchUrl(x.co,x.name,x.code)}" target="_blank" rel="noopener">🔍 查條款</a><a class="btn sm" href="${finfoSearchUrl(x.co,x.name,x.code)}" target="_blank" rel="noopener">🔍 Finfo 查</a><button class="btn sm a" data-act="prodImport" data-co="${esc(x.co)}" data-code="${esc(x.code)}" data-name="${esc(x.name)}">📄 上傳條款</button>`}</td></tr>`).join("")}</tbody></table></div>`:`<div class="empty" style="padding:20px">目前沒有待補商品 👍</div>`}</div>
   <div class="card"><h2>📚 商品庫（${list.length}）</h2>${list.length?`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>公司</th><th>代碼</th><th>商品名稱</th><th>版本日期</th><th>規則</th><th>套用</th><th>狀態</th><th></th></tr></thead><tbody>
    ${list.map(x=>`<tr class="click" data-act="prodEdit" data-id="${x.id}"><td>${esc(x.company||"")}</td><td><b>${esc(x.code||"")}</b></td><td>${esc(x.name||"")}</td><td class="sub">${esc(x.effective||"")}</td><td>${(x.rules||[]).filter(r=>r.mode).length} 項</td><td>${prodUsage(x)} 筆</td>
      <td><span class="tag ${x.status==="已核對"?"g":x.status==="停用"?"":"y"}">${esc(x.status||"草稿")}</span></td><td><span class="btn sm ghost">編輯</span></td></tr>`).join("")}</tbody></table></div>`:`<div class="empty"><b>商品庫還是空的</b>從上方「待補商品」挑一個，按「🔍 查條款」下載條款 PDF，再按「📄 上傳條款」讓 AI 整理給付規則。</div>`}</div>
@@ -877,20 +878,22 @@ function openProductEditor(x,isNew){
   const del=box.querySelector("[data-del]");if(del)del.onclick=()=>confirmBox("確定刪除這個商品？已套用的客戶會改回估算值。",async()=>{box.remove();await delProduct(x.id);toast("已刪除")});
 }
 function openTermsImport(pre){pre=pre||{};
-  const box=document.createElement("div");document.getElementById("modalRoot").appendChild(box);let files=[];
+  const box=document.createElement("div");document.getElementById("modalRoot").appendChild(box);let files=[],txt="";
   const draw=(busy,msg)=>{box.innerHTML=`<div class="mask"><div class="modal sm" style="max-width:560px"><div class="mh"><b>📄 上傳條款建立商品</b><button class="btn ghost x" data-x>✕</button></div><div class="mb">
     ${pre.name||pre.code?`<div class="banner" style="background:#eef6ff;border-color:#c9def5;color:#1f4f80">商品：${esc(pre.co||"")} ${esc(pre.name||"")} ${esc(pre.code||"")}</div>`:""}
     <div class="scanbox"><div style="font-size:30px">📄</div><b>選擇條款 PDF（或商品 DM、條款照片）</b><div class="hint" style="margin:6px 0 12px">AI 會讀出各項給付，整理成「保額 × 倍數」規則，存成草稿讓你核對</div>
     <label class="btn a" style="cursor:pointer">選擇檔案<input type="file" id="tFile" accept="application/pdf,.pdf,image/*" multiple style="display:none"></label>
     <div class="thumbs">${files.map(f=>`<div class="tag">${esc(f.name)}</div>`).join("")}</div></div>
+    <label class="sub" style="display:block;margin-top:10px">或貼上條款／理賠項目文字（例如從 Finfo 商品頁複製的「理賠項目」）<textarea class="inp" id="tText" rows="5" placeholder="把給付項目與金額的文字貼在這裡">${esc(txt)}</textarea></label>
     ${pre.name||pre.code?`<div class="hint" style="margin-top:8px">還沒有條款？<a href="${termsSearchUrl(pre.co,pre.name,pre.code)}" target="_blank" rel="noopener">🔍 先去查條款</a></div>`:""}
     ${busy?`<div class="banner" style="margin-top:12px">🔍 AI 正在讀條款，約 20～60 秒…</div>`:""}${msg?`<div class="banner err" style="margin-top:12px">${esc(msg)}</div>`:""}</div>
-    <div class="mf"><button class="btn" data-x>取消</button><button class="btn p" data-go ${files.length&&!busy?"":"disabled"}>${busy?"讀取中…":"開始分析"}</button></div></div></div>`;
+    <div class="mf"><button class="btn" data-x>取消</button><button class="btn p" data-go ${(files.length||txt.trim())&&!busy?"":"disabled"}>${busy?"讀取中…":"開始分析"}</button></div></div></div>`;
     box.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>box.remove());
-    const fi=box.querySelector("#tFile");fi.onchange=()=>{files=[...fi.files].slice(0,4);draw(false)};
-    const go=box.querySelector("[data-go]");go.onclick=async()=>{draw(true);try{const direct=!!(window.StarkAI&&typeof getCfg==="function"&&getCfg());const blobs=[];
+    const fi=box.querySelector("#tFile");fi.onchange=()=>{txt=box.querySelector("#tText").value;files=[...fi.files].slice(0,4);draw(false)};
+    const ta=box.querySelector("#tText");ta.oninput=()=>{txt=ta.value;box.querySelector("[data-go]").disabled=!(files.length||txt.trim())};
+    const go=box.querySelector("[data-go]");go.onclick=async()=>{txt=box.querySelector("#tText").value;draw(true);try{const direct=!!(window.StarkAI&&typeof getCfg==="function"&&getCfg());const blobs=[];
       for(const f of files){const pdf=f.type==="application/pdf"||/\.pdf$/i.test(f.name);if(pdf){if(direct)blobs.push(f.type==="application/pdf"?f:new Blob([f],{type:"application/pdf"}));else for(const b of await pdfToImages(f))blobs.push(b)}else blobs.push(await shrink(f))}
-      const d=await aiExtract(blobs,TERMS_PROMPT);const rules=(d.rules||[]).filter(r=>COVD_KEYS.includes(r.key)&&["mult","range","fixed","text"].includes(r.mode)).map(r=>({key:r.key,mode:r.mode,a:r.a==null?"":String(r.a),b:r.b==null?"":String(r.b),plan:r.plan||"",text:r.text||"",cite:r.cite||""}));
+      const d=await aiExtract(blobs,TERMS_PROMPT+(txt.trim()?"\n\n以下是使用者貼上的條款／給付內容文字：\n"+txt.trim().slice(0,30000):""));const rules=(d.rules||[]).filter(r=>COVD_KEYS.includes(r.key)&&["mult","range","fixed","text"].includes(r.mode)).map(r=>({key:r.key,mode:r.mode,a:r.a==null?"":String(r.a),b:r.b==null?"":String(r.b),plan:r.plan||"",text:r.text||"",cite:r.cite||""}));
       box.remove();openProductEditor({company:coKey(d.company)||(COS.includes(pre.co)?pre.co:"其他"),code:(d.code||pre.code||"").toUpperCase(),name:d.name||pre.name||"",effective:/^\d{4}-\d{2}-\d{2}$/.test(d.effective||"")?d.effective:"",approval:d.approval||"",aliases:[...new Set([...(d.aliases||[]),pre.name].filter(Boolean))],basis:d.basis||"",status:"草稿",rules},true);
       toast(`AI 整理出 ${rules.length} 條規則，請核對`)}catch(e){draw(false,scanErr(e))}}};
   draw(false)}
@@ -997,7 +1000,7 @@ async function aiExtract(blobs,PROMPT){PROMPT=PROMPT||SCAN_PROMPT;
     const t=r.text.trim().replace(/^```(json)?/,"").replace(/```$/,"");return JSON.parse(t.slice(t.indexOf("{"),t.lastIndexOf("}")+1));
   }
   const sample=window.claude&&window.claude.use?await window.claude.use("sample"):null;
-  if(sample)return await sample.json(PROMPT,{images:blobs,modelTier:"default"});
+  if(sample)return await sample.json(PROMPT,blobs.length?{images:blobs,modelTier:"default"}:{modelTier:"default"});
   throw new Error("這個版本無法使用拍照辨識");
 }
 function scanErr(e){const m=String((e&&((e.code||"")+" "+(e.message||"")))||e);
