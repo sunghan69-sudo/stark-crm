@@ -179,6 +179,7 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{outline:2px solid #bcd3ee;bo
 .famadd{display:flex;flex-direction:column;gap:8px;justify-content:center}.famadd .btn{justify-content:center;padding:12px}
 .scangrp{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:14px;background:#fcfdfc}
 .scangrp .sgh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.ruletbl td{padding:3px 6px}.ruletbl td.sec{padding:8px 6px 2px}.ruletbl.onlyfilled tr.blank{display:none}
 .scanbox{border:2px dashed #b8c4d4;border-radius:12px;padding:22px;text-align:center;background:#f8fafc}
 .thumbs{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px}
 .thumbs img{width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
@@ -251,6 +252,7 @@ const VIEWS=[
   {id:"reminders",ic:"🔔",n:"提醒"},
   {id:"claims",ic:"🧮",n:"怎麼賠"},
   {id:"ecard",ic:"🪪",n:"名片"},
+  {id:"products",ic:"📚",n:"商品庫"},
   {id:"setup",ic:"⚙",n:"設定"}
 ];
 const COV=[
@@ -280,7 +282,7 @@ const DEF_TPL={
 const DEF_PROFILE={type:"profile",agent:"",title:"",company:"",phone:"",line:"",email:"",slogan:"",area:"",targets:{},tpl:{}};
 
 /* ========== 狀態 ========== */
-const S={clients:[],profile:clone(DEF_PROFILE),db:null,uid:null,mode:"loading",filter:"all",q:"",tag:"",remDays:30,claimCid:"",claimSc:"cancer",view:"dashboard"};
+const S={products:[],prodCo:"",clients:[],profile:clone(DEF_PROFILE),db:null,uid:null,mode:"loading",filter:"all",q:"",tag:"",remDays:30,claimCid:"",claimSc:"cancer",view:"dashboard"};
 const writeQ={};
 
 /* ========== 工具 ========== */
@@ -363,7 +365,7 @@ function sheetHtml(c,ps,opts){opts=opts||{};
    <div class="pwrap"><table class="ptbl"><colgroup>${opts.check?'<col style="width:34px">':""}<col style="width:30%"><col style="width:8%"><col style="width:7%"><col style="width:10%"><col style="width:8%"><col style="width:10%"><col style="width:7%"><col></colgroup><thead><tr>${opts.check?"<th></th>":""}<th style="text-align:left">商品</th><th>繳費年期</th><th>對象</th><th>投保日期</th><th>保額</th><th>下期保費</th><th>繳別</th><th>受益人</th></tr></thead><tbody>
    ${g.items.map(p=>`<tr class="${p.rider?"":"main"} ${opts.check?"":"click"} ${active(p)?"":"off"}" ${opts.check?"":`data-act="editPol" data-pid="${p.id}"`}>
      ${opts.check?`<td><input type="checkbox" class="scanchk" data-i="${p._i}" checked></td>`:""}
-     <td class="nm"><span class="rd">${p.rider?"○":"●"}</span>${esc(p.product||"(未命名)")}${opts.check?`<div><select class="inp scantype" data-i="${p._i}" style="padding:2px 6px;font-size:12px;width:auto;margin-top:4px">${PTYPES.map(t=>`<option ${t===p.type?"selected":""}>${t}</option>`).join("")}</select></div>`:(active(p)?"":` <span class="tag r">${esc(p.status)}</span>`)}</td>
+     <td class="nm"><span class="rd">${p.rider?"○":"●"}</span>${esc(p.product||"(未命名)")}${!opts.check&&(()=>{const pr=matchProduct(p);return pr&&pr.status==="已核對"})()?` <span title="已套用商品庫給付規則" style="font-size:11px">📚</span>`:""}${opts.check?`<div><select class="inp scantype" data-i="${p._i}" style="padding:2px 6px;font-size:12px;width:auto;margin-top:4px">${PTYPES.map(t=>`<option ${t===p.type?"selected":""}>${t}</option>`).join("")}</select></div>`:(active(p)?"":` <span class="tag r">${esc(p.status)}</span>`)}</td>
      <td class="g">${num(p.payYears)?String(num(p.payYears)).padStart(2,"0")+"年":(fq(p)===0?"--":"")}</td><td class="g">${esc(p.target||"本人")}</td><td class="g">${esc(rocDate(p.start))}</td>
      <td class="g">${esc(sumLabel(p))}</td><td class="g">${p.premium!==""&&p.premium!=null?fmt(num(p.premium))+(isUSD(p)?"美元":"元"):""}</td><td class="g">${esc(FREQ_SHORT[fq(p)]||"")}</td><td class="bf">${esc(p.beneficiary||"")}</td></tr>`).join("")}
    </tbody></table></div></div>`}).join("");
@@ -373,8 +375,8 @@ function lastContactDays(c){const d=pd(c.lastContact);return d?daysBetween(d,tod
 /* ========== 儲存層（Firebase 雲端同步 / 本機模式） ========== */
 const LS="stark-local-v1",CFG_KEY="stark-fb-config",MODE_KEY="stark-mode";
 let FB=null,unsub=null;
-function lsLoad(){try{const j=JSON.parse(localStorage.getItem(LS)||"null");if(j){S.clients=j.clients||[];S.profile=Object.assign(clone(DEF_PROFILE),j.profile||{})}}catch(e){}}
-function lsSave(){try{localStorage.setItem(LS,JSON.stringify({clients:S.clients,profile:S.profile}))}catch(e){}}
+function lsLoad(){try{const j=JSON.parse(localStorage.getItem(LS)||"null");if(j){S.clients=j.clients||[];S.products=j.products||[];S.profile=Object.assign(clone(DEF_PROFILE),j.profile||{})}}catch(e){}}
+function lsSave(){try{localStorage.setItem(LS,JSON.stringify({clients:S.clients,products:S.products,profile:S.profile}))}catch(e){}}
 function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
 function lsSet(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}
 function col(){return FB.fs.collection("users").doc(S.uid).collection("items")}
@@ -386,6 +388,8 @@ function writeDoc(id,data){
 }
 function saveClient(c){c.type="client";c.updated=Date.now();const i=S.clients.findIndex(x=>x.id===c.id);if(i>=0)S.clients[i]=c;else S.clients.push(c);render();return writeDoc(c.id,clone(c))}
 function delClient(id){S.clients=S.clients.filter(c=>c.id!==id);render();return writeDoc(id,null)}
+function saveProduct(x){x.type="product";x.updated=Date.now();const i=S.products.findIndex(y=>y.id===x.id);if(i>=0)S.products[i]=x;else S.products.push(x);render();return writeDoc(x.id,clone(x))}
+function delProduct(id){S.products=S.products.filter(x=>x.id!==id);render();return writeDoc(id,null)}
 function saveProfile(){render();return writeDoc("profile",clone(S.profile))}
 
 function parseCfg(t){
@@ -408,9 +412,9 @@ async function initStore(){
     S.uid=u.uid;S.email=u.email;S.mode="cloud";S.loaded=false;setSync("同步中…");render();
     let timer=setTimeout(()=>setSync("⚠ 目前離線，顯示手機內的資料"),10000);
     unsub=col().onSnapshot({includeMetadataChanges:true},snap=>{
-      const cl=[];let prof=null;
-      snap.docs.forEach(d=>{const v=d.data();if(!v)return;if(d.id==="profile")prof=v;else if(v.type==="client")cl.push(Object.assign({},v,{id:d.id}))});
-      S.clients=cl;S.profile=Object.assign(clone(DEF_PROFILE),prof||{});
+      const cl=[],pr=[];let prof=null;
+      snap.docs.forEach(d=>{const v=d.data();if(!v)return;if(d.id==="profile")prof=v;else if(v.type==="client")cl.push(Object.assign({},v,{id:d.id}));else if(v.type==="product")pr.push(Object.assign({},v,{id:d.id}))});
+      S.clients=cl;S.products=pr;S.profile=Object.assign(clone(DEF_PROFILE),prof||{});
       if(!snap.metadata.fromCache){clearTimeout(timer);setSync()}else if(!S.loaded)setSync("離線資料（連上網路後自動同步）");
       S.loaded=true;if(!M)render();
     },err=>{clearTimeout(timer);setSync("⚠ 同步錯誤："+(err.code||""));S.loaded=true;render()});
@@ -492,7 +496,7 @@ function render(){
   if(S.mode==="login"){m.innerHTML=vLogin();return}
   if(S.mode==="loading"||(S.mode==="cloud"&&!S.loaded)){m.innerHTML=`<div class="empty"><b>載入中…</b>正在讀取你的客戶資料</div>`;return}
   const banner=S.mode==="local"?`<div class="banner">💾 目前為<b>本機模式</b>：資料只存在這台裝置。到「設定」可以改用雲端同步，或匯出備份。</div>`:"";
-  const fn={dashboard:vDash,clients:vClients,reminders:vRem,claims:vClaims,services:vSvc,ecard:vCard,setup:vSetup}[S.view]||vDash;
+  const fn={dashboard:vDash,clients:vClients,reminders:vRem,claims:vClaims,services:vSvc,ecard:vCard,setup:vSetup,products:vProducts}[S.view]||vDash;
   m.innerHTML=banner+fn();
 }
 function vDash(){
@@ -778,14 +782,118 @@ function yuan(n){return n?fmt(n)+"元":""}
 function covAuto(c){const v=cov(c);return {d_gen:wan(v.life),d_acc:wan(v.life+v.acc),d_can:wan(v.life),a_hosp:yuan(v.hosp),i_hosp:yuan(v.hosp),r_misc:wan(v.med),c_ci:wan(v.ci),k_first:wan(v.cancer),l_year:wan(v.ltc*12),x_month:wan(v.dis)}}
 function parseAmt(t){t=String(t||"").replace(/,/g,"").trim();if(!t||/[~～至]/.test(t))return null;const m=/^([\d.]+)\s*(萬|元)?/.exec(t);if(!m)return null;const n=parseFloat(m[1]);if(!isFinite(n))return null;return m[2]==="萬"?n*10000:n}
 function fmtAmt(v){return v>=10000?wan(v/10000):yuan(v)}
-function covFromPolicies(c,k){const ps=(c.policies||[]).filter(p=>active(p)&&p.covd&&String(p.covd[k]||"").trim());if(!ps.length)return "";
-  let sum=0,ok=true;const txt=[];ps.forEach(p=>{const t=String(p.covd[k]).trim();txt.push(t);const v=parseAmt(t);if(v==null)ok=false;else sum+=v*(isUSD(p)?usdRate():1)});
-  return ok?fmtAmt(sum):txt.join(" + ")}
+function parseRange(t){t=String(t||"").replace(/,/g,"").trim();if(!t)return null;const parts=t.split(/\s*[~～至]\s*/);if(parts.length===2){const a=parseAmt(parts[0]),b=parseAmt(parts[1]);return a!=null&&b!=null?{min:a,max:b}:null}const v=parseAmt(t);return v==null?null:{min:v,max:v}}
+function fmtRange(r){return r.min===r.max?fmtAmt(r.min):fmtAmt(r.min)+"~"+fmtAmt(r.max)}
+function policyCovd(p){const o=Object.assign({},p.covd||{});const pr=matchProduct(p);if(pr&&pr.status==="已核對"){const rc=computeFromProduct(p,pr);Object.keys(rc).forEach(k=>{if(!o[k])o[k]=rc[k]})}return o}
+function covFromPolicies(c,k){const vals=[];(c.policies||[]).filter(active).forEach(p=>{const t=String(policyCovd(p)[k]||"").trim();if(t)vals.push({t,usd:isUSD(p)})});if(!vals.length)return "";
+  let mn=0,mx=0,ok=true;vals.forEach(v=>{const r=parseRange(v.t);if(!r){ok=false;return}const k2=v.usd?usdRate():1;mn+=r.min*k2;mx+=r.max*k2});
+  return ok?fmtRange({min:mn,max:mx}):vals.map(v=>v.t).join(" + ")}
 function covVal(c,k){const d=(c.covDetail||{})[k];if(d!=null&&d!=="")return d;return covFromPolicies(c,k)||covAuto(c)[k]||""}
 function mCovDetail(){const c=M.c;const au0=covAuto(c);const au={};COVD_KEYS.forEach(k=>au[k]=covFromPolicies(c,k)||au0[k]||"");
   return `<h3 style="margin-top:22px">詳細保障項目（保單健檢報表用）</h3><div class="hint" style="margin-bottom:8px">這裡填的會優先使用；空白的會用「各保單保障明細」加總，沒有的再用上方 8 大保障估算（灰字）。匯入「保障總覽」頁會自動填入。</div>
   <form id="covdForm">${COVD.map(g=>`<div class="sec" style="margin:8px 0 4px">${g[0]}</div><div class="form">${g[1].map(i=>`<label>${i[1]}<input class="inp" name="${i[0]}" value="${esc((c.covDetail||{})[i[0]]||"")}" placeholder="${esc(au[i[0]]||"")}"></label>`).join("")}</div>`).join("")}
   <div class="row" style="margin-top:12px"><span class="sp"></span><button class="btn p" type="submit">儲存詳細保障</button></div></form>`}
+
+/* ========== 商品明細庫 ========== */
+const COS=["國泰人壽","全球人壽","安聯人壽","新光人壽","其他"];
+const RULE_MODES=[["","—"],["mult","保額×倍數"],["range","保額×倍數範圍"],["fixed","固定金額(元)"],["text","文字"]];
+function coKey(n){n=n||"";if(/國泰/.test(n))return "國泰人壽";if(/全球/.test(n))return "全球人壽";if(/安聯/.test(n))return "安聯人壽";if(/新光/.test(n))return "新光人壽";return n.trim()?"其他":""}
+function prodCode(name){const g=[...String(name||"").matchAll(/[（(]([^()（）]+)[)）]/g)].map(m=>m[1].trim()).filter(x=>/^[A-Z0-9][A-Z0-9_\-]{0,7}$/i.test(x)&&/[A-Z_]/i.test(x));return g.length?g[g.length-1].toUpperCase():""}
+function baseName(name){return String(name||"").replace(/[（(][^()（）]*[)）]/g,"").trim()}
+function matchProduct(p){if(!S.products.length)return null;const code=prodCode(p.product),co=coKey(p.company),bn=baseName(p.product);
+  let cand=S.products.filter(x=>x.status!=="停用"&&((code&&x.code&&x.code.toUpperCase()===code)||(bn&&(x.name===bn||(x.aliases||[]).includes(bn)||(x.aliases||[]).includes(p.product)))));
+  if(co){const same=cand.filter(x=>x.company===co);if(same.length)cand=same;else cand=cand.filter(x=>!x.company||x.company==="其他")}
+  if(!cand.length)return null;const st=p.start||"9999";cand.sort((a,b)=>(b.status==="已核對")-(a.status==="已核對")||(b.effective||"").localeCompare(a.effective||""));
+  return cand.find(x=>!x.effective||x.effective<=st)||cand[cand.length-1]}
+function policyBase(p){const t=String(p.sumText||"").replace(/,/g,"");const all=[...t.matchAll(/([\d.]+)\s*(萬|元|美元)/g)];if(all.length){const m=all[all.length-1];const n=parseFloat(m[1]);return m[2]==="萬"?n*10000:n}
+  const n=parseFloat(t);return isFinite(n)&&n>0?n:null}
+function computeFromProduct(p,pr){const base=policyBase(p);const t=String(p.sumText||"");const rules=(pr.rules||[]);
+  const planned=rules.filter(r=>r.plan&&t.includes(r.plan));const use=rules.filter(r=>!r.plan||planned.includes(r));const out={};
+  use.forEach(r=>{if(!r.key||!r.mode)return;let v="";
+    if(r.mode==="mult"&&base!=null&&num(r.a))v=fmtAmt(base*num(r.a));
+    else if(r.mode==="range"&&base!=null&&num(r.b))v=fmtAmt(base*num(r.a))+"~"+fmtAmt(base*num(r.b));
+    else if(r.mode==="fixed"&&num(r.a))v=fmtAmt(num(r.a));
+    else if(r.mode==="text"&&r.text)v=r.text;
+    if(v)out[r.key]=v});return out}
+function prodUsage(pr){let n=0;S.clients.forEach(c=>(c.policies||[]).forEach(p=>{if(active(p)&&matchProduct(p)===pr)n++}));return n}
+function missingProducts(){const m={};S.clients.forEach(c=>(c.policies||[]).forEach(p=>{if(!active(p)||!p.product)return;const pr=matchProduct(p);if(pr&&pr.status==="已核對")return;
+  const code=prodCode(p.product),co=coKey(p.company)||"未填公司",bn=baseName(p.product);const k=co+"|"+(code||bn);if(!m[k])m[k]={co,code,name:bn,full:p.product,clients:new Set(),draft:pr||null};m[k].clients.add(c.name)}));
+  return Object.values(m).sort((a,b)=>b.clients.size-a.clients.size)}
+function termsSearchUrl(co,name,code){return "https://www.google.com/search?q="+encodeURIComponent([co==="未填公司"?"":co,name,code,"條款"].filter(Boolean).join(" "))}
+function vProducts(){
+  const co=S.prodCo;const miss=missingProducts().filter(x=>!co||x.co===co);const list=S.products.filter(x=>!co||x.company===co).sort((a,b)=>(a.company||"").localeCompare(b.company||"")||(a.code||"").localeCompare(b.code||""));
+  return `<div class="top"><div><h1>商品明細庫</h1><div class="sub">每個商品設定一次給付規則，所有持有該商品的客戶自動算出保障明細</div></div><div class="row"><button class="btn a" data-act="prodImport">📄 上傳條款建立商品</button><button class="btn" data-act="prodNew">＋ 手動新增</button></div></div>
+  <div class="chips"><button class="chip ${!co?"on":""}" data-act="prodCo" data-c="">全部</button>${COS.map(c=>`<button class="chip ${co===c?"on":""}" data-act="prodCo" data-c="${c}">${c}</button>`).join("")}</div>
+  <div class="card" style="margin-bottom:14px"><h2>⏳ 待補商品 <span class="sub">（客戶保單裡有、但商品庫還沒有已核對規則的）</span></h2>
+   ${miss.length?`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>公司</th><th>代碼</th><th>商品名稱</th><th>客戶數</th><th>狀態</th><th></th></tr></thead><tbody>
+   ${miss.slice(0,80).map(x=>`<tr><td>${esc(x.co)}</td><td><b>${esc(x.code||"—")}</b></td><td>${esc(x.name)}</td><td>${x.clients.size}</td><td>${x.draft?`<span class="tag y">草稿待核對</span>`:`<span class="tag r">未建立</span>`}</td>
+     <td class="row" style="flex-wrap:nowrap">${x.draft?`<button class="btn sm p" data-act="prodEdit" data-id="${x.draft.id}">核對</button>`:`<a class="btn sm" href="${termsSearchUrl(x.co,x.name,x.code)}" target="_blank" rel="noopener">🔍 查條款</a><button class="btn sm a" data-act="prodImport" data-co="${esc(x.co)}" data-code="${esc(x.code)}" data-name="${esc(x.name)}">📄 上傳條款</button>`}</td></tr>`).join("")}</tbody></table></div>`:`<div class="empty" style="padding:20px">目前沒有待補商品 👍</div>`}</div>
+  <div class="card"><h2>📚 商品庫（${list.length}）</h2>${list.length?`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>公司</th><th>代碼</th><th>商品名稱</th><th>版本日期</th><th>規則</th><th>套用</th><th>狀態</th><th></th></tr></thead><tbody>
+   ${list.map(x=>`<tr class="click" data-act="prodEdit" data-id="${x.id}"><td>${esc(x.company||"")}</td><td><b>${esc(x.code||"")}</b></td><td>${esc(x.name||"")}</td><td class="sub">${esc(x.effective||"")}</td><td>${(x.rules||[]).filter(r=>r.mode).length} 項</td><td>${prodUsage(x)} 筆</td>
+     <td><span class="tag ${x.status==="已核對"?"g":x.status==="停用"?"":"y"}">${esc(x.status||"草稿")}</span></td><td><span class="btn sm ghost">編輯</span></td></tr>`).join("")}</tbody></table></div>`:`<div class="empty"><b>商品庫還是空的</b>從上方「待補商品」挑一個，按「🔍 查條款」下載條款 PDF，再按「📄 上傳條款」讓 AI 整理給付規則。</div>`}</div>
+  <div class="hint" style="margin-top:10px">只有「已核對」的商品會用來計算客戶的保障總覽。AI 整理的規則可能有誤，請務必對照條款核對。</div>`;
+}
+const TERMS_PROMPT=`你是台灣人身保險條款分析師。附件是一份保險商品條款（或商品說明書／DM）。請讀出各項給付，整理成計算規則，只回傳一個 JSON 物件：
+{"company":"保險公司","code":"商品代碼（例如 BG_、TZ-11，條款上沒有就空字串）","name":"商品名稱（不含代碼）","effective":"核准或備查日期 YYYY-MM-DD（民國年加1911）","approval":"文號","aliases":["其他常見寫法"],"basis":"保額的意義，例如『住院日額保險金額（元/日）』或『保險金額（萬元）』",
+"rules":[{"key":"項目key","plan":"計畫別（沒有就空字串）","mode":"mult|range|fixed|text","a":倍數或金額,"b":範圍上限倍數,"text":"文字說明","cite":"第幾條：原文摘錄（30字內）"}]}
+規則：
+1. key 只能用：${COVD.map(g=>g[1].map(i=>i[0]+"="+g[0]+"/"+i[1]).join("、")).join("、")}。條款沒有的項目不要列。
+2. mode=mult：給付金額 = 保單保額 × a（例如住院日額保險金 a=1；加護病房 a=2；出院療養 a=0.5；壽險身故 a=1）。
+   mode=range：給付金額 = 保單保額 × a ~ 保單保額 × b（例如手術依等級 a=最低倍數，b=最高倍數）。
+   mode=fixed：固定金額（元）放 a。無法量化（例如依實際費用、按比例）用 mode=text 並在 text 寫說明。
+3. 若不同計畫別給付不同，每個計畫各列一筆並填 plan（例如 "M10"）。
+4. 每一筆都要有 cite（條號＋原文摘錄），沒有把握就不要列。`;
+function openProductEditor(x,isNew){
+  x=clone(x);x.rules=x.rules||[];const rk={};x.rules.forEach((r,i)=>{(rk[r.key]=rk[r.key]||[]).push(r)});
+  const rowFor=(key,label,r)=>`<tr data-key="${key}" class="${r&&r.mode?"filled":"blank"}"><td style="font-size:12.5px">${label}</td><td><select class="inp rm" style="padding:4px">${RULE_MODES.map(m=>`<option value="${m[0]}" ${(r&&r.mode||"")===m[0]?"selected":""}>${m[1]}</option>`).join("")}</select></td>
+    <td><input class="inp ra" style="padding:4px;width:70px" value="${esc(r&&r.a!=null?r.a:"")}"></td><td><input class="inp rb" style="padding:4px;width:70px" value="${esc(r&&r.b!=null?r.b:"")}"></td><td><input class="inp rp" style="padding:4px;width:60px" value="${esc(r&&r.plan||"")}" placeholder="全部"></td>
+    <td><input class="inp rt" style="padding:4px" value="${esc(r&&(r.text||r.cite)||"")}" placeholder="說明／條款出處"></td></tr>`;
+  const rows=COVD.map(g=>`<tr class="${g[1].some(i=>(rk[i[0]]||[]).some(r=>r&&r.mode))?"filled":"blank"}"><td colspan="6" class="sec" style="padding-top:8px">${g[0]}</td></tr>`+g[1].map(i=>(rk[i[0]]||[null]).map(r=>rowFor(i[0],i[1],r)).join("")).join("")).join("");
+  const box=document.createElement("div");box.innerHTML=`<div class="mask"><div class="modal" style="max-width:980px"><div class="mh"><b>${isNew?"新增商品":"編輯商品"}${x.status?`<span class="tag ${x.status==="已核對"?"g":"y"}" style="margin-left:8px">${esc(x.status)}</span>`:""}</b><button class="btn ghost x" data-x>✕</button></div>
+   <div class="mb"><div class="form">
+     <label>保險公司<select class="inp" name="company">${COS.map(c=>`<option ${c===x.company?"selected":""}>${c}</option>`).join("")}</select></label>
+     <label>商品代碼<input class="inp" name="code" value="${esc(x.code||"")}" placeholder="例：BG_"></label>
+     <label>商品名稱<input class="inp" name="name" value="${esc(x.name||"")}"></label>
+     <label>版本日期（核准／備查）<input class="inp" type="date" name="effective" value="${esc(x.effective||"")}"></label>
+     <label>文號<input class="inp" name="approval" value="${esc(x.approval||"")}"></label>
+     <label>狀態<select class="inp" name="status">${["草稿","已核對","停用"].map(t=>`<option ${t===(x.status||"草稿")?"selected":""}>${t}</option>`).join("")}</select></label>
+     <label class="w2">其他寫法（逗號分隔，用來對應客戶保單名稱）<input class="inp" name="aliases" value="${esc((x.aliases||[]).join(", "))}"></label>
+     <label>保額的意義<input class="inp" name="basis" value="${esc(x.basis||"")}" placeholder="例：住院日額（元/日）"></label>
+     <label class="w3">條款來源網址<input class="inp" name="source" value="${esc(x.source||"")}" placeholder="https://..."></label>
+   </div>
+   <div class="row" style="margin:14px 0 6px"><b>給付規則</b><span class="sub">保額×倍數：例如住院日額 1 倍、加護病房 2 倍；範圍：手術 1～30 倍</span><span class="sp"></span><label class="sub" style="white-space:nowrap"><input type="checkbox" id="showAll" ${x.rules.some(r=>r.mode)?"":"checked"}> 顯示全部項目</label><label class="sub">試算保額 <input class="inp" id="testAmt" style="width:110px;display:inline-block" placeholder="例：1000 或 50萬"></label></div>
+   <div style="max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:10px"><table class="tbl ruletbl ${x.rules.some(r=>r.mode)?"onlyfilled":""}" id="ruleTbl"><thead><tr><th>項目</th><th>計算方式</th><th>倍數／金額</th><th>上限倍數</th><th>計畫別</th><th>說明／出處</th></tr></thead><tbody>${rows}</tbody></table></div>
+   <div id="testOut" class="hint" style="margin-top:8px"></div></div>
+   <div class="mf">${isNew?"":`<button class="btn d" data-del>刪除</button>`}<span class="sp"></span><button class="btn" data-x>取消</button><button class="btn" data-save="草稿">存成草稿</button><button class="btn p" data-save="已核對">✓ 核對完成並啟用</button></div></div></div>`;
+  document.getElementById("modalRoot").appendChild(box);box.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>box.remove());
+  const collect=()=>{const g=n=>box.querySelector(`[name=${n}]`).value.trim();const rules=[];box.querySelectorAll("#ruleTbl tr[data-key]").forEach(tr=>{const mode=tr.querySelector(".rm").value;if(!mode)return;const t=tr.querySelector(".rt").value.trim();
+      rules.push({key:tr.dataset.key,mode,a:tr.querySelector(".ra").value.trim(),b:tr.querySelector(".rb").value.trim(),plan:tr.querySelector(".rp").value.trim(),text:mode==="text"?t:"",cite:mode==="text"?"":t})});
+    return Object.assign(x,{company:g("company"),code:g("code").toUpperCase(),name:g("name"),effective:g("effective"),approval:g("approval"),status:g("status"),aliases:g("aliases").split(/[,，、]/).map(t=>t.trim()).filter(Boolean),basis:g("basis"),source:g("source"),rules})};
+  const test=()=>{const v=box.querySelector("#testAmt").value.trim();const out=box.querySelector("#testOut");if(!v){out.textContent="";return}const pr=collect();const r=computeFromProduct({sumText:/[萬元]/.test(v)?v:v+"元"},pr);
+    out.innerHTML="試算結果："+(Object.keys(r).length?Object.keys(r).map(k=>{const g=COVD.find(g=>g[1].some(i=>i[0]===k));const it=g&&g[1].find(i=>i[0]===k);return `${it?g[0].slice(0,2)+"・"+it[1]:k} <b>${esc(r[k])}</b>`}).join("、"):"（沒有可計算的規則）")};
+  box.querySelector("#showAll").onchange=e=>box.querySelector("#ruleTbl").classList.toggle("onlyfilled",!e.target.checked);
+  box.querySelector("#testAmt").oninput=test;box.querySelector("#ruleTbl").addEventListener("input",test);box.querySelector("#ruleTbl").addEventListener("change",test);
+  box.querySelectorAll("[data-save]").forEach(b=>b.onclick=async()=>{const pr=collect();if(!pr.name&&!pr.code){toast("請填商品名稱或代碼");return}pr.status=b.dataset.save==="已核對"?"已核對":(pr.status==="停用"?"停用":"草稿");if(!pr.id)pr.id="pd"+uid();box.remove();await saveProduct(pr);toast(pr.status==="已核對"?`已啟用，套用到 ${prodUsage(pr)} 筆保單`:"已存成草稿")});
+  const del=box.querySelector("[data-del]");if(del)del.onclick=()=>confirmBox("確定刪除這個商品？已套用的客戶會改回估算值。",async()=>{box.remove();await delProduct(x.id);toast("已刪除")});
+}
+function openTermsImport(pre){pre=pre||{};
+  const box=document.createElement("div");document.getElementById("modalRoot").appendChild(box);let files=[];
+  const draw=(busy,msg)=>{box.innerHTML=`<div class="mask"><div class="modal sm" style="max-width:560px"><div class="mh"><b>📄 上傳條款建立商品</b><button class="btn ghost x" data-x>✕</button></div><div class="mb">
+    ${pre.name||pre.code?`<div class="banner" style="background:#eef6ff;border-color:#c9def5;color:#1f4f80">商品：${esc(pre.co||"")} ${esc(pre.name||"")} ${esc(pre.code||"")}</div>`:""}
+    <div class="scanbox"><div style="font-size:30px">📄</div><b>選擇條款 PDF（或商品 DM、條款照片）</b><div class="hint" style="margin:6px 0 12px">AI 會讀出各項給付，整理成「保額 × 倍數」規則，存成草稿讓你核對</div>
+    <label class="btn a" style="cursor:pointer">選擇檔案<input type="file" id="tFile" accept="application/pdf,.pdf,image/*" multiple style="display:none"></label>
+    <div class="thumbs">${files.map(f=>`<div class="tag">${esc(f.name)}</div>`).join("")}</div></div>
+    ${pre.name||pre.code?`<div class="hint" style="margin-top:8px">還沒有條款？<a href="${termsSearchUrl(pre.co,pre.name,pre.code)}" target="_blank" rel="noopener">🔍 先去查條款</a></div>`:""}
+    ${busy?`<div class="banner" style="margin-top:12px">🔍 AI 正在讀條款，約 20～60 秒…</div>`:""}${msg?`<div class="banner err" style="margin-top:12px">${esc(msg)}</div>`:""}</div>
+    <div class="mf"><button class="btn" data-x>取消</button><button class="btn p" data-go ${files.length&&!busy?"":"disabled"}>${busy?"讀取中…":"開始分析"}</button></div></div></div>`;
+    box.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>box.remove());
+    const fi=box.querySelector("#tFile");fi.onchange=()=>{files=[...fi.files].slice(0,4);draw(false)};
+    const go=box.querySelector("[data-go]");go.onclick=async()=>{draw(true);try{const direct=!!(window.StarkAI&&typeof getCfg==="function"&&getCfg());const blobs=[];
+      for(const f of files){const pdf=f.type==="application/pdf"||/\.pdf$/i.test(f.name);if(pdf){if(direct)blobs.push(f.type==="application/pdf"?f:new Blob([f],{type:"application/pdf"}));else for(const b of await pdfToImages(f))blobs.push(b)}else blobs.push(await shrink(f))}
+      const d=await aiExtract(blobs,TERMS_PROMPT);const rules=(d.rules||[]).filter(r=>COVD_KEYS.includes(r.key)&&["mult","range","fixed","text"].includes(r.mode)).map(r=>({key:r.key,mode:r.mode,a:r.a==null?"":String(r.a),b:r.b==null?"":String(r.b),plan:r.plan||"",text:r.text||"",cite:r.cite||""}));
+      box.remove();openProductEditor({company:coKey(d.company)||(COS.includes(pre.co)?pre.co:"其他"),code:(d.code||pre.code||"").toUpperCase(),name:d.name||pre.name||"",effective:/^\d{4}-\d{2}-\d{2}$/.test(d.effective||"")?d.effective:"",approval:d.approval||"",aliases:[...new Set([...(d.aliases||[]),pre.name].filter(Boolean))],basis:d.basis||"",status:"草稿",rules},true);
+      toast(`AI 整理出 ${rules.length} 條規則，請核對`)}catch(e){draw(false,scanErr(e))}}};
+  draw(false)}
 
 /* ========== 保單健檢報表 ========== */
 function stripCode(n){return String(n||"").replace(/\s*[（(][A-Z0-9_]{1,6}[)）]\s*$/,"")}
@@ -881,15 +989,15 @@ function loadPdfJs(){if(_pdfjs)return _pdfjs;_pdfjs=new Promise((res,rej)=>{cons
 async function pdfToImages(file){const lib=await loadPdfJs();const doc=await lib.getDocument({data:await file.arrayBuffer()}).promise;const out=[];
   for(let i=1;i<=Math.min(doc.numPages,6);i++){const pg=await doc.getPage(i);const vp=pg.getViewport({scale:2});const cv=document.createElement("canvas");cv.width=vp.width;cv.height=vp.height;await pg.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;out.push(await new Promise(r=>cv.toBlob(r,"image/jpeg",0.88)))}
   return out}
-async function aiExtract(blobs){
+async function aiExtract(blobs,PROMPT){PROMPT=PROMPT||SCAN_PROMPT;
   if(window.StarkAI&&typeof getCfg==="function"&&getCfg()){
     let models=["gemini-flash-latest","gemini-3.6-flash","gemini-3.5-flash","gemini-2.5-flash"];
     const custom=(typeof lsGet==="function"&&lsGet("stark-ai-model"))||"";if(custom)models=[custom].concat(models);
-    const r=await window.StarkAI.extract(getCfg(),models,SCAN_PROMPT,blobs);
+    const r=await window.StarkAI.extract(getCfg(),models,PROMPT,blobs);
     const t=r.text.trim().replace(/^```(json)?/,"").replace(/```$/,"");return JSON.parse(t.slice(t.indexOf("{"),t.lastIndexOf("}")+1));
   }
   const sample=window.claude&&window.claude.use?await window.claude.use("sample"):null;
-  if(sample)return await sample.json(SCAN_PROMPT,{images:blobs,modelTier:"default"});
+  if(sample)return await sample.json(PROMPT,{images:blobs,modelTier:"default"});
   throw new Error("這個版本無法使用拍照辨識");
 }
 function scanErr(e){const m=String((e&&((e.code||"")+" "+(e.message||"")))||e);
@@ -988,9 +1096,9 @@ function confirmBox(msg,onYes){
 function csv(rows){return rows.map(r=>r.map(v=>{v=String(v==null?"":v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(",")).join("\n")}
 function exportCsv(){copy(csv([["姓名","身分證字號","性別","生日","年齡","手機","LINE","Email","職業","年收入(萬)","家庭","身分","階段","來源","標籤","上次聯絡","下次追蹤","有效保單數","年化保費","備註"]].concat(S.clients.map(c=>[c.name,c.idNo,c.gender,c.birthday,age(c.birthday),c.phone,c.line,c.email,c.job,c.income,c.family,c.relation,c.stage,c.source,(c.tags||[]).join("、"),c.lastContact,c.nextFollow,(c.policies||[]).filter(active).length,Math.round(annualSum(c)),c.notes]))))}
 function exportPol(){const h=["客戶","保險公司","商品","險種","保單號","要保人","狀態","生效日","繳費年期","繳別","每期保費","年化保費","繳費方式"].concat(COV.map(x=>x.n+"("+x.u+")"));copy(csv([h].concat(S.clients.flatMap(c=>(c.policies||[]).map(p=>[c.name,p.company,p.product,p.type,p.policyNo,p.holder,p.status,p.start,p.payYears,FREQ[fq(p)],p.premium,Math.round(annual(p)),p.payMethod].concat(COV.map(x=>(p.cov||{})[x.k]||"")))))))}
-function exportJson(){openText("完整備份（請複製後存成文字檔）",JSON.stringify({v:1,exported:new Date().toISOString(),profile:S.profile,clients:S.clients}))}
+function exportJson(){openText("完整備份（請複製後存成文字檔）",JSON.stringify({v:1,exported:new Date().toISOString(),profile:S.profile,clients:S.clients,products:S.products}))}
 function importJson(){openText("貼上 JSON 備份內容（同 ID 客戶會被覆蓋）","",true,async t=>{
-  try{const j=JSON.parse(t);const cs=j.clients||[];for(const c of cs){if(!c.id)c.id=uid();await saveClient(c)}if(j.profile){S.profile=Object.assign(clone(DEF_PROFILE),j.profile);await saveProfile()}toast("已匯入 "+cs.length+" 位客戶")}catch(e){toast("格式錯誤，無法匯入")}
+  try{const j=JSON.parse(t);const cs=j.clients||[];for(const c of cs){if(!c.id)c.id=uid();await saveClient(c)}for(const x of (j.products||[])){if(!x.id)x.id=uid();await saveProduct(x)}if(j.profile){S.profile=Object.assign(clone(DEF_PROFILE),j.profile);await saveProfile()}toast("已匯入 "+cs.length+" 位客戶"+((j.products||[]).length?"、"+j.products.length+" 個商品":""))}catch(e){toast("格式錯誤，無法匯入")}
 })}
 async function demo(){
   const y=today().getFullYear();const m=today().getMonth();const d2=(mm,dd)=>ds(new Date(y,mm,dd));const L=n=>ds(new Date(Date.now()-n*86400000));
@@ -1049,6 +1157,10 @@ document.addEventListener("click",async e=>{
     case "famMove":{const x=liveC(cById(el.dataset.id)||M.c);const fams=[...new Set(S.clients.map(y=>y.family).filter(Boolean))];
       famDialog("重新歸戶｜"+esc(x.name),`<label class="sub">歸到哪個家庭<select class="inp" name="fam">${fams.map(f=>`<option ${f===x.family?"selected":""}>${esc(f)}</option>`).join("")}<option value="__new">＋ 以 ${esc(x.name)} 為戶長另立新家庭</option><option value="__none">移出家庭（獨立）</option></select></label>${relSelect(x.relation||"其他")}`,
         async d=>{if(d.fam==="__none"){x.family="";x.relation=""}else if(d.fam==="__new"){x.family=x.name+"家";x.relation="戶長"}else{x.family=d.fam;x.relation=d.relation;await setHeadIfNeeded(d.fam,x)}await saveMember(x);drawModal();toast(x.name+" 已更新歸戶")});break}
+    case "prodCo":S.prodCo=el.dataset.c;render();break;
+    case "prodNew":openProductEditor({company:S.prodCo||"國泰人壽",status:"草稿",rules:[]},true);break;
+    case "prodEdit":{const x=S.products.find(y=>y.id===el.dataset.id);if(x)openProductEditor(x,false);break}
+    case "prodImport":openTermsImport({co:el.dataset.co||S.prodCo||"",code:el.dataset.code||"",name:el.dataset.name||""});break;
     case "scanPol":openScan();break;
     case "report":{const c=M.c;const fam=c.family?S.clients.filter(x=>x.family===c.family):[];
       if(fam.length>1){const box=document.createElement("div");box.innerHTML=`<div class="mask"><div class="modal sm"><div class="mh"><b>產生保單健檢報表</b></div><div class="mb">要只做 ${esc(c.name)} 本人，還是 ${esc(c.family)} 全家（${fam.length} 人）？</div><div class="mf"><button class="btn" data-one>只有本人</button><button class="btn p" data-all>全家</button></div></div></div>`;document.getElementById("modalRoot").appendChild(box);
