@@ -1,9 +1,48 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 每個帳號只能讀寫自己的資料，其他人（包含管理者以外的任何人）都看不到
+    // 管理員帳號
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'sunghan69@gmail.com';
+    }
+    function signedIn(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+    // 已開通（輸入過正確確認碼、且未被停用）
+    function isMember(uid) {
+      return exists(/databases/$(database)/documents/members/$(uid))
+        && get(/databases/$(database)/documents/members/$(uid)).data.active == true;
+    }
+
+    // 每個帳號只能讀寫自己的資料；內測期間必須先開通
     match /users/{uid}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if signedIn(uid) && (isAdmin() || isMember(uid));
+    }
+
+    // 加入申請：本人送出、管理員覆核
+    match /applications/{uid} {
+      allow read: if isAdmin() || signedIn(uid);
+      allow create: if signedIn(uid)
+        && request.resource.data.status == 'pending'
+        && request.resource.data.email == request.auth.token.email;
+      allow update: if isAdmin()
+        || (signedIn(uid) && resource.data.status == 'rejected' && request.resource.data.status == 'pending');
+      allow delete: if isAdmin();
+    }
+
+    // 確認碼：只有管理員看得到
+    match /codes/{uid} {
+      allow read, write: if isAdmin();
+    }
+
+    // 開通紀錄：本人輸入的確認碼必須和管理員產生的一致
+    match /members/{uid} {
+      allow read: if isAdmin() || signedIn(uid);
+      allow create: if signedIn(uid)
+        && exists(/databases/$(database)/documents/codes/$(uid))
+        && request.resource.data.code == get(/databases/$(database)/documents/codes/$(uid)).data.code
+        && request.resource.data.active == true;
+      allow update, delete: if isAdmin();
     }
   }
 }

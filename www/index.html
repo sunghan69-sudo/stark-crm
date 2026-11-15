@@ -285,6 +285,7 @@ details.fold{align-self:start}details.fold>summary{list-style:none;cursor:pointe
 .cvC .cv-agl{width:52%;text-align:left;border-right:1px solid rgba(214,178,106,.35);padding-right:20px}.cvC .cv-agk{letter-spacing:6px;color:#d6b26a}.cvC .cv-agn span{color:#d6b26a}.cvC .cv-agc{color:#b9c6d8;font-weight:400}.cvC .cv-ags{color:#8ea2bd}
 .cvC .cv-agr{flex:1;text-align:left;display:flex;flex-direction:column;justify-content:center;gap:6px;color:#dfe6ef}
 .cvsw{display:flex;gap:8px;margin:6px 0 4px 28px}.cvsw label{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;cursor:pointer}.cvsw i{display:block;width:46px;height:62px;border-radius:5px;border:2px solid #ddd;box-shadow:0 1px 4px rgba(0,0,0,.12)}.cvsw input{display:none}.cvsw input:checked+i{border-color:#e8862f;box-shadow:0 0 0 2px #e8862f}
+.nbadge{background:#e5484d;color:#fff;border-radius:10px;font-size:11px;padding:1px 7px;margin-left:6px;font-weight:700}
 </style>
 </head>
 <body>
@@ -315,7 +316,8 @@ const VIEWS=[
   {id:"claims",ic:"🧮",n:"怎麼賠"},
   {id:"ecard",ic:"🪪",n:"名片"},
   {id:"products",ic:"📚",n:"商品庫"},
-  {id:"setup",ic:"⚙",n:"設定"}
+  {id:"setup",ic:"⚙",n:"設定"},
+  {id:"admin",ic:"🛡",n:"帳號管理"}
 ];
 const COV=[
   {k:"life",n:"壽險身故",u:"萬",t:300},
@@ -471,6 +473,64 @@ function parseCfg(t){
   while((m=re.exec(t)))o[m[1]]=m[2];return o.apiKey&&o.projectId?o:null;
 }
 function getCfg(){const w=window.STARK_FIREBASE_CONFIG;if(w&&w.apiKey)return w;try{return JSON.parse(lsGet(CFG_KEY)||"null")}catch(e){return null}}
+/* ========== 帳號開通管控（內測） ========== */
+const ADMIN_EMAIL="sunghan69@gmail.com";
+function isAdminUser(){return String(S.email||"").toLowerCase()===ADMIN_EMAIL}
+let gateUnsub=null,adminUnsub=null,memberUnsub=null;
+function genCode(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";const r=new Uint32Array(6);(window.crypto||{}).getRandomValues?crypto.getRandomValues(r):r.forEach((_,i)=>r[i]=Math.random()*1e9);return [...r].map(x=>A[x%A.length]).join("")}
+function stopGate(){[gateUnsub,adminUnsub,memberUnsub].forEach(f=>{try{f&&f()}catch(e){}});gateUnsub=adminUnsub=memberUnsub=null}
+/* 登入後檢查是否已開通；已開通才 start() 讀資料 */
+function checkAccess(u,start){stopGate();
+  if(isAdminUser()){S.isAdmin=true;start();watchApplications();return}
+  S.isAdmin=false;S.mode="gate";S.gate={state:"loading"};render();
+  memberUnsub=FB.fs.collection("members").doc(u.uid).onSnapshot(ms=>{const m=ms.exists?ms.data():null;
+    if(m&&m.active){stopGate();S.gate=null;start();return}
+    if(m&&!m.active){S.mode="gate";S.gate={state:"disabled"};render();return}
+    if(!gateUnsub)gateUnsub=FB.fs.collection("applications").doc(u.uid).onSnapshot(as=>{const a=as.exists?as.data():null;S.mode="gate";
+      S.gate={state:!a?"apply":(a.status||"pending"),app:a};render()},e=>{S.gate={state:"error",err:e.code||e.message};render()});
+  },e=>{S.mode="gate";S.gate={state:"error",err:e.code||e.message};render()})}
+function watchApplications(){let first=true,seen=new Set();
+  adminUnsub=FB.fs.collection("applications").onSnapshot(snap=>{S.apps=snap.docs.map(d=>Object.assign({uid:d.id},d.data()));
+    const pend=S.apps.filter(a=>a.status==="pending");
+    if(!first)pend.filter(a=>!seen.has(a.uid)).forEach(a=>{toast(`🔔 新的加入申請：${a.name||a.email}，請到「帳號管理」覆核`);try{if(window.Notification&&Notification.permission==="granted")new Notification("史塔克CRM：新的加入申請",{body:(a.name||"")+" "+(a.email||"")})}catch(e){}});
+    pend.forEach(a=>seen.add(a.uid));first=false;if(!M)render()},e=>{S.appsErr=e.code||e.message;if(!M)render()});
+  FB.fs.collection("members").onSnapshot(snap=>{S.members={};snap.docs.forEach(d=>S.members[d.id]=d.data());if(!M&&S.view==="admin")render()},()=>{});
+  FB.fs.collection("codes").onSnapshot(snap=>{S.codes={};snap.docs.forEach(d=>S.codes[d.id]=d.data());if(!M&&S.view==="admin")render()},()=>{})}
+function vGate(){const g=S.gate||{state:"loading"},a=g.app||{};const out=`<button class="btn ghost sm" data-act="logout" style="margin-top:14px">登出（${esc(S.email||"")}）</button>`;
+  let body="";
+  if(g.state==="loading")body=`<div class="sub">確認帳號狀態中…</div>`;
+  else if(g.state==="apply")body=`<div class="sub" style="margin-bottom:14px">系統目前為<b>內測期間</b>，需經管理員覆核開通。請填寫資料送出申請。</div>
+    <form id="applyForm" class="grid" style="gap:10px"><input class="inp" name="name" placeholder="姓名" required><input class="inp" name="phone" placeholder="手機" required><input class="inp" name="company" placeholder="公司／單位"><textarea class="inp" name="note" rows="2" placeholder="備註（例：推薦人）"></textarea>
+    <button class="btn p" style="justify-content:center" type="submit">送出申請</button></form>`;
+  else if(g.state==="pending")body=`<div class="banner" style="background:#eef6ff;border-color:#c9def5;color:#1f4f80">✅ 申請已送出（${esc(a.name||"")}），等待管理員覆核。</div><div class="sub">管理員核准後會給你一組<b>確認碼</b>，取得後在下方輸入即可開通。</div>
+    <form id="codeForm" class="grid" style="gap:10px;margin-top:12px"><input class="inp" name="code" placeholder="輸入 6 碼確認碼" maxlength="8" style="text-align:center;font-size:22px;letter-spacing:6px;text-transform:uppercase" required><button class="btn p" style="justify-content:center" type="submit">開通帳號</button></form>`;
+  else if(g.state==="approved")body=`<div class="banner" style="background:#f3fbf5;border-color:#cfe9d6;color:#1d6b35">🎉 管理員已核准你的申請，請輸入管理員給你的確認碼。</div>
+    <form id="codeForm" class="grid" style="gap:10px;margin-top:12px"><input class="inp" name="code" placeholder="輸入 6 碼確認碼" maxlength="8" style="text-align:center;font-size:22px;letter-spacing:6px;text-transform:uppercase" required><button class="btn p" style="justify-content:center" type="submit">開通帳號</button></form>`;
+  else if(g.state==="rejected")body=`<div class="banner err">很抱歉，你的申請未通過${a.reason?"："+esc(a.reason):""}。</div><button class="btn" data-act="reapply">重新申請</button>`;
+  else if(g.state==="disabled")body=`<div class="banner err">這個帳號已被管理員停用，如有疑問請聯絡管理員。</div>`;
+  else body=`<div class="banner err">無法確認帳號狀態（${esc(g.err||"")}）。請確認網路，或聯絡管理員。</div>`;
+  return `<div class="auth"><div class="card"><div class="logo">STARK</div><h1>史塔克客戶管理系統</h1><div class="sub" style="margin-bottom:14px">帳號開通</div>${S.gateErr?`<div class="banner err">${esc(S.gateErr)}</div>`:""}${body}${out}</div></div>`}
+function vAdmin(){if(!S.isAdmin)return `<div class="empty">只有管理員可以使用</div>`;const apps=(S.apps||[]).slice().sort((x,y)=>String(y.createdAt||"").localeCompare(String(x.createdAt||"")));
+  const st=a=>{const m=(S.members||{})[a.uid];if(m)return m.active?["已開通","g"]:["已停用","r"];return a.status==="approved"?["已核准・待輸入確認碼","o"]:a.status==="rejected"?["未通過","r"]:["待覆核","b"]};
+  const pend=apps.filter(a=>a.status==="pending"&&!(S.members||{})[a.uid]);
+  const row=a=>{const [t,c]=st(a);const m=(S.members||{})[a.uid];const code=(S.codes||{})[a.uid];
+    return `<tr><td><b>${esc(a.name||"")}</b><div class="sub">${esc(a.email||"")}</div></td><td>${esc(a.phone||"")}<div class="sub">${esc(a.company||"")}</div></td><td class="sub">${esc(a.note||"")}</td><td class="sub">${esc(String(a.createdAt||"").slice(0,16).replace("T"," "))}</td>
+      <td><span class="tag ${c==="g"?"":"r"}" style="${c==="o"?"background:#fff4e5;color:#b45309":c==="b"?"background:#eef6ff;color:#1f4f80":""}">${t}</span>${code&&!m?`<div style="margin-top:4px;font:700 16px monospace;letter-spacing:3px">${esc(code.code)}</div>`:""}</td>
+      <td style="white-space:nowrap">${m?(m.active?`<button class="btn sm" data-act="admDisable" data-uid="${a.uid}">停用</button>`:`<button class="btn sm" data-act="admEnable" data-uid="${a.uid}">恢復</button>`):
+        `<button class="btn sm p" data-act="admApprove" data-uid="${a.uid}">${code?"重新產生確認碼":"核准並產生確認碼"}</button>${code?`<button class="btn sm" data-act="admCopy" data-uid="${a.uid}">複製訊息</button>`:""}${a.status!=="rejected"?`<button class="btn sm ghost" data-act="admReject" data-uid="${a.uid}">不通過</button>`:""}`}</td></tr>`};
+  return `<div class="top"><div><h1>帳號管理</h1><div class="sub">內測期間：新帳號送出申請 → 你核准並產生確認碼 → 對方輸入確認碼才開通</div></div></div>
+  ${S.appsErr?`<div class="banner err">讀取申請失敗（${esc(S.appsErr)}）：請確認 Firebase 的 Firestore 規則已更新。</div>`:""}
+  ${pend.length?`<div class="banner" style="background:#fff4e5;border-color:#f7d9a8;color:#8a4b00">🔔 有 ${pend.length} 件新的加入申請等待覆核</div>`:""}
+  <div class="card"><div class="pwrap"><table class="tbl"><thead><tr><th>申請人</th><th>聯絡</th><th>備註</th><th>申請時間</th><th>狀態</th><th></th></tr></thead><tbody>${apps.length?apps.map(row).join(""):`<tr><td colspan="6" class="empty">目前沒有申請</td></tr>`}</tbody></table></div></div>
+  <div class="hint" style="margin-top:8px">確認碼只有你看得到；把確認碼用 LINE 或簡訊傳給申請人，對方在登入後的開通畫面輸入即可。</div>`}
+async function admAction(a,uid){const ap=(S.apps||[]).find(x=>x.uid===uid)||{};
+  if(a==="admApprove"){const code=genCode();await FB.fs.collection("codes").doc(uid).set({code,email:ap.email||"",createdAt:new Date().toISOString()});
+    await FB.fs.collection("applications").doc(uid).update({status:"approved",approvedAt:new Date().toISOString()});
+    openText("確認碼已產生",`${ap.name||""} 您好，您的「史塔克客戶管理系統」申請已核准。\n請登入後輸入確認碼：${code}\n\n登入帳號：${ap.email||""}`,false);return}
+  if(a==="admCopy"){const c=(S.codes||{})[uid];if(c)copy(`${ap.name||""} 您好，您的「史塔克客戶管理系統」申請已核准。\n請登入後輸入確認碼：${c.code}\n\n登入帳號：${ap.email||""}`);return}
+  if(a==="admReject"){await FB.fs.collection("applications").doc(uid).update({status:"rejected"});await FB.fs.collection("codes").doc(uid).delete().catch(()=>{});toast("已設為不通過");return}
+  if(a==="admDisable"){await FB.fs.collection("members").doc(uid).update({active:false});toast("已停用");return}
+  if(a==="admEnable"){await FB.fs.collection("members").doc(uid).update({active:true});toast("已恢復");return}}
 async function initStore(){
   const cfg=getCfg();
   if(lsGet(MODE_KEY)==="local"){S.mode="local";lsLoad();setSync();render();return}
@@ -482,8 +542,9 @@ async function initStore(){
   }catch(e){S.mode="setup";S.cfgErr=String(e.message||e);render();return}
   FB.auth.onAuthStateChanged(u=>{
     if(unsub){unsub();unsub=null}
-    if(!u){S.mode="login";S.uid=null;S.clients=[];S.profile=clone(DEF_PROFILE);setSync("未登入");render();return}
-    S.uid=u.uid;S.email=u.email;S.mode="cloud";S.loaded=false;setSync("同步中…");render();
+    if(!u){stopGate();S.isAdmin=false;S.mode="login";S.uid=null;S.clients=[];S.profile=clone(DEF_PROFILE);setSync("未登入");render();return}
+    S.uid=u.uid;S.email=u.email;
+    checkAccess(u,()=>{S.mode="cloud";S.loaded=false;setSync("同步中…");render();
     let timer=setTimeout(()=>setSync("⚠ 目前離線，顯示手機內的資料"),10000);
     unsub=col().onSnapshot({includeMetadataChanges:true},snap=>{
       const cl=[],pr=[];let prof=null;
@@ -492,6 +553,7 @@ async function initStore(){
       if(!snap.metadata.fromCache){clearTimeout(timer);setSync()}else if(!S.loaded)setSync("離線資料（連上網路後自動同步）");
       S.loaded=true;if(!M)render();
     },err=>{clearTimeout(timer);setSync("⚠ 同步錯誤："+(err.code||""));S.loaded=true;render()});
+    });
   });
 }
 function setSync(m){const el=document.getElementById("syncState");if(el)el.textContent=m||(S.mode==="cloud"?"☁ 雲端同步中｜"+(S.email||""):"💾 本機模式");}
@@ -562,16 +624,19 @@ function filtered(){
 /* ========== 渲染 ========== */
 function render(){
   const nav=document.getElementById("nav");
-  nav.innerHTML=VIEWS.map(v=>`<a href="#${v.id}" class="${S.view===v.id?"on":""}"><span class="ic">${v.ic}</span>${v.n}</a>`).join("");
+  const pendN=S.isAdmin?(S.apps||[]).filter(a=>a.status==="pending"&&!(S.members||{})[a.uid]).length:0;
+  nav.innerHTML=VIEWS.filter(v=>v.id!=="admin"||S.isAdmin).map(v=>`<a href="#${v.id}" class="${S.view===v.id?"on":""}"><span class="ic">${v.ic}</span>${v.n}${v.id==="admin"&&pendN?`<span class="nbadge">${pendN}</span>`:""}</a>`).join("");
   document.getElementById("brandSub").textContent=S.profile.agent?"Stark Insurance CRM｜"+S.profile.agent:"Stark Insurance CRM";
   const m=document.getElementById("main");
-  document.body.classList.toggle("gate",S.mode==="setup"||S.mode==="login");
+  document.body.classList.toggle("gate",S.mode==="setup"||S.mode==="login"||S.mode==="gate");
+  if(S.mode==="gate"){m.innerHTML=vGate();return}
   if(S.mode==="setup"){m.innerHTML=vSetupCloud();return}
   if(S.mode==="login"){m.innerHTML=vLogin();return}
   if(S.mode==="loading"||(S.mode==="cloud"&&!S.loaded)){m.innerHTML=`<div class="empty"><b>載入中…</b>正在讀取你的客戶資料</div>`;return}
   const banner=S.mode==="local"?`<div class="banner">💾 目前為<b>本機模式</b>：資料只存在這台裝置。到「設定」可以改用雲端同步，或匯出備份。</div>`:"";
-  const fn={dashboard:vDash,clients:vClients,reminders:vRem,claims:vClaims,services:vSvc,ecard:vCard,setup:vSetup,products:vProducts}[S.view]||vDash;
-  m.innerHTML=banner+fn();
+  const fn={dashboard:vDash,clients:vClients,reminders:vRem,claims:vClaims,services:vSvc,ecard:vCard,setup:vSetup,products:vProducts,admin:vAdmin}[S.view]||vDash;
+  const pendN2=S.isAdmin&&S.view!=="admin"?(S.apps||[]).filter(a=>a.status==="pending"&&!(S.members||{})[a.uid]).length:0;
+  m.innerHTML=banner+(pendN2?`<a href="#admin" class="banner" style="display:block;background:#fff4e5;border-color:#f7d9a8;color:#8a4b00;text-decoration:none">🔔 有 ${pendN2} 件新的加入申請等待你覆核，點這裡處理 ›</a>`:"")+fn();
 }
 function vDash(){
   const cs=S.clients;const pols=cs.flatMap(c=>(c.policies||[]).filter(active));
@@ -1445,6 +1510,8 @@ document.addEventListener("click",async e=>{
     case "resetPw":{const em=(document.querySelector("#loginForm [name=email]")||{}).value;if(!em){S.authErr="請先輸入 Email，再按忘記密碼";render();break}
       try{await FB.auth.sendPasswordResetEmail(em);toast("已寄出重設密碼信")}catch(err){S.authErr=AUTH_ERR[err.code]||err.message;render()}break}
     case "logout":await FB.auth.signOut();location.hash="dashboard";break;
+    case "admApprove":case "admCopy":case "admReject":case "admDisable":case "admEnable":try{await admAction(a,el.dataset.uid)}catch(err){toast("操作失敗："+(err.code||err.message))}break;
+    case "reapply":await FB.fs.collection("applications").doc(S.uid).update({status:"pending",createdAt:new Date().toISOString()}).catch(err=>toast("失敗："+(err.code||"")));break;
   }
 });
 document.addEventListener("change",async e=>{
@@ -1456,6 +1523,9 @@ document.addEventListener("change",async e=>{
 document.addEventListener("input",e=>{if(e.target.id==="q"){S.q=e.target.value;const pos=e.target.selectionStart;render();const q=document.getElementById("q");q.focus();try{q.setSelectionRange(pos,pos)}catch(_){}}});
 document.addEventListener("submit",async e=>{
   e.preventDefault();const f=e.target;const fd=Object.fromEntries(new FormData(f).entries());
+  if(f.id==="applyForm"){S.gateErr="";try{await FB.fs.collection("applications").doc(S.uid).set({email:S.email,name:fd.name.trim(),phone:fd.phone.trim(),company:(fd.company||"").trim(),note:(fd.note||"").trim(),status:"pending",createdAt:new Date().toISOString()})}catch(err){S.gateErr="送出失敗："+(err.code||err.message);render()}return}
+  if(f.id==="codeForm"){S.gateErr="";const code=String(fd.code||"").trim().toUpperCase();const btn=f.querySelector("button");btn.disabled=true;
+    try{await FB.fs.collection("members").doc(S.uid).set({code,active:true,email:S.email,activatedAt:new Date().toISOString()});toast("帳號已開通，歡迎使用！")}catch(err){S.gateErr=/permission/i.test(err.code||err.message)?"確認碼不正確，或管理員尚未核准":"開通失敗："+(err.code||err.message);render()}return}
   if(f.id==="cfgForm"){const c=parseCfg(fd.cfg);if(!c){S.cfgErr="看不懂這段設定，請確認有 apiKey 和 projectId";render();return}lsSet(CFG_KEY,JSON.stringify(c));lsSet(MODE_KEY,null);location.reload();return}
   if(f.id==="loginForm"){S.authErr="";const btn=f.querySelector("button[type=submit]");btn.disabled=true;btn.textContent="處理中…";
     try{if(S.authMode==="reg")await FB.auth.createUserWithEmailAndPassword(fd.email.trim(),fd.pw);else await FB.auth.signInWithEmailAndPassword(fd.email.trim(),fd.pw)}
