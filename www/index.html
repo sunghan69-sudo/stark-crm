@@ -1561,12 +1561,15 @@ const MKTG_URL="https://sunghan69-sudo.github.io/stark-crm/mkt/marketing.json";
 let MKTG=(()=>{try{return JSON.parse(localStorage.getItem("stark-mktg")||"null")}catch(e){return null}})(),mktgAt=0,mktgRep="",mktgAmt=1000000;
 async function loadMktg(force){if(!force&&Date.now()-mktgAt<10*60*1000)return;mktgAt=Date.now();
   try{const r=await fetch(MKTG_URL+"?t="+Math.floor(Date.now()/600000),{cache:"no-store"});if(!r.ok)return;const j=await r.json();MKTG=j;try{localStorage.setItem("stark-mktg",JSON.stringify(j))}catch(e){}if(S.view==="marketing"&&!M)render()}catch(e){}}
-function mktgTable(rep,list,usd){const amt=mktgAmt;return `<div style="overflow-x:auto"><table class="tbl mktg"><thead><tr><th>#</th><th>連結標的</th><th>代碼</th><th>RR</th><th class="r">最新淨值</th><th class="hide-m">淨值日期</th><th class="hide-m">配息基準日</th><th class="r">月配息率</th><th class="r">預估單位數</th><th class="r">預估每月配息</th></tr></thead><tbody>${list.map((x,i)=>{const units=usd?amt/rep.usd/x.nav:amt/x.nav;const pay=amt*x.rate/100;
-  return `<tr><td>${i+1}</td><td><b>${esc(x.name)}</b>${x.flag?`<div class="sub" style="color:#b5651d">† ${esc(x.flag)}</div>`:""}</td><td class="mono">${esc(x.code)}</td><td><span class="tag ${x.rr==="RR4"||x.rr==="RR5"?"o":"g"}">${esc(x.rr)}</span></td><td class="r">${x.nav}</td><td class="hide-m">${esc(x.navDate)}</td><td class="hide-m">${esc(x.divDate)}</td><td class="r"><b style="color:#0f7c8a">${x.rate.toFixed(2)}%${x.flag?"†":""}</b></td><td class="r">${fmt(Math.round(units))}</td><td class="r"><b>${fmt(Math.round(pay))}</b> 元</td></tr>`}).join("")}</tbody></table></div>`}
+function mktgTable(rep,list,usd){const amt=mktgAmt;const has=k=>list.some(x=>x[k]!=null&&x[k]!=="");
+  const pc=v=>v==null||v===""?"—":`<span class="${v>0?"mup":v<0?"mdn":""}">${v>0?"+":""}${(+v).toFixed(2)}%</span>`;
+  const navL=(list[0]&&list[0].navLabel)||"最新淨值";
+  return `<div style="overflow-x:auto"><table class="tbl mktg"><thead><tr><th>#</th><th>連結標的</th><th>代碼</th>${has("rr")?"<th>RR</th>":""}<th class="r">${esc(navL)}</th>${has("navDate")?'<th class="hide-m">淨值日期</th>':""}<th class="hide-m">配息基準日</th>${has("div")?'<th class="r hide-m">每單位配息</th>':""}<th class="r">月配息率</th>${has("ytd")?'<th class="r hide-m">今年以來</th>':""}<th class="r">預估單位數</th><th class="r">預估每月配息</th></tr></thead><tbody>${list.map((x,i)=>{const units=usd?amt/rep.usd/x.nav:amt/x.nav;const pay=amt*x.rate/100;
+  return `<tr><td>${i+1}</td><td><b>${esc(x.name)}</b>${x.type?`<span class="tag" style="margin-left:6px">${esc(x.type)}</span>`:""}${x.flag?`<div class="sub" style="color:#b5651d">† ${esc(x.flag)}</div>`:""}</td><td class="mono">${esc(x.code)}</td>${has("rr")?`<td>${x.rr?`<span class="tag ${/RR[45]/.test(x.rr)?"o":"g"}">${esc(x.rr)}</span>`:"—"}</td>`:""}<td class="r">${x.nav}</td>${has("navDate")?`<td class="hide-m">${esc(x.navDate||"")}</td>`:""}<td class="hide-m">${esc(x.divDate)}</td>${has("div")?`<td class="r hide-m">${x.div??"—"}</td>`:""}<td class="r"><b style="color:#0f7c8a">${x.rate.toFixed(2)}%${x.flag?"†":""}</b></td>${has("ytd")?`<td class="r hide-m">${pc(x.ytd)}</td>`:""}<td class="r">${fmt(Math.round(units))}</td><td class="r"><b>${fmt(Math.round(pay))}</b> 元</td></tr>`}).join("")}</tbody></table></div>`}
 function vMkt(){loadMktg();const reps=(MKTG&&MKTG.reports)||[];
   if(!reps.length)return `<div class="top"><h1>行銷專區</h1></div><div class="card empty"><b>載入中…</b>正在讀取最新的標的報告</div>`;
   const rep=reps.find(r=>r.id===mktgRep)||reps[0];const amtW=Math.round(mktgAmt/10000);
-  return `<div class="top"><div><h1>行銷專區</h1><div class="sub">投資型商品連結標的週報｜資料每週更新，最近更新 ${esc(MKTG.updated||rep.date)}</div></div></div>
+  return `<div class="top"><div><h1>行銷專區</h1><div class="sub">投資型商品連結標的週報｜資料每週更新，本報告日期 ${esc(rep.date)}</div></div></div>
   ${reps.length>1?`<div class="tabs">${reps.map(r=>`<button class="tab ${r.id===rep.id?"on":""}" data-act="mktgRep" data-id="${r.id}">${esc(r.company)} ${esc(r.product)}</button>`).join("")}</div>`:""}
   <div class="banner" style="background:#fff7ec;border-color:#f3d6ad;color:#8a5a14">🔒 內部研究資料・僅供內部參考，請勿外傳、轉載或直接提供給客戶。配息可能含本金，預估數字未扣保單費用。</div>
   <div class="card"><div class="row" style="align-items:flex-start;gap:16px;flex-wrap:wrap"><div style="flex:1;min-width:240px"><div class="sub">${esc(rep.company)}</div><h2 style="margin:2px 0">${esc(rep.product)}（${esc(rep.code)}）</h2><div>${esc(rep.title)}</div>
@@ -1576,7 +1579,7 @@ function vMkt(){loadMktg();const reps=(MKTG&&MKTG.reports)||[];
   <div class="card"><h2>🇹🇼 台幣計價標的・月配息率前 ${rep.twd.length}</h2>${mktgTable(rep,rep.twd,false)}</div>
   <div class="card"><h2>🇺🇸 美金計價標的・月配息率前 ${rep.usdList.length}</h2>${mktgTable(rep,rep.usdList,true)}</div>
   <div class="card"><h2>重點摘要</h2><ul style="margin:0;padding-left:20px;line-height:1.9">${(rep.summary||[]).map(t=>`<li>${esc(t)}</li>`).join("")}</ul>
-    <div class="hint" style="margin-top:10px">月配息率＝官方配息檔「當期(%)」。預估單位數：台幣＝金額÷淨值；美金＝(金額÷匯率)÷淨值。預估每月配息＝金額×月配息率（未扣任何保單費用）。資料來源：${esc(rep.source)}。本資料不構成投資建議，實際依申購日淨值與匯率為準。</div></div>`}
+    <div class="hint" style="margin-top:10px">${rep.rateNote?esc(rep.rateNote)+"。":""}預估單位數：台幣＝金額÷淨值；美金＝(金額÷匯率)÷淨值。預估每月配息＝金額×月配息率（未扣任何保單費用）。${rep.note?esc(String(rep.note).replace(/。$/,""))+"。":""}資料來源：${esc(rep.source)}。本資料不構成投資建議，實際依申購日淨值與匯率為準。</div></div>`}
 /* ========== 小彈窗 ========== */
 function openText(title,text,editable,onOk){
   const r=document.getElementById("modalRoot");const box=document.createElement("div");
