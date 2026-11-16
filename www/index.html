@@ -1258,6 +1258,7 @@ function openProductEditor(x,isNew){
      <label>保額的意義<input class="inp" name="basis" value="${esc(x.basis||"")}" placeholder="例：住院日額（元/日）"></label>
      <label class="w3">條款來源網址<input class="inp" name="source" value="${esc(x.source||"")}" placeholder="https://..."></label>
    </div>
+   ${(x.auto||x.autoNote)&&x.status!=="已核對"?`<div class="hint" style="margin-top:12px;background:#fff7e6;border:1px solid #f3d19e;border-radius:8px;padding:8px 10px">🤖 自動整理的草稿（${esc(x.updatedBy||"")}）：規則取自 Finfo 公開摘要或商品類型通則，尚未對照官方條款。${x.autoNote?"<br>⚠ "+esc(x.autoNote):""}${x.terms?`<br><a href="${esc(x.terms)}" target="_blank" rel="noopener">📄 開啟條款</a>`:""}${x.source?` ・ <a href="${esc(x.source)}" target="_blank" rel="noopener">來源頁</a>`:""}</div>`:""}
    <div class="row" style="margin:14px 0 6px"><b>給付規則</b><span class="sub">保額×倍數：例如住院日額 1 倍、加護病房 2 倍；範圍：手術 1～30 倍</span><span class="sp"></span><label class="sub" style="white-space:nowrap"><input type="checkbox" id="showAll" ${x.rules.some(r=>r.mode)?"":"checked"}> 顯示全部項目</label><label class="sub">試算保額 <input class="inp" id="testAmt" style="width:110px;display:inline-block" placeholder="例：1000 或 50萬"></label></div>
    <div style="max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:10px"><table class="tbl ruletbl ${x.rules.some(r=>r.mode)?"onlyfilled":""}" id="ruleTbl"><thead><tr><th>項目</th><th>計算方式</th><th>倍數／金額</th><th>上限倍數</th><th>計畫別</th><th>說明／出處</th></tr></thead><tbody>${rows}</tbody></table></div>
    <div id="testOut" class="hint" style="margin-top:8px"></div>
