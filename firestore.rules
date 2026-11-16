@@ -19,6 +19,18 @@ service cloud.firestore {
       allow read, write: if signedIn(uid) && (isAdmin() || isMember(uid));
     }
 
+    // 共用商品庫：已開通帳號都能讀，只有管理員能新增／修改
+    match /products/{id} {
+      allow read: if request.auth != null && (isAdmin() || isMember(request.auth.uid));
+      allow write: if isAdmin();
+    }
+
+    // 各帳號回報「待補商品」（只有商品名稱，不含客戶資料）；管理員彙整
+    match /prodNeeds/{uid} {
+      allow read: if isAdmin() || signedIn(uid);
+      allow write: if signedIn(uid) && (isAdmin() || isMember(uid));
+    }
+
     // 加入申請：本人送出、管理員覆核
     match /applications/{uid} {
       allow read: if isAdmin() || signedIn(uid);
