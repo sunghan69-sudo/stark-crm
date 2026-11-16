@@ -66,7 +66,7 @@ const CSS=`.sc-ov{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9
 .sc-msg{background:#fff4e5;border:1px solid #f5c58a;color:#9a4b00;border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:13.5px;white-space:pre-line}
 .sc-card{background:#fff;border:1px solid #e3e8ef;border-radius:12px;padding:12px 14px;margin-bottom:14px}.sc-card h3{margin:0 0 8px;font-size:15px}
 .sc-t{border-collapse:collapse;width:100%;font-size:12.5px}.sc-t th,.sc-t td{border:1px solid #e3e8ef;padding:5px 7px;text-align:right;white-space:nowrap}
-.sc-t th{background:#eef3f8;color:#334155;font-weight:600;white-space:normal;text-align:center;vertical-align:bottom}.sc-t td.l{text-align:left;white-space:normal}
+.sc-t th{min-width:62px;background:#eef3f8;color:#334155;font-weight:600;white-space:normal;text-align:center;vertical-align:bottom}.sc-t td.l{text-align:left;white-space:normal}
 .sc-t tr.hl td{background:#fffbe6}.sc-wrap{overflow:auto;max-height:70vh}.sc-wrap thead th{position:sticky;top:0;z-index:1}
 .sc-load{padding:60px;text-align:center;color:#64748b}.sc-note{font-size:12px;color:#94a3b8;margin-top:6px}
 @media (max-width:860px){.sc-bd{grid-template-columns:1fr}.sc-form{border-right:0;border-bottom:1px solid #e3e8ef}.sc-hd h2{font-size:15px}}
@@ -102,7 +102,7 @@ async function open(item){ensureCss();
       return `<div class="sc-rd ${on?"on":""}"><label class="t"><input type="checkbox" data-c="${esc(r.flag)}" data-chk="1" ${on?"checked":""}><span>${esc(nm)}${r.hint&&S.get(r.hint)?`<br><span class="sc-hint" style="font-weight:400">${esc(S.get(r.hint))}</span>`:""}</span>${on&&p!==""?`<span class="sc-p">${nfmt(p)} 元</span>`:""}</label>${on&&r.fields&&r.fields.length?`<div class="sc-in">${r.fields.map(fieldHtml).join("")}</div>`:""}</div>`}).join("")+`</div>`}
     form.innerHTML=h+`<div class="sc-note">※ 計算公式取自 ${esc(item.co)} 官方試算表（${esc(item.ver||"")}，版本日 ${esc(item.date||"")}），僅供參考，實際以保單條款及核保結果為準。</div>`;form.scrollTop=sc}
   function drawOut(){let h="";
-    const msgs=(spec.msgs||[]).map(c=>S.get(c)).filter(v=>typeof v==="string"&&v.trim()&&/＊|超過|不符|不得|錯誤|請確認|須輸入|未滿|以上者|不可|限/.test(v)&&!/^\(/.test(v.trim()));
+    const msgs=(spec.msgs||[]).map(c=>S.get(c)).filter(v=>typeof v==="string"&&v.trim()&&/＊|超過|不符|不得|錯誤|請確認|須輸入|未滿|以上者|不可|限/.test(v)&&!/^[\(★※]/.test(v.trim()));
     if(msgs.length)h+=`<div class="sc-msg">⚠ ${[...new Set(msgs)].map(esc).join("\n⚠ ")}</div>`;
     if(spec.summary)h+=`<div class="sc-sum">${spec.summary.map(k=>{const v=S.get(k.cell);return `<div class="sc-k"><small>${esc(k.label)}</small><b>${nfmt(v,k.fmt)}${k.unit&&v!==""&&v!=="-"?`<small> ${esc(k.unit)}</small>`:""}</b></div>`}).join("")}</div>`;
     (spec.tables||[]).forEach(t=>{h+=tableHtml(t)});
