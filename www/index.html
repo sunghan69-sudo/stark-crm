@@ -337,9 +337,9 @@ details.fold{align-self:start}details.fold>summary{list-style:none;cursor:pointe
 .fxt{margin-top:8px;font-size:12.5px}.fxt th{font-weight:500;color:var(--muted);text-align:right;font-size:11.5px}.fxt td+td{text-align:right}
 .mup{color:#d0302b;font-weight:700}.mdn{color:#13894f;font-weight:700}.mfl{color:var(--muted)}
 @media (max-width:1100px){.mkg{grid-template-columns:1fr 1fr}}@media (max-width:560px){.mkg{grid-template-columns:1fr}}
-.dash2{display:grid;grid-template-columns:minmax(240px,1fr) 3fr;gap:14px;align-items:start}
+.dleft{display:grid;gap:14px;align-content:start}.dleft .card{margin:0}.dash2{display:grid;grid-template-columns:minmax(240px,1fr) 3fr;gap:14px;align-items:start}
 .kst .kgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px 12px}.kst .kgrid>div{display:flex;flex-direction:column}.kst span{color:var(--muted);font-size:13px}.kst b{font-size:26px;font-weight:900;color:var(--pri);line-height:1.25}.kst b em{font-style:normal;font-size:14px;margin-left:2px}.kst small{font-size:12px;color:var(--muted)}
-.carelist{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;max-height:340px;overflow:auto;padding-right:2px}
+.carelist{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;max-height:620px;overflow:auto;padding-right:2px}
 .care{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line,#e5e7eb);border-radius:10px;cursor:pointer;color:inherit;text-decoration:none;background:#fff}.care:hover{border-color:var(--pri)}.care.soon{background:#fff7ed;border-color:#fdba74}
 .care .cd{min-width:44px;text-align:center;font-size:12px;color:var(--muted)}.care .cd b{display:block;font-size:14px;color:var(--pri)}.care.soon .cd b{color:#c2410c}
 .care .cn{flex:1;min-width:0}.care .cn small{margin-left:6px;color:var(--muted);font-size:11.5px}.care .ci{display:flex;flex-direction:column;gap:2px;margin-top:3px;font-size:12px}.care .ci .up{color:#c2410c}.care .ci .bd{color:#0f7c8a}
@@ -837,26 +837,22 @@ function vDash(){
     const f=CARE_F;const shown=list.filter(e=>f==="all"||e.items.some(x=>x.type===f));
     const row=e=>`<a class="care ${e.days<=7?"soon":""}" data-act="openClient" data-id="${e.c.id}"><div class="cd"><b>${e.days===0?"今天":e.days+" 天"}</b></div><div class="cn"><b>${esc(e.c.name)}</b>${e.ids.size>1?`<span class="dup" title="有 ${e.ids.size} 筆同名同生日的客戶資料">重複 ${e.ids.size} 筆</span>`:""}${e.c.family?`<small>${esc(e.c.family)}</small>`:""}<div class="ci">${e.items.map(x=>`<span class="${x.type}">${x.txt}</span>`).join("")}</div></div></a>`;
     return `<div class="dash2">
-    <div class="card kst"><div class="kgrid">
+    <div class="dleft"><div class="card kst"><div class="kgrid">
       <div><span>客戶數</span><b>${cs.length}</b><small>家庭 ${fams} 組</small></div>
       <div><span>有效保單</span><b>${pols.length}</b><small>平均每人 ${(pols.length/Math.max(1,cs.length)).toFixed(1)} 張</small></div>
       <div><span>年化保費</span><b>${prem>=1e8?(prem/1e8).toFixed(2)+"<em>億</em>":prem>=1e4?Math.round(prem/1e4).toLocaleString()+"<em>萬</em>":fmt(prem)}</b><small>全部有效保單</small></div>
       <div><span>30 天待辦</span><b>${rem30.length}</b><small>本週 ${rem7.length} 件</small></div>
     </div></div>
-    <div class="card carec"><div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><h2 style="margin:0">近 30 天關懷名單</h2><span class="sub">生日祝福・保險年齡增齡前提醒客戶投保</span><span class="sp"></span>
-      <div class="seg"><button class="btn sm ${f==="all"?"on":""}" data-act="careF" data-v="all">全部 ${list.length}</button><button class="btn sm ${f==="up"?"on":""}" data-act="careF" data-v="up">⏫ 增齡 ${nUp}</button><button class="btn sm ${f==="bd"?"on":""}" data-act="careF" data-v="bd">🎂 生日 ${nBd}</button></div></div>
-      ${shown.length?`<div class="carelist">${shown.map(row).join("")}</div>`:`<div class="empty" style="padding:20px">近 30 天沒有需要關懷的客戶</div>`}</div>
-  </div>`})()}
-  <div class="grid g2" style="margin-top:14px">
-    <details class="card fold" ${(()=>{try{return localStorage.getItem("stark-fold-rem7")==="0"?"":"open"}catch(e){return "open"}})()} ontoggle="try{localStorage.setItem('stark-fold-rem7',this.open?'1':'0')}catch(e){}"><summary class="row"><h2 style="margin:0">本週提醒 <span class="fcount">${rem7.length} 件</span></h2><span class="sp"></span><a href="#reminders" class="btn sm ghost" onclick="event.stopPropagation()">全部 →</a><span class="fchev">▾</span></summary>
-      ${rem7.length?rem7.slice(0,8).map(remItem).join(""):`<div class="empty" style="padding:24px">這 7 天沒有待辦 👍</div>`}</details>
-    <div class="grid" style="gap:14px;align-content:start">
-      <div class="card"><h2>客戶階段</h2><div class="funnel">${st.map(x=>`<div><b>${x.n}</b><span>${x.s}</span></div>`).join("")}</div></div>
+    <div class="card"><h2>客戶階段</h2><div class="funnel">${st.map(x=>`<div><b>${x.n}</b><span>${x.s}</span></div>`).join("")}</div></div>
       <div class="card"><h2>保障缺口商機</h2><div class="hint" style="margin-bottom:8px">點一下直接列出名單</div>
         ${gaps.map(g=>`<div class="covrow" style="grid-template-columns:120px 1fr 50px;cursor:pointer" data-act="gapgo" data-k="${g.k}"><div class="n">${g.n}</div><div class="bar"><i class="low" style="width:${g.v/mx*100}%"></i></div><div class="x"><b>${g.v}</b> 人</div></div>`).join("")}
       </div>
     </div>
-  </div>`;
+    <div class="card carec"><div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><h2 style="margin:0">近 30 天關懷名單</h2><span class="sub">生日祝福・保險年齡增齡前提醒客戶投保</span><span class="sp"></span>
+      <div class="seg"><button class="btn sm ${f==="all"?"on":""}" data-act="careF" data-v="all">全部 ${list.length}</button><button class="btn sm ${f==="up"?"on":""}" data-act="careF" data-v="up">⏫ 增齡 ${nUp}</button><button class="btn sm ${f==="bd"?"on":""}" data-act="careF" data-v="bd">🎂 生日 ${nBd}</button></div></div>
+      ${shown.length?`<div class="carelist">${shown.map(row).join("")}</div>`:`<div class="empty" style="padding:20px">近 30 天沒有需要關懷的客戶</div>`}</div>
+  </div>`})()}
+`;
 }
 function remItem(r){
   const t=today();const dd=daysBetween(t,r.d);const k=KIND[r.kind];
