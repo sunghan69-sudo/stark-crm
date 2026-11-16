@@ -626,7 +626,7 @@ async function initStore(){
     try{await FB.fs.enablePersistence({synchronizeTabs:true})}catch(e){}
   }catch(e){S.mode="setup";S.cfgErr=String(e.message||e);render();return}
   FB.auth.onAuthStateChanged(u=>{
-    if(unsub){unsub();unsub=null}if(punsub){punsub();punsub=null}if(needUnsub){needUnsub();needUnsub=null}S.sharedOK=false;S.sharedProducts=[];S.ownProducts=[];
+    if(unsub){unsub();unsub=null}S.tourChecked=false;if(punsub){punsub();punsub=null}if(needUnsub){needUnsub();needUnsub=null}S.sharedOK=false;S.sharedProducts=[];S.ownProducts=[];
     if(!u){stopGate();S.isAdmin=false;S.mode="login";S.uid=null;S.clients=[];S.profile=clone(DEF_PROFILE);setSync("未登入");render();return}
     S.uid=u.uid;S.email=u.email;
     checkAccess(u,()=>{S.mode="cloud";S.loaded=false;setSync("同步中…");render();
@@ -636,7 +636,7 @@ async function initStore(){
       snap.docs.forEach(d=>{const v=d.data();if(!v)return;if(d.id==="profile")prof=v;else if(v.type==="client")cl.push(Object.assign({},v,{id:d.id}));else if(v.type==="product")pr.push(Object.assign({},v,{id:d.id}))});
       S.clients=cl;S.ownProducts=pr;mergeProducts();migrateProducts();watchNeeds();S.profile=Object.assign(clone(DEF_PROFILE),prof||{});
       if(!snap.metadata.fromCache){clearTimeout(timer);setSync()}else if(!S.loaded)setSync("離線資料（連上網路後自動同步）");
-      S.loaded=true;reportNeeds();if(!M)render();
+      S.loaded=true;reportNeeds();if(!M)render();if(!S.tourChecked&&!snap.metadata.fromCache){S.tourChecked=true;maybeAutoTour(FB.auth.currentUser)}
     },err=>{clearTimeout(timer);setSync("⚠ 同步錯誤："+(err.code||""));S.loaded=true;render()});
     punsub=pcol().onSnapshot(snap=>{S.sharedOK=true;S.sharedProducts=snap.docs.map(d=>Object.assign({},d.data(),{id:d.id}));mergeProducts();migrateProducts();reportNeeds();if(!M&&S.loaded)render()},
       err=>{console.warn("共用商品庫未開放：",err&&err.code);S.sharedOK=false;mergeProducts();if(!M&&S.loaded)render()});
@@ -793,8 +793,8 @@ function vDash(){
   const st=STAGES.map(s=>({s,n:cs.filter(c=>(c.stage||"潛在")===s).length}));
   const gaps=[["ci","缺重疾/重大傷病"],["med","缺實支實付"],["acc","缺意外"],["ltc","缺長照"],["life","缺壽險"]].map(([k,n])=>({k,n,v:cs.filter(c=>cov(c)[k]<=0).length}));
   const mx=Math.max(1,...gaps.map(g=>g.v));
-  if(!cs.length)return `<div class="top"><h1>總覽</h1></div><div class="card empty"><b>還沒有客戶資料</b>先新增第一位客戶，或載入示範資料看看系統怎麼運作。<div class="row" style="justify-content:center;margin-top:16px"><button class="btn p" data-act="newClient">＋ 新增客戶</button><button class="btn" data-act="demo">載入示範資料</button></div></div>`;
-  return `<div class="top"><div><h1>總覽</h1><div class="sub">${ds(today())}｜早安，${esc(agentName())}</div></div><div class="row"><button class="btn p" data-act="newClient">＋ 新增客戶</button></div></div>
+  if(!cs.length)return `<div class="top"><h1>總覽</h1></div><div class="card empty"><b>還沒有客戶資料</b>先新增第一位客戶，或載入示範資料看看系統怎麼運作。<div class="row" style="justify-content:center;margin-top:16px"><button class="btn p" data-act="newClient">＋ 新增客戶</button><button class="btn" data-act="demo">載入示範資料</button><button class="btn" data-act="tour">🎬 操作說明影片</button></div></div>`;
+  return `<div class="top"><div><h1>總覽</h1><div class="sub">${ds(today())}｜早安，${esc(agentName())}</div></div><div class="row"><button class="btn" data-act="tour">🎬 操作說明影片</button><button class="btn p" data-act="newClient">＋ 新增客戶</button></div></div>
   ${vMarket()}
   <div class="grid k4">
     <div class="card kpi"><div class="l">客戶數</div><div class="v">${cs.length}</div><div class="s">家庭 ${new Set(cs.map(c=>c.family).filter(Boolean)).size} 組</div></div>
@@ -1635,6 +1635,17 @@ function vMkt(){loadMktg();const reps=(MKTG&&MKTG.reports)||[];
   <div class="card"><h2>🇺🇸 美金計價標的・月配息率前 ${rep.usdList.length}</h2>${mktgTable(rep,rep.usdList,true)}</div>
   <div class="card"><h2>重點摘要</h2><ul style="margin:0;padding-left:20px;line-height:1.9">${(rep.summary||[]).map(t=>`<li>${esc(t)}</li>`).join("")}</ul>
     <div class="hint" style="margin-top:10px">${rep.rateNote?esc(rep.rateNote)+"。":""}預估單位數：台幣＝金額÷淨值；美金＝(金額÷匯率)÷淨值。預估每月配息＝金額×月配息率（未扣任何保單費用）。${rep.note?esc(String(rep.note).replace(/。$/,""))+"。":""}資料來源：${esc(rep.source)}。本資料不構成投資建議，實際依申購日淨值與匯率為準。</div></div>`}
+
+/* ========== 操作說明影片：新註冊帳號第一次進系統自動播放一次；其他帳號從總覽「🎬 操作說明影片」開啟 ========== */
+const TOUR_SRC="media/tour.mp4",TOUR_SINCE=Date.parse("2026-11-16T09:20:00Z");
+function openTour(auto){if(document.getElementById("tourBox"))return;const box=document.createElement("div");box.id="tourBox";document.getElementById("modalRoot").appendChild(box);
+  box.innerHTML=`<div class="mask"><div class="modal" style="max-width:960px"><div class="mh"><b>🎬 史塔克客戶管理系統｜操作說明</b><button class="btn ghost x" data-x>✕</button></div>
+    <div class="mb" style="padding:0;background:#000"><video id="tourVid" src="${TOUR_SRC}" controls playsinline preload="auto" style="width:100%;display:block;max-height:72vh;background:#000"></video></div>
+    <div class="mf">${auto?`<span class="sub" style="margin-right:auto">歡迎加入！之後可在「總覽」右上角再次觀看。</span>`:""}<button class="btn p" data-x>${auto?"開始使用":"關閉"}</button></div></div></div>`;
+  const v=box.querySelector("#tourVid");const close=()=>{try{v.pause()}catch(e){}box.remove()};box.querySelectorAll("[data-x]").forEach(b=>b.onclick=close);v.onended=()=>{if(auto)setTimeout(close,800)};
+  const p=v.play();if(p&&p.catch)p.catch(()=>{v.muted=true;v.play().catch(()=>{})})}
+function maybeAutoTour(u){try{if(!u||S.mode!=="cloud")return;const created=Date.parse((u.metadata&&u.metadata.creationTime)||"");if(!created||created<TOUR_SINCE)return;
+  const k="stark-tour-"+u.uid;if(localStorage.getItem(k)||S.profile.tourSeen)return;localStorage.setItem(k,"1");setTimeout(()=>openTour(true),600);S.profile.tourSeen=Date.now();try{saveProfile()}catch(e){}}catch(e){}}
 /* ========== 小彈窗 ========== */
 function openText(title,text,editable,onOk){
   const r=document.getElementById("modalRoot");const box=document.createElement("div");
@@ -1682,6 +1693,7 @@ document.addEventListener("click",async e=>{
   switch(a){
     case "newClient":openClient(null);break;
     case "bulkPdf":openBulkPdf();break;
+    case "tour":openTour(false);break;
     case "cview":CVIEW=el.dataset.v;try{localStorage.setItem("stark-cview",CVIEW)}catch(e){}render();break;
     case "mktgRep":mktgRep=el.dataset.id;render();break;
     case "openClient":openClient(el.dataset.id,el.dataset.tab);break;
