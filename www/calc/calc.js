@@ -40,9 +40,10 @@ function Session(item,model,H){const spec=item.calc;const hf=buildModel(H,model)
   const get=a=>{const v=hf.getCellValue(A(a));return v&&typeof v==="object"&&v.type?"":v};
   const set=(a,v)=>hf.setCellContents(A(a),[[v]]);
   const evalF=f=>{const ff=f.replace(/\{([^}]+)\}/g,(m,n)=>nameMap[n]||"NA()");try{return hf.calculateFormula(ff,hf.getSheetId(defSheet))}catch(e){return null}};
-  const opts=o=>{if(!o)return null;if(o.list)return o.list;let v=null;
+  const opts=function(o){if(!o)return null;if(o.list)return o.list;let v=null;
+    if(o.cond){const c=evalF(o.cond);return opts(c===true||c===1?o.then:o.else)}
     if(o.name)v=evalF("={"+o.name+"}");else if(o.indirect){const nm=evalF("={"+o.indirect+"}");v=nm&&nameMap[nm]?evalF("={"+nm+"}"):null}else if(o.expr)v=evalF(o.expr);
-    if(Array.isArray(v))return v.flat().filter(x=>x!==null&&x!==""&&!(x&&x.type));return v==null?[]:[v]};
+    if(Array.isArray(v))return v.flat().filter(x=>x!==null&&x!==""&&!(x&&x.type));return v==null||(v&&typeof v==="object")?[]:[v]};
   return {hf,get,set,opts,spec,evalF}}
 
 /* ---------- 介面 ---------- */
