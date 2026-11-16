@@ -73,7 +73,6 @@ async function videos(){
   const order={inv:0,biz:1,med:2,ins:3};
   return pick.slice(0,5).sort((a,b)=>order[a.cat]-order[b.cat]||b.score-a.score).map(({score,...v})=>v);
 }
-out.videos=await videos();
 // 影音每天早上 8 點（VIDEOS=1）更新一輪，其他時段沿用上一輪
 if(process.env.VIDEOS==="1"){out.videos=await videos();out.videosAt=new Date().toISOString()}
 else{try{const r=await fetch("https://raw.githubusercontent.com/sunghan69-sudo/stark-crm/data/market.json?t="+Date.now());const j=await r.json();out.videos=j.videos||[];out.videosAt=j.videosAt||null;if(!out.videos.length){out.videos=await videos();out.videosAt=new Date().toISOString()}}catch(e){out.videos=await videos();out.videosAt=new Date().toISOString()}}
