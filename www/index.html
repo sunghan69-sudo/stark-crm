@@ -1110,8 +1110,9 @@ function baseName(name){return String(name||"").replace(/[（(][^()（）]*[)）
 function matchProduct(p){if(!S.products.length)return null;const code=prodCode(p.product),co=coKey(polCo(p)),bn=baseName(p.product);
   let cand=S.products.filter(x=>x.status!=="停用"&&((code&&x.code&&x.code.toUpperCase()===code)||(bn&&(x.name===bn||(x.aliases||[]).includes(bn)||(x.aliases||[]).includes(p.product)))));
   if(co){const same=cand.filter(x=>x.company===co);if(same.length)cand=same;else cand=cand.filter(x=>!x.company||x.company==="其他")}
-  if(!cand.length)return null;const st=p.start||"9999";cand.sort((a,b)=>(b.status==="已核對")-(a.status==="已核對")||(b.effective||"").localeCompare(a.effective||""));
-  return cand.find(x=>!x.effective||x.effective<=st)||cand[cand.length-1]}
+  if(!cand.length)return null;if(code){const exact=cand.filter(x=>x.code&&x.code.toUpperCase()===code);if(exact.length)cand=exact}
+  const st=p.start||"9999";cand.sort((a,b)=>(b.status==="已核對")-(a.status==="已核對")||(b.effective||"").localeCompare(a.effective||""));
+  return cand.find(x=>!x.effective||x.effective<=st)||cand.find(x=>x.status==="已核對")||cand[cand.length-1]}
 function policyBase(p){const t=String(p.sumText||"").replace(/,/g,"");const all=[...t.matchAll(/([\d.]+)\s*(萬|元|美元)/g)];if(all.length){const m=all[all.length-1];const n=parseFloat(m[1]);return m[2]==="萬"?n*10000:n}
   const n=parseFloat(t);return isFinite(n)&&n>0?n:null}
 function computeFromProduct(p,pr){const base=policyBase(p);const t=String(p.sumText||"");const rules=(pr.rules||[]);
