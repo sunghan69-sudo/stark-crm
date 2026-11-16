@@ -690,7 +690,7 @@ const FILTERS=[
 ];
 function filtered(){
   const f=FILTERS.find(x=>x.id===S.filter)||FILTERS[0];const q=S.q.trim().toLowerCase();
-  return S.clients.filter(c=>f.f(c)&&(!S.tag||(c.tags||[]).includes(S.tag))&&(!q||[c.name,c.idNo,c.phone,c.line,c.family,c.job,(c.tags||[]).join(" "),c.notes].join(" ").toLowerCase().includes(q)))
+  return S.clients.filter(c=>f.f(c)&&(!S.tag||(c.tags||[]).includes(S.tag))&&(!q||[c.name,c.idNo,c.phone,c.line,c.family,c.job,c.address,c.address2,(c.tags||[]).join(" "),c.notes].join(" ").toLowerCase().includes(q)))
     .sort((a,b)=>(a.family||"~").localeCompare(b.family||"~","zh-Hant")||(a.name||"").localeCompare(b.name||"","zh-Hant"));
 }
 
@@ -805,7 +805,7 @@ function vClients(){
       <td class="hide-m">${(c.tags||[]).map(t=>`<span class="tag o">${esc(t)}</span>`).join("")}</td></tr>`;
   }).join("");
   return `<div class="top"><div><h1>客戶管理</h1><div class="sub">共 ${S.clients.length} 位，顯示 ${list.length} 位</div></div>
-   <div class="row"><input class="inp search" id="q" placeholder="搜尋姓名、電話、標籤、家庭…" value="${esc(S.q)}"><button class="btn p" data-act="newClient">＋ 新增客戶</button></div></div>
+   <div class="row"><input class="inp search" id="q" placeholder="搜尋姓名、電話、地址、標籤、家庭…" value="${esc(S.q)}"><button class="btn p" data-act="newClient">＋ 新增客戶</button></div></div>
    <div class="chips">${FILTERS.map(f=>`<button class="chip ${S.filter===f.id?"on":""}" data-act="filter" data-f="${f.id}">${f.n}</button>`).join("")}</div>
    ${tags.length?`<div class="chips" style="margin-top:-4px"><span class="sub" style="padding:5px 0">標籤：</span>${tags.map(t=>`<button class="chip ${S.tag===t?"on":""}" data-act="tagf" data-t="${esc(t)}">#${esc(t)}</button>`).join("")}</div>`:""}
    <div class="card" style="padding:6px 8px;overflow-x:auto">${list.length?`<table class="tbl"><thead><tr><th>客戶</th><th class="hide-m">家庭</th><th>階段</th><th class="hide-m">保單</th><th class="hide-m">保障缺口</th><th class="hide-m">上次聯絡</th><th class="hide-m">標籤</th></tr></thead><tbody>${rows}</tbody></table>`:`<div class="empty"><b>沒有符合的客戶</b>${S.clients.length?"換個篩選條件試試":"按右上角「新增客戶」開始"}</div>`}</div>
@@ -914,7 +914,7 @@ function drawModal(){
   const body={info:mInfo,fam:mFam,pol:mPol,cov:mCov,log:mLog,svc:mSvc}[M.tab]();
   document.getElementById("modalRoot").innerHTML=`<div class="mask drawer" data-act="maskClose"><div class="modal">
     <div class="mh"><span class="av" style="width:44px;height:44px;font-size:16px">${esc((c.name||"新").slice(-2))}</span><div><div class="nm" style="font-size:18px">${esc(c.name||"新增客戶")}</div><div class="sub">${c.birthday?age(c.birthday)+" 歲・":""}${c.idNo?`<span id="idDisp" data-full="${esc(c.idNo)}" data-mask="${esc(maskId(c.idNo))}">${esc(maskId(c.idNo))}</span><button type="button" class="eye" data-act="toggleId" title="顯示 / 隱藏身分證字號">👁</button>・`:""}${esc(c.stage||"")}${c.family?"・🏠 "+esc(c.family):""}${!c.isNew?"・年繳保費 "+fmt(annualSum(c))+" 元":""}</div></div>
-    ${c.phone&&!c.isNew?`<a class="btn sm x" href="tel:${esc(c.phone.replace(/[^\d+]/g,""))}">📞 撥打</a>`:""}<button class="btn ghost ${c.phone&&!c.isNew?"":"x"}" data-act="close">✕</button></div>
+    ${c.address&&!c.isNew?`<a class="btn sm x" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address)}" target="_blank" rel="noopener">📍 導航</a>`:""}${c.phone&&!c.isNew?`<a class="btn sm x" href="tel:${esc(c.phone.replace(/[^\d+]/g,""))}">📞 撥打</a>`:""}<button class="btn ghost ${c.phone&&!c.isNew?"":"x"}" data-act="close">✕</button></div>
     ${c.isNew?"":`<div class="tabs">${tabs.map(t=>`<button class="${M.tab===t[0]?"on":""}" data-act="mtab" data-t="${t[0]}">${t[1]}</button>`).join("")}</div>`}
     ${fam.length&&!c.isNew&&M.tab!=="fam"?`<div style="padding:10px 22px 0" class="row"><span class="sub">全家成員：</span>${fam.map(x=>`<button class="chip" data-act="switchClient" data-id="${x.id}">${esc(x.name)}${x.relation?"（"+esc(x.relation)+"）":""}</button>`).join("")}</div>`:""}
     <div class="mb">${body}</div></div></div>`;
@@ -948,6 +948,8 @@ function mInfo(){
     ${f("name","姓名 *","text")}${sel("gender","性別",["","男","女"])}${f("birthday","生日","date")}
     <label><span>身分證字號 <button type="button" class="eye" data-act="toggleId" title="顯示 / 隱藏">👁</button></span><input class="inp secure" id="idInput" name="idNo" value="${esc(c.idNo)}" maxlength="10" placeholder="例：A123456789" style="text-transform:uppercase" autocomplete="off" autocapitalize="characters"></label>
     ${f("phone","手機","tel")}${f("line","LINE","text")}${f("email","Email","email")}
+    <label class="w3"><span>通訊地址 ${c.address?`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address)}" target="_blank" rel="noopener" style="font-weight:400;margin-left:6px">📍 地圖</a>`:""}</span><input class="inp" name="address" value="${esc(c.address)}" placeholder="例：台北市信義區市府路 1 號 5 樓" autocomplete="street-address"></label>
+    <label class="w3">戶籍地址<span class="sub" style="font-weight:400">（與通訊地址相同可留空）</span><input class="inp" name="address2" value="${esc(c.address2)}"></label>
     ${f("job","職業","text","例：工程師")}${f("income","年收入（萬）","number")}${sel("stage","客戶階段",STAGES)}
     <div class="sec">家庭（同一個家庭名稱的客戶會整合在一起，方便看全家保單）</div>
     <label>家庭名稱<input class="inp" name="family" list="famlist" value="${esc(c.family)}" placeholder="例：王家"><datalist id="famlist">${fams.map(x=>`<option value="${esc(x)}">`).join("")}</datalist></label>
@@ -955,7 +957,6 @@ function mInfo(){
     <div class="sec">經營追蹤</div>
     ${f("lastContact","上次聯絡","date")}${f("nextFollow","下次追蹤日","date")}${f("followNote","追蹤事項","text","例：送建議書")}
     <label class="w3">標籤（用逗號分隔）<input class="inp" name="tags" value="${esc((c.tags||[]).join(", "))}" placeholder="例：VIP, 新手爸媽, 高資產"></label>
-    <label class="w3">地址<input class="inp" name="address" value="${esc(c.address)}"></label>
     <label class="w3">備註<textarea class="inp" name="notes" rows="3">${esc(c.notes)}</textarea></label>
   </div><div class="row" style="margin-top:16px">${c.isNew?"":`<button type="button" class="btn d" data-act="delClient">刪除客戶</button>`}<span class="sp"></span><button type="button" class="btn" data-act="close">取消</button><button class="btn p" type="submit">${c.isNew?"建立客戶":"儲存"}</button></div></form>`;
 }
@@ -1520,7 +1521,7 @@ function confirmBox(msg,onYes){
 
 /* ========== 匯出 ========== */
 function csv(rows){return rows.map(r=>r.map(v=>{v=String(v==null?"":v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(",")).join("\n")}
-function exportCsv(){copy(csv([["姓名","身分證字號","性別","生日","年齡","手機","LINE","Email","職業","年收入(萬)","家庭","身分","階段","來源","標籤","上次聯絡","下次追蹤","有效保單數","年化保費","備註"]].concat(S.clients.map(c=>[c.name,c.idNo,c.gender,c.birthday,age(c.birthday),c.phone,c.line,c.email,c.job,c.income,c.family,c.relation,c.stage,c.source,(c.tags||[]).join("、"),c.lastContact,c.nextFollow,(c.policies||[]).filter(active).length,Math.round(annualSum(c)),c.notes]))))}
+function exportCsv(){copy(csv([["姓名","身分證字號","性別","生日","年齡","手機","LINE","Email","通訊地址","戶籍地址","職業","年收入(萬)","家庭","身分","階段","來源","標籤","上次聯絡","下次追蹤","有效保單數","年化保費","備註"]].concat(S.clients.map(c=>[c.name,c.idNo,c.gender,c.birthday,age(c.birthday),c.phone,c.line,c.email,c.address,c.address2,c.job,c.income,c.family,c.relation,c.stage,c.source,(c.tags||[]).join("、"),c.lastContact,c.nextFollow,(c.policies||[]).filter(active).length,Math.round(annualSum(c)),c.notes]))))}
 function exportPol(){const h=["客戶","保險公司","商品","險種","保單號","要保人","狀態","生效日","繳費年期","繳別","每期保費","年化保費","繳費方式"].concat(COV.map(x=>x.n+"("+x.u+")"));copy(csv([h].concat(S.clients.flatMap(c=>(c.policies||[]).map(p=>[c.name,p.company,p.product,p.type,p.policyNo,p.holder,p.status,p.start,p.payYears,FREQ[fq(p)],p.premium,Math.round(annual(p)),p.payMethod].concat(COV.map(x=>(p.cov||{})[x.k]||"")))))))}
 function exportJson(){openText("完整備份（請複製後存成文字檔）",JSON.stringify({v:1,exported:new Date().toISOString(),profile:S.profile,clients:S.clients,products:S.products}))}
 function importJson(){openText("貼上 JSON 備份內容（同 ID 客戶會被覆蓋）","",true,async t=>{
