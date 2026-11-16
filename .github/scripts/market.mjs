@@ -50,27 +50,33 @@ async function news(){
   for(const x of biz){if(pick.length>=5)break;add(x)}
   return pick.slice(0,5).map(x=>({id:x.newsId,title:x.title,cat:x.categoryName||"",t:x.publishAt,summary:String(x.summary||"").replace(/\s+/g," ").slice(0,90),url:`https://news.cnyes.com/news/id/${x.newsId}`,ins:isIns(x),kw:kw(x).slice(0,3)}));
 }
-out.news=await news();
 
-// 財經影音：YouTube 頻道 RSS（非凡財經新聞、57東森財經新聞），依觀看數排序，排除 Shorts 與政治選舉
-const YT=[["UCYIVkruUoN04UjV9pkBTswg","非凡財經新聞"],["UCuzqko_GKcj9922M1gUo__w","東森財經新聞"]];
+
+// 今日重點影音：YouTube 頻道 RSS，依觀看熱度挑 5 支，分類配額：投資股市 2、商業 1、醫療 1、保險 1（不足時由其他類補）
+const YT=[["UCYIVkruUoN04UjV9pkBTswg","非凡財經新聞"],["UCuzqko_GKcj9922M1gUo__w","東森財經新聞"],["UC5nwNW4KdC0SzrhF9BXEYOQ","TVBS NEWS"],["UCAqzHNzLTC6Vm5UYE7xw_2A","健康2.0"],["UCuGQgbXhDC3a5emcEPCFKog","ETtoday健康雲"]];
+const CAT={ins:/保險|保單|壽險|產險|理賠|保費|投保|保戶|長照險|醫療險|癌症險|金管會.*保/,med:/醫|藥|健保|癌|疫苗|長照|病|健康|失智|中風|心臟|血壓|血糖|腎|肝|肺|骨|睡眠|飲食|營養|運動傷害/,inv:/股|ETF|台積|輝達|半導體|美股|台股|Fed|聯準會|升息|降息|利率|債|匯率|美元|基金|期貨|加權|指數|外資|AI股|殖利率|黃金|比特幣/,biz:/經濟|景氣|企業|營收|產業|關稅|出口|訂單|消費|零售|房市|房價|薪|就業|無薪假|物價|通膨|財報|EPS|併購|上市|供應鏈|電商|航運/};
+const catOf=t=>CAT.ins.test(t)?"ins":CAT.inv.test(t)?"inv":CAT.biz.test(t)?"biz":CAT.med.test(t)?"med":"";
 async function videos(){
   const all=[];const now=Date.now();
   for(const [id,ch] of YT){try{const r=await fetch(`https://www.youtube.com/feeds/videos.xml?channel_id=${id}`,{headers:UA});if(!r.ok)continue;const x=await r.text();
     for(const e of x.split("<entry>").slice(1)){const g=re=>{const m=e.match(re);return m?m[1]:""};
       const vid=g(/<yt:videoId>([^<]+)</),title=g(/<title>([^<]+)</).replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;/g,"'"),pub=g(/<published>([^<]+)</),views=+g(/views="(\d+)"/)||0;
       if(!vid||/#shorts|shorts/i.test(title))continue;
-      if(/民調|選戰|市長|議員|立委|藍綠|政黨|總統府|罷免/.test(title))continue;
-      const age=(now-Date.parse(pub))/36e5;if(age>48)continue;
-      const rel=/股|ETF|台積|輝達|AI|半導體|美股|Fed|聯準會|利率|升息|降息|通膨|匯|美元|經濟|財報|營收|EPS|投資|基金|債|房|保險|壽險|保單|醫療|健保|長照|退休|理財|金融|銀行|關稅/i.test(title);
-      all.push({id:vid,title:title.replace(/｜(非凡財經新聞|東森財經新聞|57東森財經新聞).*$/,"").trim(),ch,pub,views,score:views/Math.pow(age+2,0.8)*(rel?1.5:0.6),ins:/保險|壽險|保單|醫療|健保|長照|退休/.test(title)})}}catch(e){}}
+      if(/民調|選戰|市長|議員|立委|藍綠|政黨|總統府|罷免|命案|車禍|地震|颱風|藝人|網紅/.test(title))continue;
+      const age=(now-Date.parse(pub))/36e5;if(age>72)continue;
+      let cat=catOf(title);if(/健康2\.0|健康雲/.test(ch)&&!cat)cat="med";if(!cat)continue;
+      all.push({id:vid,title:title.replace(/｜.*$/,"").replace(/\s*【[^】]*】\s*$/,"").trim()||title,ch,pub,views,cat,score:views/Math.pow(age+2,0.9)})}}catch(e){}}
   all.sort((a,b)=>b.score-a.score);
-  const pick=[];const ins=all.find(v=>v.ins);
-  for(const v of all){if(pick.length>=(ins?5:6))break;if(v!==ins)pick.push(v)}
-  if(ins)pick.splice(Math.min(3,pick.length),0,ins);
-  return pick.slice(0,6).map(({score,...v})=>v);
+  const quota={inv:2,biz:1,med:1,ins:1},pick=[];
+  for(const c of ["inv","biz","med","ins"]){all.filter(v=>v.cat===c).slice(0,quota[c]).forEach(v=>pick.push(v))}
+  for(const v of all){if(pick.length>=5)break;if(!pick.includes(v)&&pick.filter(p=>p.cat===v.cat).length<2)pick.push(v)}
+  const order={inv:0,biz:1,med:2,ins:3};
+  return pick.slice(0,5).sort((a,b)=>order[a.cat]-order[b.cat]||b.score-a.score).map(({score,...v})=>v);
 }
 out.videos=await videos();
+// 影音每天早上 8 點（VIDEOS=1）更新一輪，其他時段沿用上一輪
+if(process.env.VIDEOS==="1"){out.videos=await videos();out.videosAt=new Date().toISOString()}
+else{try{const r=await fetch("https://raw.githubusercontent.com/sunghan69-sudo/stark-crm/data/market.json?t="+Date.now());const j=await r.json();out.videos=j.videos||[];out.videosAt=j.videosAt||null;if(!out.videos.length){out.videos=await videos();out.videosAt=new Date().toISOString()}}catch(e){out.videos=await videos();out.videosAt=new Date().toISOString()}}
 fs.mkdirSync("out",{recursive:true});fs.writeFileSync("out/market.json",JSON.stringify(out,null,1));
 console.log(JSON.stringify(out).slice(0,1500));
 if(!out.index.length&&!out.tw.length)process.exit(1);
