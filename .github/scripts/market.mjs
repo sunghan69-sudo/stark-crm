@@ -62,9 +62,9 @@ async function videos(){
     for(const e of x.split("<entry>").slice(1)){const g=re=>{const m=e.match(re);return m?m[1]:""};
       const vid=g(/<yt:videoId>([^<]+)</),title=g(/<title>([^<]+)</).replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;/g,"'"),pub=g(/<published>([^<]+)</),views=+g(/views="(\d+)"/)||0;
       if(!vid||/#shorts|shorts/i.test(title))continue;
-      if(/民調|選戰|市長|議員|立委|藍綠|政黨|總統府|罷免|命案|車禍|地震|颱風|藝人|網紅/.test(title))continue;
+      if(/民調|選戰|市長|議員|立委|藍綠|政黨|總統府|罷免|命案|車禍|地震|颱風|藝人|網紅|氣象|天氣|降溫|寒流|低溫|下雨/.test(title))continue;
       const age=(now-Date.parse(pub))/36e5;if(age>72)continue;
-      let cat=catOf(title);if(/健康2\.0|健康雲/.test(ch)&&!cat)cat="med";if(!cat)continue;
+      let cat=catOf(title);if(!cat)continue;
       all.push({id:vid,title:title.replace(/｜.*$/,"").replace(/\s*【[^】]*】\s*$/,"").trim()||title,ch,pub,views,cat,score:views/Math.pow(age+2,0.9)})}}catch(e){}}
   all.sort((a,b)=>b.score-a.score);
   const quota={inv:2,biz:1,med:1,ins:1},pick=[];
