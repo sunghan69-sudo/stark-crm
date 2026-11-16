@@ -805,7 +805,7 @@ function vClients(){
       <td class="hide-m">${(c.tags||[]).map(t=>`<span class="tag o">${esc(t)}</span>`).join("")}</td></tr>`;
   }).join("");
   return `<div class="top"><div><h1>客戶管理</h1><div class="sub">共 ${S.clients.length} 位，顯示 ${list.length} 位</div></div>
-   <div class="row"><input class="inp search" id="q" placeholder="搜尋姓名、電話、地址、標籤、家庭…" value="${esc(S.q)}"><button class="btn p" data-act="newClient">＋ 新增客戶</button></div></div>
+   <div class="row"><input class="inp search" id="q" placeholder="搜尋姓名、電話、地址、標籤、家庭…" value="${esc(S.q)}"><button class="btn" data-act="bulkPdf">📂 批次匯入保單PDF</button><button class="btn p" data-act="newClient">＋ 新增客戶</button></div></div>
    <div class="chips">${FILTERS.map(f=>`<button class="chip ${S.filter===f.id?"on":""}" data-act="filter" data-f="${f.id}">${f.n}</button>`).join("")}</div>
    ${tags.length?`<div class="chips" style="margin-top:-4px"><span class="sub" style="padding:5px 0">標籤：</span>${tags.map(t=>`<button class="chip ${S.tag===t?"on":""}" data-act="tagf" data-t="${esc(t)}">#${esc(t)}</button>`).join("")}</div>`:""}
    <div class="card" style="padding:6px 8px;overflow-x:auto">${list.length?`<table class="tbl"><thead><tr><th>客戶</th><th class="hide-m">家庭</th><th>階段</th><th class="hide-m">保單</th><th class="hide-m">保障缺口</th><th class="hide-m">上次聯絡</th><th class="hide-m">標籤</th></tr></thead><tbody>${rows}</tbody></table>`:`<div class="empty"><b>沒有符合的客戶</b>${S.clients.length?"換個篩選條件試試":"按右上角「新增客戶」開始"}</div>`}</div>
@@ -1504,6 +1504,55 @@ function openScan(){
   draw("pick");
 }
 
+
+/* ========== 批次匯入保單 PDF（整個資料夾一次匯入，依檔名「某某(家庭)」分家庭） ========== */
+let _jszip=null;function loadJsZip(){if(_jszip)return _jszip;_jszip=new Promise((res,rej)=>{const sc=document.createElement("script");sc.src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";sc.onload=()=>res(window.JSZip);sc.onerror=()=>{_jszip=null;rej(new Error("ZIP 元件載入失敗"))};document.head.appendChild(sc)});return _jszip}
+async function expandBulkFiles(list){const out=[];for(const f of list){if(/\.zip$/i.test(f.name)){const Z=await loadJsZip();const z=await Z.loadAsync(f);for(const n of Object.keys(z.files)){const e=z.files[n];if(!e.dir&&/\.pdf$/i.test(n)&&!/__MACOSX/.test(n)){const b=await e.async("blob");out.push(new File([b],n.split("/").pop(),{type:"application/pdf"}))}}}else if(/\.pdf$/i.test(f.name)||f.type==="application/pdf")out.push(f)}return out}
+function bulkHeadName(fn){const m=String(fn||"").replace(/\.pdf$/i,"").match(/^(.+?)[（(](家庭|個人)[)）]/);return m?m[1].trim():""}
+function bulkNp(it,data){const cov={};Object.keys(it.cov||{}).forEach(k=>{if(COV.some(x=>x.k===k)&&num(it.cov[k])>0)cov[k]=num(it.cov[k])});
+  const np={company:it.company||data.company||"",product:it.product||"",type:PTYPES.includes(it.type)?it.type:"其他",policyNo:it.policyNo,holder:it.holder,payMethod:it.payMethod,rider:!!it.rider,target:it.target||"本人",start:/^\d{4}-\d{2}-\d{2}$/.test(it.start||"")?it.start:"",payYears:num(it.payYears)||"",freq:it.freq,premium:it.premium===""||it.premium==null?"":num(it.premium),sumText:it.sumText||"",beneficiary:it.beneficiary||"",status:"有效",cov,note:"",currency:it.currency==="USD"?"USD":"TWD",listPremium:it.listPremium===""||it.listPremium==null?"":num(it.listPremium),covd:(()=>{const o={};Object.keys(it.covd||{}).forEach(k=>{const v=String(it.covd[k]||"").trim();if(v&&COVD_KEYS.includes(k))o[k]=v});return o})()};
+  if(it.payTo)np.payTo=it.payTo;if(it.note)np.note=it.note;return np}
+async function bulkImportOne(file,stat){
+  const pages=await pdfTextPages(file);const txt=pages.map(p=>p.map(i=>i.s).join("")).join("");
+  if(!/保\s*單\s*號\s*碼/.test(txt)||!/投保日期/.test(txt))throw new Error("不是保單明細格式");
+  const data=parsePolicyReportPages(pages);if(!data.policies.length)throw new Error("讀不到保單");enforceOneMain(data);
+  const flat=[];data.policies.forEach(pp=>(pp.items||[]).forEach(it=>flat.push(Object.assign({},it,{policyNo:pp.policyNo||"",holder:pp.holder||"",payMethod:pp.payMethod||"",company:pp.company||data.company||"",insured:String(it.insured||pp.insured||data.insured||"").trim(),freq:({"年":12,"年繳":12,"半年":6,"半年繳":6,"季":3,"季繳":3,"月":1,"月繳":1,"躉繳":0,"躉":0})[it.freq]??12}))));
+  const groups={};flat.forEach(it=>{(groups[it.insured]=groups[it.insured]||{items:[],cov:null}).items.push(it)});
+  const covs=Array.isArray(data.coverageByInsured)?data.coverageByInsured.slice():[];if(data.coverage&&Object.keys(data.coverage).length)covs.push({insured:data.insured||"",coverage:data.coverage});
+  covs.forEach(cv=>{if(cv&&cv.coverage&&Object.keys(cv.coverage).length){const n=String(cv.insured||"").trim();const g=groups[n]=groups[n]||{items:[],cov:null};g.cov=Object.assign(g.cov||{},cv.coverage)}});
+  const names=Object.keys(groups).filter(Boolean);let head=bulkHeadName(file.name);if(!head)head=names[0]||"";if(!head)throw new Error("沒有姓名");
+  let hc=S.clients.find(c=>c.name===head&&isHead(c))||S.clients.find(c=>c.name===head);
+  const fam=(hc&&hc.family)||head+"家";const touched=new Map();
+  const get=n=>{if(touched.has(n))return touched.get(n);let c=S.clients.find(x=>x.family===fam&&x.name===n)||(n===head?hc:null)||S.clients.find(x=>x.name===n&&!x.family);
+    if(c)c=clone(c);else{c={id:uid(),type:"client",name:n,relation:n===head?"戶長":"其他",stage:"已成交",tags:[],policies:[],logs:[],services:[]};stat.newC++}
+    if(!c.family)c.family=fam;if(n===head&&!c.relation)c.relation="戶長";c.policies=c.policies||[];touched.set(n,c);return c};
+  get(head);
+  for(const n of Object.keys(groups)){const g=groups[n];const tgt=get(n||head);if(!tgt.birthday&&data.births&&data.births[n])tgt.birthday=data.births[n];
+    const used=new Set();const fileNos=new Set(g.items.filter(it=>it.policyNo).map(it=>it.policyNo));
+    g.items.forEach(it=>{const np=bulkNp(it,data);const k=polKey(np);const same=tgt.policies.filter(p=>!used.has(p.id)&&polKey(p)===k);
+      if(same.length){const ex=same[0];const keep={cov:Object.keys(np.cov).length?np.cov:ex.cov,covd:Object.keys(np.covd).length?np.covd:ex.covd,note:np.note||ex.note,type:ex.type&&ex.type!=="其他"?ex.type:np.type};Object.assign(ex,np,keep);used.add(ex.id);stat.upd++;const dup=new Set(same.slice(1).map(p=>p.id));if(dup.size)tgt.policies=tgt.policies.filter(p=>!dup.has(p.id))}
+      else{const x=Object.assign({id:"p"+uid()},np);tgt.policies.push(x);used.add(x.id);stat.add++}});
+    tgt.policies=tgt.policies.filter(p=>used.has(p.id)||!fileNos.has(String(p.policyNo||"").trim()));
+    if(g.cov){tgt.covDetail=tgt.covDetail||{};Object.keys(g.cov).forEach(k=>{const v=String(g.cov[k]||"").trim();if(v&&COVD_KEYS.includes(k))tgt.covDetail[k]=v})}}
+  for(const c of touched.values())await saveClient(c);
+  return {fam,members:[...touched.keys()],n:flat.length}}
+async function runBulkPdf(list,onp){const files=await expandBulkFiles(list);const stat={add:0,upd:0,newC:0,ok:0,fail:[]};const log=[];
+  for(let i=0;i<files.length;i++){const f=files[i];onp&&onp(i,files.length,f.name);try{const r=await bulkImportOne(f,stat);stat.ok++;log.push("✓ "+r.fam+"："+r.members.join("、")+"（"+r.n+" 項）")}catch(e){stat.fail.push(f.name);log.push("✗ "+f.name+"："+(e.message||e))}}
+  onp&&onp(files.length,files.length,"");return {stat,log,total:files.length}}
+function openBulkPdf(){const box=document.createElement("div");document.getElementById("modalRoot").appendChild(box);
+  const close=()=>{box.remove();render()};
+  box.innerHTML=`<div class="mask"><div class="modal" style="max-width:720px"><div class="mh"><b>📂 批次匯入保單 PDF</b><button class="btn ghost x" data-x>✕</button></div><div class="mb" id="bkBody">
+    <div class="banner" style="background:#eef7f8;border-color:#c8e3e7;color:#0b6370">一次選取整個資料夾的保單明細 PDF（可多選，或直接選雲端下載的 .zip）。系統依檔名「<b>王小明(家庭)</b>」建立／對應家庭，被保險人自動成為家庭成員；同一張保單會以檔案為準更新，不會重複。</div>
+    <input type="file" id="bkFile" multiple accept="application/pdf,.pdf,.zip" class="inp" style="margin-top:10px"><div class="hint" id="bkInfo"></div></div>
+    <div class="mf"><button class="btn" data-x>關閉</button><button class="btn p" id="bkGo" disabled>開始匯入</button></div></div></div>`;
+  box.querySelectorAll("[data-x]").forEach(b=>b.onclick=close);const fi=box.querySelector("#bkFile"),go=box.querySelector("#bkGo");
+  fi.onchange=()=>{box.querySelector("#bkInfo").textContent=`已選 ${fi.files.length} 個檔案`;go.disabled=!fi.files.length};
+  go.onclick=async()=>{go.disabled=true;const body=box.querySelector("#bkBody");
+    const r=await runBulkPdf([...fi.files],(i,n,nm)=>{body.innerHTML=`<div class="banner">處理中 ${i}/${n}… ${esc(nm)}</div><div style="height:8px;background:#e5eef0;border-radius:4px"><div style="height:8px;width:${n?Math.round(i/n*100):0}%;background:#0f7c8a;border-radius:4px"></div></div>`});
+    body.innerHTML=`<div class="banner" style="background:#eef7f8;border-color:#c8e3e7;color:#0b6370">完成：${r.stat.ok}/${r.total} 個檔案，新增保單 ${r.stat.add} 筆、更新 ${r.stat.upd} 筆、新建客戶 ${r.stat.newC} 位${r.stat.fail.length?`，<b style="color:#b33">${r.stat.fail.length} 個失敗</b>（可改用客戶頁的「拍照／PDF 匯入」以 AI 辨識）`:""}。</div><div style="max-height:46vh;overflow:auto;font-size:13px;line-height:1.7">${r.log.map(esc).join("<br>")}</div>`;
+    toast(`批次匯入完成：${r.stat.ok} 個檔案`)};
+}
+window.__bulkPdf=runBulkPdf;
 /* ========== 小彈窗 ========== */
 function openText(title,text,editable,onOk){
   const r=document.getElementById("modalRoot");const box=document.createElement("div");
@@ -1549,6 +1598,7 @@ document.addEventListener("click",async e=>{
   if(el.tagName==="SELECT")return;
   switch(a){
     case "newClient":openClient(null);break;
+    case "bulkPdf":openBulkPdf();break;
     case "openClient":openClient(el.dataset.id,el.dataset.tab);break;
     case "toggleId":M.showId=!M.showId;applyId();break;
     case "switchClient":openClient(el.dataset.id,M.tab);break;
