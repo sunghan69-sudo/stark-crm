@@ -514,7 +514,8 @@ function writeDoc(id,data){
   const run=()=>(data?ref.set(data):ref.delete()).catch(e=>{toast("儲存失敗："+(e&&e.message||e))});
   writeQ[id]=(writeQ[id]||Promise.resolve()).then(run,run);return writeQ[id];
 }
-function saveClient(c){c.type="client";c.updated=Date.now();const i=S.clients.findIndex(x=>x.id===c.id);if(i>=0)S.clients[i]=c;else S.clients.push(c);render();return writeDoc(c.id,clone(c))}
+const PUA=/[\ue000-\uf8ff]/g;let _puaWarn=0;function fixPua(c){let hit=[];const f=v=>{if(typeof v==="string"&&PUA.test(v)){PUA.lastIndex=0;hit.push(v.replace(PUA,"□"));return v.replace(PUA,"□")}PUA.lastIndex=0;return v};c.name=f(c.name);(c.policies||[]).forEach(p=>{p.holder=f(p.holder);p.insured=f(p.insured);p.beneficiary=f(p.beneficiary)});if(hit.length&&Date.now()-_puaWarn>8000){_puaWarn=Date.now();setTimeout(()=>toast("⚠ PDF 有字轉不出來，已用「□」標示："+[...new Set(hit)].slice(0,3).join("、")+"，請手動補正"),300)}}
+function saveClient(c){fixPua(c);c.type="client";c.updated=Date.now();const i=S.clients.findIndex(x=>x.id===c.id);if(i>=0)S.clients[i]=c;else S.clients.push(c);render();return writeDoc(c.id,clone(c))}
 function delClient(id){S.clients=S.clients.filter(c=>c.id!==id);render();return writeDoc(id,null)}
 /* 商品庫：雲端模式下所有已開通帳號共用 products 集合（規則未開放時退回個人商品庫） */
 function pcol(){return FB.fs.collection("products")}
