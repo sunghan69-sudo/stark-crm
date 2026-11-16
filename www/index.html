@@ -202,6 +202,7 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{outline:2px solid #bcd3ee;bo
 .msgbox{background:#f6f8fb;border:1px solid var(--line);border-radius:10px;padding:12px;white-space:pre-wrap;font-size:14px}
 /* e-card */
 .ecard{width:100%;max-width:380px;border-radius:18px;overflow:hidden;background:linear-gradient(140deg,var(--pri) 0%,#24507e 100%);color:#fff;padding:26px 24px;position:relative;box-shadow:0 14px 40px rgba(20,54,92,.3)}
+.tbl.mktg td,.tbl.mktg th{white-space:nowrap}.tbl.mktg td:nth-child(2){white-space:normal;min-width:220px}.tbl .r{text-align:right}.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
 .ecard:after{content:"";position:absolute;right:-60px;top:-60px;width:200px;height:200px;border-radius:50%;background:rgba(232,131,58,.25)}
 .ecard .nmx{font-size:26px;font-weight:900}
 .ecard .tt{opacity:.85;font-size:14px}
@@ -357,6 +358,7 @@ const VIEWS=[
   {id:"reminders",ic:"🔔",n:"提醒"},
   {id:"claims",ic:"🧮",n:"怎麼賠"},
   {id:"ecard",ic:"🪪",n:"名片"},
+  {id:"marketing",ic:"📣",n:"行銷專區"},
   {id:"products",ic:"📚",n:"商品庫"},
   {id:"setup",ic:"⚙",n:"設定"},
   {id:"admin",ic:"🛡",n:"帳號管理"}
@@ -707,7 +709,7 @@ function render(){
   if(S.mode==="login"){m.innerHTML=S.authMode==="reset"?vReset():vLogin();return}
   if(S.mode==="loading"||(S.mode==="cloud"&&!S.loaded)){m.innerHTML=`<div class="empty"><b>載入中…</b>正在讀取你的客戶資料</div>`;return}
   const banner=S.mode==="local"?`<div class="banner">💾 目前為<b>本機模式</b>：資料只存在這台裝置。到「設定」可以改用雲端同步，或匯出備份。</div>`:"";
-  const fn={dashboard:vDash,clients:vClients,reminders:vRem,claims:vClaims,services:vSvc,ecard:vCard,setup:vSetup,products:vProducts,admin:vAdmin}[S.view]||vDash;
+  const fn={dashboard:vDash,clients:vClients,reminders:vRem,claims:vClaims,services:vSvc,ecard:vCard,marketing:vMkt,setup:vSetup,products:vProducts,admin:vAdmin}[S.view]||vDash;
   const pendN2=S.isAdmin&&S.view!=="admin"?(S.apps||[]).filter(a=>a.status==="pending"&&!(S.members||{})[a.uid]).length+(S.resets||[]).filter(a=>a.status==="pending").length:0;
   m.innerHTML=banner+(pendN2?`<a href="#admin" class="banner" style="display:block;background:#fff4e5;border-color:#f7d9a8;color:#8a4b00;text-decoration:none">🔔 有 ${pendN2} 件申請（加入／重設密碼）等待你覆核，點這裡處理 ›</a>`:"")+fn();
 }
@@ -1553,6 +1555,28 @@ function openBulkPdf(){const box=document.createElement("div");document.getEleme
     toast(`批次匯入完成：${r.stat.ok} 個檔案`)};
 }
 window.__bulkPdf=runBulkPdf;
+
+/* ========== 行銷專區（投資型連結標的週報，資料檔 mkt/marketing.json 每週更新） ========== */
+const MKTG_URL="https://sunghan69-sudo.github.io/stark-crm/mkt/marketing.json";
+let MKTG=(()=>{try{return JSON.parse(localStorage.getItem("stark-mktg")||"null")}catch(e){return null}})(),mktgAt=0,mktgRep="",mktgAmt=1000000;
+async function loadMktg(force){if(!force&&Date.now()-mktgAt<10*60*1000)return;mktgAt=Date.now();
+  try{const r=await fetch(MKTG_URL+"?t="+Math.floor(Date.now()/600000),{cache:"no-store"});if(!r.ok)return;const j=await r.json();MKTG=j;try{localStorage.setItem("stark-mktg",JSON.stringify(j))}catch(e){}if(S.view==="marketing"&&!M)render()}catch(e){}}
+function mktgTable(rep,list,usd){const amt=mktgAmt;return `<div style="overflow-x:auto"><table class="tbl mktg"><thead><tr><th>#</th><th>連結標的</th><th>代碼</th><th>RR</th><th class="r">最新淨值</th><th class="hide-m">淨值日期</th><th class="hide-m">配息基準日</th><th class="r">月配息率</th><th class="r">預估單位數</th><th class="r">預估每月配息</th></tr></thead><tbody>${list.map((x,i)=>{const units=usd?amt/rep.usd/x.nav:amt/x.nav;const pay=amt*x.rate/100;
+  return `<tr><td>${i+1}</td><td><b>${esc(x.name)}</b>${x.flag?`<div class="sub" style="color:#b5651d">† ${esc(x.flag)}</div>`:""}</td><td class="mono">${esc(x.code)}</td><td><span class="tag ${x.rr==="RR4"||x.rr==="RR5"?"o":"g"}">${esc(x.rr)}</span></td><td class="r">${x.nav}</td><td class="hide-m">${esc(x.navDate)}</td><td class="hide-m">${esc(x.divDate)}</td><td class="r"><b style="color:#0f7c8a">${x.rate.toFixed(2)}%${x.flag?"†":""}</b></td><td class="r">${fmt(Math.round(units))}</td><td class="r"><b>${fmt(Math.round(pay))}</b> 元</td></tr>`}).join("")}</tbody></table></div>`}
+function vMkt(){loadMktg();const reps=(MKTG&&MKTG.reports)||[];
+  if(!reps.length)return `<div class="top"><h1>行銷專區</h1></div><div class="card empty"><b>載入中…</b>正在讀取最新的標的報告</div>`;
+  const rep=reps.find(r=>r.id===mktgRep)||reps[0];const amtW=Math.round(mktgAmt/10000);
+  return `<div class="top"><div><h1>行銷專區</h1><div class="sub">投資型商品連結標的週報｜資料每週更新，最近更新 ${esc(MKTG.updated||rep.date)}</div></div></div>
+  ${reps.length>1?`<div class="tabs">${reps.map(r=>`<button class="tab ${r.id===rep.id?"on":""}" data-act="mktgRep" data-id="${r.id}">${esc(r.company)} ${esc(r.product)}</button>`).join("")}</div>`:""}
+  <div class="banner" style="background:#fff7ec;border-color:#f3d6ad;color:#8a5a14">🔒 內部研究資料・僅供內部參考，請勿外傳、轉載或直接提供給客戶。配息可能含本金，預估數字未扣保單費用。</div>
+  <div class="card"><div class="row" style="align-items:flex-start;gap:16px;flex-wrap:wrap"><div style="flex:1;min-width:240px"><div class="sub">${esc(rep.company)}</div><h2 style="margin:2px 0">${esc(rep.product)}（${esc(rep.code)}）</h2><div>${esc(rep.title)}</div>
+    <div class="sub" style="margin-top:6px">報告日期 ${esc(rep.date)}｜資料日期 ${esc(rep.dataDate)}｜美元匯率 ${rep.usd}（臺銀即期賣出）</div></div>
+    <label style="min-width:200px"><span class="sub">試算投資金額（萬元新臺幣）</span><input class="inp" id="mktgAmt" type="number" min="1" step="1" value="${amtW}"></label></div>
+    <div class="hint" style="margin-top:8px">篩選規則：${esc(rep.rule)}</div></div>
+  <div class="card"><h2>🇹🇼 台幣計價標的・月配息率前 ${rep.twd.length}</h2>${mktgTable(rep,rep.twd,false)}</div>
+  <div class="card"><h2>🇺🇸 美金計價標的・月配息率前 ${rep.usdList.length}</h2>${mktgTable(rep,rep.usdList,true)}</div>
+  <div class="card"><h2>重點摘要</h2><ul style="margin:0;padding-left:20px;line-height:1.9">${(rep.summary||[]).map(t=>`<li>${esc(t)}</li>`).join("")}</ul>
+    <div class="hint" style="margin-top:10px">月配息率＝官方配息檔「當期(%)」。預估單位數：台幣＝金額÷淨值；美金＝(金額÷匯率)÷淨值。預估每月配息＝金額×月配息率（未扣任何保單費用）。資料來源：${esc(rep.source)}。本資料不構成投資建議，實際依申購日淨值與匯率為準。</div></div>`}
 /* ========== 小彈窗 ========== */
 function openText(title,text,editable,onOk){
   const r=document.getElementById("modalRoot");const box=document.createElement("div");
@@ -1599,6 +1623,7 @@ document.addEventListener("click",async e=>{
   switch(a){
     case "newClient":openClient(null);break;
     case "bulkPdf":openBulkPdf();break;
+    case "mktgRep":mktgRep=el.dataset.id;render();break;
     case "openClient":openClient(el.dataset.id,el.dataset.tab);break;
     case "toggleId":M.showId=!M.showId;applyId();break;
     case "switchClient":openClient(el.dataset.id,M.tab);break;
@@ -1693,6 +1718,7 @@ document.addEventListener("change",async e=>{
   if(t.dataset.act==="svcStatus"){const s=M.c.services.find(x=>x.id===t.dataset.sid);s.status=t.value;await commitM();toast("狀態已更新")}
   if(["cDays","cCost","cMonths"].includes(t.id)){S[t.id]=num(t.value);render()}
 });
+document.addEventListener("change",e=>{if(e.target.id==="mktgAmt"){const v=Math.max(1,num(e.target.value)||100);mktgAmt=v*10000;render()}});
 document.addEventListener("input",e=>{if(e.target.id==="q"){S.q=e.target.value;const pos=e.target.selectionStart;render();const q=document.getElementById("q");q.focus();try{q.setSelectionRange(pos,pos)}catch(_){}}});
 document.addEventListener("submit",async e=>{
   e.preventDefault();const f=e.target;const fd=Object.fromEntries(new FormData(f).entries());
