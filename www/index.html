@@ -337,6 +337,15 @@ details.fold{align-self:start}details.fold>summary{list-style:none;cursor:pointe
 .fxt{margin-top:8px;font-size:12.5px}.fxt th{font-weight:500;color:var(--muted);text-align:right;font-size:11.5px}.fxt td+td{text-align:right}
 .mup{color:#d0302b;font-weight:700}.mdn{color:#13894f;font-weight:700}.mfl{color:var(--muted)}
 @media (max-width:1100px){.mkg{grid-template-columns:1fr 1fr}}@media (max-width:560px){.mkg{grid-template-columns:1fr}}
+.dash2{display:grid;grid-template-columns:minmax(240px,1fr) 3fr;gap:14px;align-items:start}
+.kst .kgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px 12px}.kst .kgrid>div{display:flex;flex-direction:column}.kst span{color:var(--muted);font-size:13px}.kst b{font-size:26px;font-weight:900;color:var(--pri);line-height:1.25}.kst b em{font-style:normal;font-size:14px;margin-left:2px}.kst small{font-size:12px;color:var(--muted)}
+.carelist{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;max-height:340px;overflow:auto;padding-right:2px}
+.care{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line,#e5e7eb);border-radius:10px;cursor:pointer;color:inherit;text-decoration:none;background:#fff}.care:hover{border-color:var(--pri)}.care.soon{background:#fff7ed;border-color:#fdba74}
+.care .cd{min-width:44px;text-align:center;font-size:12px;color:var(--muted)}.care .cd b{display:block;font-size:14px;color:var(--pri)}.care.soon .cd b{color:#c2410c}
+.care .cn{flex:1;min-width:0}.care .cn small{margin-left:6px;color:var(--muted);font-size:11.5px}.care .ci{display:flex;flex-direction:column;gap:2px;margin-top:3px;font-size:12px}.care .ci .up{color:#c2410c}.care .ci .bd{color:#0f7c8a}
+.care .dup{margin-left:6px;font-size:11px;background:#fee2e2;color:#b91c1c;border-radius:999px;padding:1px 6px}
+@media (max-width:800px){.dash2{grid-template-columns:1fr}.kst .kgrid{grid-template-columns:repeat(4,1fr)}.kst b{font-size:20px}}
+@media (max-width:480px){.kst .kgrid{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -399,6 +408,7 @@ const DEF_TPL={
 const DEF_PROFILE={type:"profile",agent:"",title:"",company:"",phone:"",line:"",email:"",slogan:"",area:"",targets:{},tpl:{}};
 
 /* ========== 狀態 ========== */
+let CARE_F=(()=>{try{return localStorage.getItem("stark-caref")||"all"}catch(e){return "all"}})();
 const S={products:[],prodCo:"",clients:[],profile:clone(DEF_PROFILE),db:null,uid:null,mode:"loading",filter:"all",q:"",tag:"",remDays:30,claimCid:"",claimSc:"cancer",view:"dashboard"};
 const writeQ={};
 
@@ -813,17 +823,30 @@ function vDash(){
   if(!cs.length)return `<div class="top"><h1>總覽</h1></div><div class="card empty"><b>還沒有客戶資料</b>先新增第一位客戶，或載入示範資料看看系統怎麼運作。<div class="row" style="justify-content:center;margin-top:16px"><button class="btn p" data-act="newClient">＋ 新增客戶</button><button class="btn" data-act="demo">載入示範資料</button><button class="btn" data-act="tour">🎬 操作說明影片</button></div></div>`;
   return `<div class="top"><div><h1>總覽</h1><div class="sub">${ds(today())}｜早安，${esc(agentName())}</div></div><div class="row"><button class="btn" data-act="tour">🎬 操作說明影片</button><button class="btn p" data-act="newClient">＋ 新增客戶</button></div></div>
   ${vMarket()}
-  <div class="grid k4">
-    <div class="card kpi"><div class="l">客戶數</div><div class="v">${cs.length}</div><div class="s">家庭 ${new Set(cs.map(c=>c.family).filter(Boolean)).size} 組</div></div>
-    <div class="card kpi"><div class="l">有效保單</div><div class="v">${pols.length}</div><div class="s">平均每人 ${(pols.length/Math.max(1,cs.length)).toFixed(1)} 張</div></div>
-    ${(()=>{const t=today();const t0=new Date(t.getFullYear(),t.getMonth(),t.getDate());const lim=new Date(t0);lim.setDate(lim.getDate()+30);
-      const up=cs.map(c=>{const d=pd(c.birthday);if(!d)return null;let n=new Date(t0.getFullYear(),d.getMonth()+6,d.getDate());if(n<t0)n=new Date(t0.getFullYear()+1,d.getMonth()+6,d.getDate());if(n>lim)return null;
-        const ia=n.getFullYear()-d.getFullYear()-(new Date(n.getFullYear(),d.getMonth(),d.getDate())>n?1:0)+1;return {c,n,ia,days:Math.round((n-t0)/864e5)}}).filter(Boolean).sort((x,y)=>x.n-y.n);
-      const bm=cs.filter(c=>{const d=pd(c.birthday);return d&&d.getMonth()===t.getMonth()}).sort((x,y)=>pd(x.birthday).getDate()-pd(y.birthday).getDate());
-      const nm=(c,extra)=>`<a class="kname" data-act="openClient" data-id="${c.id}">${esc(c.name)}${extra?`<small>${extra}</small>`:""}</a>`;
-      return `<div class="card kpi"><div class="l">保險年齡即將增齡（30 日內）</div><div class="v" style="color:var(--acc)">${up.length}<span class="vu">人</span></div><div class="knames">${up.length?up.map(x=>nm(x.c,`${x.n.getMonth()+1}/${x.n.getDate()} 起 ${x.ia} 歲${x.days<=7?"・剩"+x.days+"天":""}`)).join(""):`<span class="s">近 30 天沒有人增齡</span>`}</div></div>
-    <div class="card kpi"><div class="l">本月生日（${t.getMonth()+1} 月）</div><div class="v">${bm.length}<span class="vu">人</span></div><div class="knames">${bm.length?bm.map(c=>nm(c,`${pd(c.birthday).getMonth()+1}/${pd(c.birthday).getDate()}`)).join(""):`<span class="s">本月沒有壽星</span>`}</div></div>`})()}
-  </div>
+  ${(()=>{const t=today();const t0=new Date(t.getFullYear(),t.getMonth(),t.getDate());const lim=new Date(t0);lim.setDate(lim.getDate()+30);
+    const fams=new Set(cs.map(c=>c.family).filter(Boolean)).size;
+    const ev=new Map();const key=c=>(c.name||"")+"|"+(c.birthday||"");
+    const push=(c,o)=>{const k=key(c);if(!ev.has(k))ev.set(k,{c,ids:new Set(),items:[]});const e=ev.get(k);e.ids.add(c.id);if(!e.items.some(x=>x.type===o.type))e.items.push(o)};
+    cs.forEach(c=>{const d=pd(c.birthday);if(!d)return;
+      let b=new Date(t0.getFullYear(),d.getMonth(),d.getDate());if(b<t0)b=new Date(t0.getFullYear()+1,d.getMonth(),d.getDate());
+      if(b<=lim)push(c,{type:"bd",d:b,txt:`🎂 ${b.getMonth()+1}/${b.getDate()} 生日・滿 ${b.getFullYear()-d.getFullYear()} 歲`});
+      let n=new Date(t0.getFullYear(),d.getMonth()+6,d.getDate());if(n<t0)n=new Date(t0.getFullYear()+1,d.getMonth()+6,d.getDate());
+      if(n<=lim){const ia=n.getFullYear()-d.getFullYear()-(new Date(n.getFullYear(),d.getMonth(),d.getDate())>n?1:0)+1;push(c,{type:"up",d:n,txt:`⏫ ${n.getMonth()+1}/${n.getDate()} 起保險年齡 ${ia} 歲`})}});
+    const list=[...ev.values()].map(e=>{e.items.sort((x,y)=>x.d-y.d);e.d=e.items[0].d;e.days=Math.round((e.d-t0)/864e5);return e}).sort((x,y)=>x.d-y.d||String(x.c.name).localeCompare(String(y.c.name),"zh-Hant"));
+    const nUp=list.filter(e=>e.items.some(x=>x.type==="up")).length,nBd=list.filter(e=>e.items.some(x=>x.type==="bd")).length;
+    const f=CARE_F;const shown=list.filter(e=>f==="all"||e.items.some(x=>x.type===f));
+    const row=e=>`<a class="care ${e.days<=7?"soon":""}" data-act="openClient" data-id="${e.c.id}"><div class="cd"><b>${e.days===0?"今天":e.days+" 天"}</b></div><div class="cn"><b>${esc(e.c.name)}</b>${e.ids.size>1?`<span class="dup" title="有 ${e.ids.size} 筆同名同生日的客戶資料">重複 ${e.ids.size} 筆</span>`:""}${e.c.family?`<small>${esc(e.c.family)}</small>`:""}<div class="ci">${e.items.map(x=>`<span class="${x.type}">${x.txt}</span>`).join("")}</div></div></a>`;
+    return `<div class="dash2">
+    <div class="card kst"><div class="kgrid">
+      <div><span>客戶數</span><b>${cs.length}</b><small>家庭 ${fams} 組</small></div>
+      <div><span>有效保單</span><b>${pols.length}</b><small>平均每人 ${(pols.length/Math.max(1,cs.length)).toFixed(1)} 張</small></div>
+      <div><span>年化保費</span><b>${prem>=1e8?(prem/1e8).toFixed(2)+"<em>億</em>":prem>=1e4?Math.round(prem/1e4).toLocaleString()+"<em>萬</em>":fmt(prem)}</b><small>全部有效保單</small></div>
+      <div><span>30 天待辦</span><b>${rem30.length}</b><small>本週 ${rem7.length} 件</small></div>
+    </div></div>
+    <div class="card carec"><div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><h2 style="margin:0">近 30 天關懷名單</h2><span class="sub">生日祝福・保險年齡增齡前提醒客戶投保</span><span class="sp"></span>
+      <div class="seg"><button class="btn sm ${f==="all"?"on":""}" data-act="careF" data-v="all">全部 ${list.length}</button><button class="btn sm ${f==="up"?"on":""}" data-act="careF" data-v="up">⏫ 增齡 ${nUp}</button><button class="btn sm ${f==="bd"?"on":""}" data-act="careF" data-v="bd">🎂 生日 ${nBd}</button></div></div>
+      ${shown.length?`<div class="carelist">${shown.map(row).join("")}</div>`:`<div class="empty" style="padding:20px">近 30 天沒有需要關懷的客戶</div>`}</div>
+  </div>`})()}
   <div class="grid g2" style="margin-top:14px">
     <details class="card fold" ${(()=>{try{return localStorage.getItem("stark-fold-rem7")==="0"?"":"open"}catch(e){return "open"}})()} ontoggle="try{localStorage.setItem('stark-fold-rem7',this.open?'1':'0')}catch(e){}"><summary class="row"><h2 style="margin:0">本週提醒 <span class="fcount">${rem7.length} 件</span></h2><span class="sp"></span><a href="#reminders" class="btn sm ghost" onclick="event.stopPropagation()">全部 →</a><span class="fchev">▾</span></summary>
       ${rem7.length?rem7.slice(0,8).map(remItem).join(""):`<div class="empty" style="padding:24px">這 7 天沒有待辦 👍</div>`}</details>
@@ -1745,6 +1768,7 @@ document.addEventListener("click",async e=>{
     case "propCalc":{const it=((PROPS&&PROPS.items)||[]).find(x=>x.id===el.dataset.id);if(!it)break;
       if(!window.StarkCalc){toast("試算引擎載入中…");await new Promise((res,rej)=>{const sc=document.createElement("script");sc.src="calc/calc.js?v=4";sc.onload=res;sc.onerror=()=>rej(new Error("載入失敗"));document.head.appendChild(sc)}).catch(e=>toast("試算引擎載入失敗，請確認網路"))}
       if(window.StarkCalc)window.StarkCalc.open(it);break}
+    case "careF":CARE_F=el.dataset.v||"all";try{localStorage.setItem("stark-caref",CARE_F)}catch(e){}render();break;
     case "propCo":propCo=el.dataset.v||"";render();break;
     case "cview":CVIEW=el.dataset.v;try{localStorage.setItem("stark-cview",CVIEW)}catch(e){}render();break;
     case "mktgRep":mktgRep=el.dataset.id;render();break;
