@@ -20,7 +20,341 @@
     "終身壽險",
     "年金轉換"
    ],
-   "note": "需開啟巨集才能正常使用"
+   "note": "需開啟巨集才能正常使用",
+   "calc": {
+    "model": "models/tg-f8w-20261015.json",
+    "sheet": "基本資料輸入",
+    "groups": [
+     {
+      "title": "被保險人（同要保人）",
+      "fields": [
+       {
+        "label": "姓名",
+        "cell": "E7",
+        "type": "text",
+        "mirror": [
+         "E16"
+        ]
+       },
+       {
+        "label": "性別",
+        "cell": "I7",
+        "type": "select",
+        "opts": {
+         "list": [
+          "男",
+          "女"
+         ]
+        },
+        "mirror": [
+         "I16"
+        ]
+       },
+       {
+        "label": "生日",
+        "type": "roc",
+        "cells": [
+         "E9",
+         "G9",
+         "I9"
+        ],
+        "mirror": [
+         "E18",
+         "G18",
+         "I18"
+        ],
+        "hint": "G11"
+       }
+      ]
+     },
+     {
+      "title": "投保內容",
+      "fields": [
+       {
+        "label": "繳費年期",
+        "cell": "E35",
+        "type": "select",
+        "opts": {
+         "name": "主約年期ddl"
+        },
+        "hint": "G36"
+       },
+       {
+        "label": "繳別",
+        "cell": "I35",
+        "type": "select",
+        "opts": {
+         "name": "繳別ddl"
+        }
+       },
+       {
+        "label": "宣告利率假設",
+        "cell": "O35",
+        "type": "select",
+        "opts": {
+         "name": "宣告利率假設ddl"
+        },
+        "fmt": "pct",
+        "hint": "O36"
+       },
+       {
+        "label": "試算依據",
+        "cell": "E38",
+        "type": "select",
+        "opts": {
+         "list": [
+          "保險金額",
+          "保費預算"
+         ]
+        }
+       },
+       {
+        "label": "金額（美元）",
+        "cell": "E40",
+        "type": "number",
+        "hint": "E39"
+       },
+       {
+        "label": "增值回饋分享金：第 1–6 年",
+        "cell": "E46",
+        "type": "select",
+        "opts": {
+         "name": "增值回饋分享金給付方式1ddl"
+        }
+       },
+       {
+        "label": "增值回饋分享金：第 7 年以後",
+        "cell": "E48",
+        "type": "select",
+        "opts": {
+         "expr": "=IF({主約年期}>6,{增值回饋分享金給付方式2ddl},{增值回饋分享金給付方式2ddl3})"
+        }
+       },
+       {
+        "label": "身故保險金分期：指定比例",
+        "cell": "E53",
+        "type": "select",
+        "opts": {
+         "name": "分期比例ddl"
+        },
+        "fmt": "pct",
+        "hint": "O52"
+       }
+      ]
+     },
+     {
+      "title": "附約與繳費",
+      "fields": [
+       {
+        "label": "附加 全球人壽美元豁免保險費健康保險附約（F18）",
+        "cell": "Index!E29",
+        "type": "check"
+       },
+       {
+        "label": "首期繳法",
+        "cell": "E72",
+        "type": "select",
+        "opts": {
+         "name": "首期繳法ddl"
+        }
+       },
+       {
+        "label": "續期繳法",
+        "cell": "E74",
+        "type": "select",
+        "opts": {
+         "name": "續期繳法ddl"
+        }
+       }
+      ]
+     },
+     {
+      "title": "退休年金試算（FSA）",
+      "fields": [
+       {
+        "label": "預計退休年齡",
+        "cell": "E65",
+        "type": "number",
+        "hint": "C66"
+       },
+       {
+        "label": "年金給付週期",
+        "cell": "J67",
+        "type": "select",
+        "opts": {
+         "name": "年金給付週期ddl"
+        }
+       }
+      ]
+     }
+    ],
+    "summary": [
+     {
+      "label": "保險年齡",
+      "cell": "E11",
+      "unit": "歲"
+     },
+     {
+      "label": "首期標準保費",
+      "cell": "Q72",
+      "unit": "美元"
+     },
+     {
+      "label": "首期應繳（折讓後）",
+      "cell": "Q73",
+      "unit": "美元"
+     },
+     {
+      "label": "續期應繳",
+      "cell": "Q74",
+      "unit": "美元"
+     },
+     {
+      "label": "F18 豁免附約保費",
+      "cell": "Q60",
+      "unit": "美元"
+     },
+     {
+      "label": "FSA 首期可領年金",
+      "cell": "Q67",
+      "unit": "美元"
+     }
+    ],
+    "msgs": [
+     "W5",
+     "G11",
+     "W11",
+     "W14",
+     "G20",
+     "W20",
+     "W21",
+     "W22",
+     "G28",
+     "W28",
+     "C29",
+     "H36",
+     "C37",
+     "E39",
+     "P39",
+     "C41",
+     "C49",
+     "O52",
+     "D60",
+     "C66",
+     "T71",
+     "W75"
+    ],
+    "tables": [
+     {
+      "title": "投保明細",
+      "sheet": "簡易試算頁",
+      "from": 72,
+      "to": 74,
+      "flag": "A",
+      "cols": [
+       {
+        "c": "B",
+        "label": "商品名稱",
+        "l": true
+       },
+       {
+        "c": "N",
+        "label": "投保對象"
+       },
+       {
+        "c": "Q",
+        "label": "投保金額"
+       },
+       {
+        "c": "T",
+        "label": "年期"
+       },
+       {
+        "c": "W",
+        "label": "繳別"
+       },
+       {
+        "c": "Y",
+        "label": "首期標準保費"
+       },
+       {
+        "c": "AB",
+        "label": "首期應繳保費"
+       },
+       {
+        "c": "AE",
+        "label": "續期應繳保費"
+       }
+      ]
+     },
+     {
+      "title": "各年度保障與解約金（美元）",
+      "note": "=簡易試算頁!B76",
+      "sheet": "簡易試算頁",
+      "from": 80,
+      "to": 189,
+      "stop": "C",
+      "head": [
+       79,
+       78,
+       77
+      ],
+      "hl": [
+       5,
+       10,
+       15,
+       20,
+       30
+      ],
+      "cols": [
+       {
+        "c": "B"
+       },
+       {
+        "c": "C"
+       },
+       {
+        "c": "D"
+       },
+       {
+        "c": "G"
+       },
+       {
+        "c": "J"
+       },
+       {
+        "c": "M"
+       },
+       {
+        "c": "P"
+       },
+       {
+        "c": "S"
+       },
+       {
+        "c": "V"
+       },
+       {
+        "c": "Y"
+       },
+       {
+        "c": "AB"
+       },
+       {
+        "c": "AE"
+       },
+       {
+        "c": "AH",
+        "fmt": "pct"
+       },
+       {
+        "c": "AK",
+        "fmt": "x2"
+       }
+      ]
+     }
+    ]
+   }
   },
   {
    "id": "tg-med-20260921",
@@ -42,7 +376,664 @@
     "長照",
     "專案組合"
    ],
-   "note": "需開啟巨集才能正常使用"
+   "note": "需開啟巨集才能正常使用",
+   "calc": {
+    "model": "models/tg-med-20260921.json",
+    "sheet": "基本資料輸入",
+    "groups": [
+     {
+      "title": "被保險人（同要保人）",
+      "fields": [
+       {
+        "label": "姓名",
+        "cell": "F7",
+        "type": "text",
+        "mirror": [
+         "O7"
+        ]
+       },
+       {
+        "label": "性別",
+        "cell": "J7",
+        "type": "select",
+        "opts": {
+         "list": [
+          "男",
+          "女"
+         ]
+        },
+        "mirror": [
+         "S7"
+        ]
+       },
+       {
+        "label": "生日",
+        "type": "roc",
+        "cells": [
+         "F9",
+         "H9",
+         "J9"
+        ],
+        "mirror": [
+         "O9",
+         "Q9",
+         "S9"
+        ],
+        "hint": "F12"
+       }
+      ]
+     },
+     {
+      "title": "專案主約",
+      "fields": [
+       {
+        "label": "投保主約",
+        "cell": "E15",
+        "type": "select",
+        "opts": {
+         "name": "主約ddlBR"
+        },
+        "hint": "F16"
+       },
+       {
+        "label": "繳費年期",
+        "cell": "G17",
+        "type": "select",
+        "opts": {
+         "indirect": "主約年期ddl"
+        }
+       },
+       {
+        "label": "繳別",
+        "cell": "N17",
+        "type": "select",
+        "opts": {
+         "name": "繳別ddl"
+        }
+       },
+       {
+        "label": "分期保險金給付期間（年）",
+        "cell": "G19",
+        "type": "select",
+        "opts": {
+         "list": [
+          10,
+          20
+         ]
+        },
+        "show": "={主約代號}=\"LCE\""
+       },
+       {
+        "label": "保險金額",
+        "labelCell": "F21",
+        "cell": "G21",
+        "type": "number",
+        "hint": "F20"
+       }
+      ]
+     },
+     {
+      "title": "繳費方式",
+      "fields": [
+       {
+        "label": "首期繳法",
+        "cell": "G155",
+        "type": "select",
+        "opts": {
+         "name": "首期繳法ddl"
+        }
+       },
+       {
+        "label": "續期繳法",
+        "cell": "G157",
+        "type": "select",
+        "opts": {
+         "name": "續期繳法ddl"
+        }
+       },
+       {
+        "label": "附加 臻鑫久久豁免保險費健康保險附約（XWB）",
+        "cell": "Index!E36",
+        "type": "check"
+       }
+      ]
+     }
+    ],
+    "riderTitle": "附約（勾選即附加）",
+    "riders": [
+     {
+      "code": "XHD",
+      "flag": "Index_rider!R30",
+      "labelCell": "G34",
+      "hint": "T33",
+      "fields": [
+       {
+        "label": "計劃",
+        "cell": "I36",
+        "type": "select",
+        "opts": {
+         "name": "XHD計劃ddl"
+        }
+       }
+      ],
+      "prem": "Q36"
+     },
+     {
+      "code": "XHO",
+      "flag": "Index_rider!G30",
+      "labelCell": "G40",
+      "hint": "T39",
+      "fields": [
+       {
+        "label": "計劃",
+        "cell": "I42",
+        "type": "select",
+        "opts": {
+         "name": "XHO計劃ddl"
+        }
+       }
+      ],
+      "prem": "Q42"
+     },
+     {
+      "code": "XHP",
+      "flag": "Index_rider!S30",
+      "labelCell": "G46",
+      "hint": "T45",
+      "fields": [
+       {
+        "label": "計劃",
+        "cell": "I48",
+        "type": "select",
+        "opts": {
+         "name": "XHP計劃ddl"
+        }
+       }
+      ],
+      "prem": "Q48"
+     },
+     {
+      "code": "XSB",
+      "flag": "Index_rider!I30",
+      "labelCell": "G58",
+      "hint": "T57",
+      "fields": [
+       {
+        "label": "保額（百元）",
+        "cell": "I60",
+        "type": "number",
+        "hint": "H59"
+       }
+      ],
+      "prem": "Q60"
+     },
+     {
+      "code": "XTS",
+      "flag": "Index_rider!U30",
+      "labelCell": "G64",
+      "hint": "T63",
+      "fields": [
+       {
+        "label": "繳費年期",
+        "cell": "I66",
+        "type": "select",
+        "opts": {
+         "name": "XTS年期ddl"
+        }
+       },
+       {
+        "label": "保額（百元）",
+        "cell": "I68",
+        "type": "number",
+        "hint": "H67"
+       }
+      ],
+      "prem": "Q68"
+     },
+     {
+      "code": "XDE",
+      "flag": "Index_rider!J30",
+      "labelCell": "G72",
+      "hint": "T71",
+      "fields": [
+       {
+        "label": "保額（萬元）",
+        "cell": "I74",
+        "type": "number",
+        "hint": "H73"
+       }
+      ],
+      "prem": "Q74"
+     },
+     {
+      "code": "XCF",
+      "flag": "Index_rider!K30",
+      "labelCell": "G78",
+      "hint": "T77",
+      "fields": [
+       {
+        "label": "保額（萬元）",
+        "cell": "I80",
+        "type": "number",
+        "hint": "H79"
+       }
+      ],
+      "prem": "Q80"
+     },
+     {
+      "code": "XCC",
+      "flag": "Index_rider!L30",
+      "labelCell": "G84",
+      "hint": "T83",
+      "fields": [
+       {
+        "label": "保額（萬元）",
+        "cell": "I86",
+        "type": "number",
+        "hint": "H85"
+       }
+      ],
+      "prem": "Q86"
+     },
+     {
+      "code": "XCG",
+      "flag": "Index_rider!V30",
+      "labelCell": "G90",
+      "hint": "T89",
+      "fields": [
+       {
+        "label": "投保單位",
+        "cell": "I92",
+        "type": "select",
+        "opts": {
+         "list": [
+          1,
+          2,
+          3
+         ]
+        }
+       }
+      ],
+      "prem": "Q92"
+     },
+     {
+      "code": "XTC",
+      "flag": "Index_rider!M30",
+      "labelCell": "G96",
+      "hint": "T95",
+      "fields": [
+       {
+        "label": "長照分期給付期間",
+        "cell": "M98",
+        "type": "select",
+        "opts": {
+         "name": "XTC給付年期ddl"
+        }
+       },
+       {
+        "label": "保額（千元）",
+        "cell": "I100",
+        "type": "number",
+        "hint": "H99"
+       }
+      ],
+      "prem": "Q99"
+     },
+     {
+      "code": "XLC",
+      "flag": "Index_rider!N30",
+      "labelCell": "G103",
+      "hint": "T102",
+      "fields": [
+       {
+        "label": "繳費年期",
+        "cell": "I105",
+        "type": "select",
+        "opts": {
+         "name": "XLC年期ddl"
+        }
+       },
+       {
+        "label": "長照分期給付期間",
+        "cell": "Q105",
+        "type": "select",
+        "opts": {
+         "name": "XLC給付期間ddl"
+        }
+       },
+       {
+        "label": "保額（千元）",
+        "cell": "I107",
+        "type": "number",
+        "hint": "H106"
+       }
+      ],
+      "prem": "Q107"
+     },
+     {
+      "code": "XLB",
+      "flag": "Index_rider!O30",
+      "labelCell": "G111",
+      "hint": "T110",
+      "fields": [
+       {
+        "label": "繳費年期",
+        "cell": "I113",
+        "type": "select",
+        "opts": {
+         "name": "XLB年期ddl"
+        }
+       },
+       {
+        "label": "保額（萬元）",
+        "cell": "I115",
+        "type": "number",
+        "hint": "H114"
+       }
+      ],
+      "prem": "Q115"
+     },
+     {
+      "code": "MIR",
+      "flag": "Index_rider!D30",
+      "labelCell": "G119",
+      "hint": "T118",
+      "fields": [
+       {
+        "label": "計劃",
+        "cell": "I121",
+        "type": "select",
+        "opts": {
+         "indirect": "rider1計畫ddl"
+        }
+       }
+      ],
+      "prem": "Q121"
+     },
+     {
+      "code": "LIR",
+      "flag": "Index_rider!T30",
+      "labelCell": "G131",
+      "hint": "T130",
+      "fields": [
+       {
+        "label": "保額（百元）",
+        "cell": "I133",
+        "type": "number",
+        "hint": "H132"
+       }
+      ],
+      "prem": "Q133"
+     },
+     {
+      "code": "XAB",
+      "flag": "Index_rider!P30",
+      "labelCell": "G137",
+      "hint": "T136",
+      "fields": [
+       {
+        "label": "職業類別",
+        "cell": "S139",
+        "type": "select",
+        "opts": {
+         "list": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+         ]
+        }
+       },
+       {
+        "label": "保額（萬元）",
+        "cell": "I140",
+        "type": "number",
+        "hint": "H139"
+       }
+      ],
+      "prem": "Q140"
+     },
+     {
+      "code": "XMBN",
+      "flag": "Index_rider!Q30",
+      "labelCell": "G144",
+      "hint": "T143",
+      "fields": [
+       {
+        "label": "在全球人壽有效之傷害險主附約",
+        "cell": "K146",
+        "type": "select",
+        "opts": {
+         "list": [
+          "有",
+          "無"
+         ]
+        }
+       },
+       {
+        "label": "職業類別",
+        "cell": "S147",
+        "type": "select",
+        "opts": {
+         "list": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+         ]
+        }
+       },
+       {
+        "label": "保額（萬元）",
+        "cell": "I148",
+        "type": "number",
+        "hint": "H147"
+       }
+      ],
+      "prem": "Q148"
+     }
+    ],
+    "summary": [
+     {
+      "label": "保險年齡",
+      "cell": "F11",
+      "unit": "歲"
+     },
+     {
+      "label": "主約首期標準保費",
+      "cell": "Q20",
+      "unit": "元"
+     },
+     {
+      "label": "主約首期應繳",
+      "cell": "Q21",
+      "unit": "元"
+     },
+     {
+      "label": "全案首期標準保費",
+      "cell": "Q155",
+      "unit": "元"
+     },
+     {
+      "label": "全案首期應繳（折讓後）",
+      "cell": "Q156",
+      "unit": "元"
+     }
+    ],
+    "msgs": [
+     "Q11",
+     "F12",
+     "W18",
+     "W23",
+     "W54",
+     "F79",
+     "F91",
+     "G122",
+     "W139",
+     "W146",
+     "U153",
+     "U158"
+    ],
+    "tables": [
+     {
+      "title": "投保明細",
+      "sheet": "試算頁(含給付類型彙整)",
+      "from": 8,
+      "to": 37,
+      "flag": "A",
+      "need": "U",
+      "cols": [
+       {
+        "c": "B",
+        "label": "商品名稱",
+        "l": true
+       },
+       {
+        "c": "L",
+        "label": "投保對象"
+       },
+       {
+        "c": "N",
+        "label": "繳費年期"
+       },
+       {
+        "c": "P",
+        "label": "保額／計劃"
+       },
+       {
+        "c": "R",
+        "label": "首期標準保費"
+       },
+       {
+        "c": "U",
+        "label": "首期應繳保費"
+       }
+      ]
+     },
+     {
+      "title": "各年度應繳保費（新臺幣）",
+      "sheet": "各年度應繳保費試算(列印應包含保障內容).",
+      "from": 40,
+      "to": 150,
+      "stop": "B",
+      "head": [
+       39,
+       38
+      ],
+      "hideEmpty": true,
+      "cols": [
+       {
+        "c": "B",
+        "label": "保單年度",
+        "keep": true
+       },
+       {
+        "c": "C",
+        "label": "保險年齡",
+        "keep": true
+       },
+       {
+        "c": "D"
+       },
+       {
+        "c": "F"
+       },
+       {
+        "c": "H"
+       },
+       {
+        "c": "J"
+       },
+       {
+        "c": "L"
+       },
+       {
+        "c": "N"
+       },
+       {
+        "c": "P"
+       },
+       {
+        "c": "R"
+       },
+       {
+        "c": "T"
+       },
+       {
+        "c": "V"
+       },
+       {
+        "c": "X"
+       },
+       {
+        "c": "Z"
+       },
+       {
+        "c": "AB"
+       },
+       {
+        "c": "AD"
+       },
+       {
+        "c": "AF"
+       },
+       {
+        "c": "AH"
+       },
+       {
+        "c": "AJ"
+       },
+       {
+        "c": "AL"
+       },
+       {
+        "c": "AN"
+       },
+       {
+        "c": "AP"
+       },
+       {
+        "c": "AR",
+        "label": "合計",
+        "keep": true
+       }
+      ]
+     },
+     {
+      "title": "給付類型彙整",
+      "sheet": "試算頁(含給付類型彙整)",
+      "from": 42,
+      "to": 400,
+      "flag": "A",
+      "need": "G",
+      "cols": [
+       {
+        "c": "B",
+        "label": "給付類型",
+        "l": true
+       },
+       {
+        "c": "G",
+        "label": "給付項目",
+        "l": true
+       },
+       {
+        "c": "N",
+        "label": "商品"
+       },
+       {
+        "c": "P",
+        "label": "給付內容（金額）",
+        "l": true
+       }
+      ]
+     }
+    ]
+   }
   }
  ]
 }
