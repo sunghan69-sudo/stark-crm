@@ -22,7 +22,14 @@ function fmtNum(v,f){if(typeof v!=="number"){const n=Number(v);if(v===""||v==nul
 function regText(){const H=window.HyperFormula;
   class TextPlugin extends H.FunctionPlugin{text(ast,state){return this.runFunction(ast.args,state,this.metadata("TEXT"),(v,f)=>fmtNum(v,f))}}
   TextPlugin.implementedFunctions={TEXT:{method:"text",parameters:[{argumentType:H.FunctionArgumentType.SCALAR},{argumentType:H.FunctionArgumentType.STRING}]}};
-  H.registerFunctionPlugin(TextPlugin,{enGB:{TEXT:"TEXT"}})}
+  H.registerFunctionPlugin(TextPlugin,{enGB:{TEXT:"TEXT"}});
+  /* Excel 先取 15 位有效數字再進位（避免 1845.9400000001 被 ROUNDUP 成 1845.95） */
+  const p15=x=>typeof x==="number"&&isFinite(x)?Number(x.toPrecision(15)):x;
+  const xr=(v,d,m)=>{v=p15(v);d=Math.trunc(d||0);const s=Math.sign(v),f=Math.pow(10,d),t=p15(Math.abs(v)*f);return s*(m==="up"?Math.ceil(t):m==="down"?Math.floor(t):Math.round(t))/f};
+  class RoundPlugin extends H.FunctionPlugin{round(a,s){return this.runFunction(a.args,s,this.metadata("ROUND"),(v,d)=>xr(v,d,"n"))}roundup(a,s){return this.runFunction(a.args,s,this.metadata("ROUNDUP"),(v,d)=>xr(v,d,"up"))}rounddown(a,s){return this.runFunction(a.args,s,this.metadata("ROUNDDOWN"),(v,d)=>xr(v,d,"down"))}}
+  const NP=[{argumentType:H.FunctionArgumentType.NUMBER},{argumentType:H.FunctionArgumentType.NUMBER,defaultValue:0}];
+  RoundPlugin.implementedFunctions={ROUND:{method:"round",parameters:NP},ROUNDUP:{method:"roundup",parameters:NP},ROUNDDOWN:{method:"rounddown",parameters:NP}};
+  H.registerFunctionPlugin(RoundPlugin,{enGB:{ROUND:"ROUND",ROUNDUP:"ROUNDUP",ROUNDDOWN:"ROUNDDOWN"}})}
 function dec(a){const m=a.match(/^([A-Z]+)(\d+)$/);let c=0;for(const ch of m[1])c=c*26+ch.charCodeAt(0)-64;return {col:c-1,row:+m[2]-1}}
 function buildModel(H,model){const sheets={};
   for(const n in model.sheets){const cs=model.sheets[n].cells;let mr=0;const ent=[];for(const a in cs){const p=dec(a);ent.push([p,cs[a]]);if(p.row>mr)mr=p.row}
