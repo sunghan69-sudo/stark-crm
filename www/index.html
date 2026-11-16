@@ -1743,7 +1743,7 @@ document.addEventListener("click",async e=>{
     case "bulkPdf":openBulkPdf();break;
     case "tour":openTour(false);break;
     case "propCalc":{const it=((PROPS&&PROPS.items)||[]).find(x=>x.id===el.dataset.id);if(!it)break;
-      if(!window.StarkCalc){toast("試算引擎載入中…");await new Promise((res,rej)=>{const sc=document.createElement("script");sc.src="calc/calc.js?v=1";sc.onload=res;sc.onerror=()=>rej(new Error("載入失敗"));document.head.appendChild(sc)}).catch(e=>toast("試算引擎載入失敗，請確認網路"))}
+      if(!window.StarkCalc){toast("試算引擎載入中…");await new Promise((res,rej)=>{const sc=document.createElement("script");sc.src="calc/calc.js?v=2";sc.onload=res;sc.onerror=()=>rej(new Error("載入失敗"));document.head.appendChild(sc)}).catch(e=>toast("試算引擎載入失敗，請確認網路"))}
       if(window.StarkCalc)window.StarkCalc.open(it);break}
     case "propCo":propCo=el.dataset.v||"";render();break;
     case "cview":CVIEW=el.dataset.v;try{localStorage.setItem("stark-cview",CVIEW)}catch(e){}render();break;

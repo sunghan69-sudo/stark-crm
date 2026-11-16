@@ -114,7 +114,7 @@ async function open(item){ensureCss();
     const body=rows.map(r=>`<tr class="${t.hl&&t.hl.includes(cell(t.hlCol||"B",r))?"hl":""}">${cols.map(c=>{const v=cell(c.c,r);return `<td class="${c.l?"l":""}">${nfmt(v,c.fmt)}</td>`}).join("")}</tr>`).join("");
     return `<div class="sc-card"><h3>${esc(t.title)}</h3>${t.note?`<div class="sc-note" style="margin:-4px 0 8px">${esc(typeof t.note==="string"&&t.note.startsWith("=")?S.get(t.note.slice(1)):t.note)}</div>`:""}<div class="sc-wrap"><table class="sc-t"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div></div>`}
   // 套用欄位後：確保下拉值有效
-  function fixSelects(){let changed=false;S.hf.batch(()=>{fields.forEach(f=>{if(f.type!=="select"||!visible(f))return;const o=S.opts(f.opts)||[];if(!o.length)return;const v=S.get(f.cell);if(!o.some(x=>String(x)===String(v))){S.set(f.cell,o[0]);changed=true}})});return changed}
+  function fixSelects(){let changed=false;for(let pass=0;pass<3;pass++){let ch=false;fields.forEach(f=>{if(f.type!=="select"||!visible(f))return;const o=S.opts(f.opts)||[];if(!o.length)return;const v=S.get(f.cell);if(!o.some(x=>String(x)===String(v))){S.set(f.cell,o[0]);ch=changed=true}});if(!ch)break}return changed}
   function apply(el){const t0=performance.now();S.hf.batch(()=>{
       if(el.dataset.roc){const cs=el.dataset.roc.split(",");const d=el.value?new Date(el.value):null;const vals=d&&!isNaN(d)?[d.getFullYear()-1911,d.getMonth()+1,d.getDate()]:["","",""];
         cs.forEach((c,i)=>S.set(c,vals[i]));const f=fields.find(x=>x.type==="roc"&&x.cells.join(",")===el.dataset.roc);(f&&f.mirror||[]).forEach((c,i)=>S.set(c,vals[i]))}
