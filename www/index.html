@@ -346,6 +346,7 @@ details.fold{align-self:start}details.fold>summary{list-style:none;cursor:pointe
 .care .dup{margin-left:6px;font-size:11px;background:#fee2e2;color:#b91c1c;border-radius:999px;padding:1px 6px}
 @media (max-width:800px){.dash2{grid-template-columns:1fr}.kst .kgrid{grid-template-columns:repeat(4,1fr)}.kst b{font-size:20px}}
 @media (max-width:480px){.kst .kgrid{grid-template-columns:1fr 1fr}}
+.mknews .nwi{display:flex;gap:9px;padding:7px 0;border-bottom:1px solid var(--line,#e5e7eb);color:inherit;text-decoration:none}.mknews .nwi:last-child{border-bottom:0}.mknews .nwi:hover b{color:var(--pri);text-decoration:underline}.nwn{flex:0 0 20px;height:20px;border-radius:50%;background:var(--pri);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:2px}.nwb{display:flex;flex-direction:column;gap:2px;min-width:0}.nwb b{font-size:14px;line-height:1.4;font-weight:600}.nwb small{font-size:11.5px;color:var(--muted)}.nwtag{font-style:normal;background:#e0f2f1;color:#0f7c8a;border-radius:4px;padding:0 5px;margin-right:5px}
 </style>
 </head>
 <body>
@@ -813,7 +814,8 @@ function vMarket(){loadMarket();loadTwRt();loadUsRt();twrtTick();const m=MKT;let
       ${b.spotBuy?`<table class="mtb fxt"><tr><th></th><th>買入</th><th>賣出</th></tr><tr><td>台銀即期</td><td>${b.spotBuy}</td><td>${b.spotSell}</td></tr><tr><td>台銀現金</td><td>${b.cashBuy}</td><td>${b.cashSell}</td></tr></table>`:""}</div>
     ${twrtHtml()}
     ${usrtHtml()||`<div class="mkc"><div class="mkt1">📊 美股昨日收盤</div>${rows((m.index||[]).filter(q=>!/^\^TW/.test(q.sym||"")))}</div><div class="mkc"><div class="mkt1">🇺🇸 美股科技前五大</div>${rows(m.us||[],true)}</div>`}
-  </div><div class="hint" style="margin-top:8px">台股、美股為即時報價（盤中每 30 秒更新，來源：鉅亨網；美股盤中為台灣時間晚上約 21:30／22:30 至清晨）；匯率每日更新（臺灣銀行）。僅供參考，紅漲綠跌。</div></details>`}
+    ${(m.news&&m.news.length)?`<div class="mkc mknews"><div class="mkt1">📰 今日重點新聞 <span class="rtt">依話題熱度・鉅亨網</span></div>${m.news.map((n,i)=>`<a class="nwi" href="${esc(n.url)}" target="_blank" rel="noopener"><span class="nwn">${i+1}</span><span class="nwb"><b>${esc(n.title)}</b><small>${n.ins?'<em class="nwtag">保險醫療</em>':''}${esc(n.cat)}・${new Date(n.t*1000).toLocaleString("zh-TW",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false})}</small></span></a>`).join("")}</div>`:""}
+  </div><div class="hint" style="margin-top:8px">台股、美股為即時報價（盤中每 30 秒更新，來源：鉅亨網；美股盤中為台灣時間晚上約 21:30／22:30 至清晨）；匯率每日更新（臺灣銀行）；重點新聞每 2 小時更新（鉅亨網）。僅供參考，紅漲綠跌。</div></details>`}
 function vDash(){
   const cs=S.clients;const pols=cs.flatMap(c=>(c.policies||[]).filter(active));
   const prem=cs.reduce((a,c)=>a+annualSum(c),0);const rem30=reminders(30);const rem7=reminders(7);
