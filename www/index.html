@@ -1775,7 +1775,10 @@ document.addEventListener("change",async e=>{
 });
 document.addEventListener("change",e=>{if(e.target.id==="mktgAmt"){const v=Math.max(1,num(e.target.value)||100);mktgAmt=v*10000;render()}});
 document.addEventListener("change",e=>{if(e.target.id==="maskNm"){MASK=e.target.checked;try{localStorage.setItem("stark-mask",MASK?"1":"0")}catch(_){}render()}});
-document.addEventListener("input",e=>{if(e.target.id==="fq"){FQ=e.target.value;const pos=e.target.selectionStart;render();const q=document.getElementById("fq");q.focus();try{q.setSelectionRange(pos,pos)}catch(_){}return}
+function onSearchInput(e){if(e.target.id==="fq"){FQ=e.target.value}else if(e.target.id==="q"){S.q=e.target.value}else return;const id=e.target.id,pos=e.target.selectionStart;render();const q=document.getElementById(id);if(q){q.focus();try{q.setSelectionRange(pos,pos)}catch(_){}}}
+document.addEventListener("compositionend",e=>{if(e.target.id==="q"||e.target.id==="fq")onSearchInput(e)});
+document.addEventListener("input",e=>{if((e.target.id==="q"||e.target.id==="fq")&&(e.isComposing||e.inputType==="insertCompositionText"))return;
+  if(e.target.id==="fq"){FQ=e.target.value;const pos=e.target.selectionStart;render();const q=document.getElementById("fq");q.focus();try{q.setSelectionRange(pos,pos)}catch(_){}return}
   if(e.target.id==="q"){S.q=e.target.value;const pos=e.target.selectionStart;render();const q=document.getElementById("q");q.focus();try{q.setSelectionRange(pos,pos)}catch(_){}}});
 document.addEventListener("submit",async e=>{
   e.preventDefault();const f=e.target;const fd=Object.fromEntries(new FormData(f).entries());
