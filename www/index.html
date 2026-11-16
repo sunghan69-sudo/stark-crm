@@ -767,7 +767,7 @@ async function loadTwRt(force){const gap=twOpenNow()?25000:10*60000;if(!force&&D
     const rows=TWRT_SYMS.map(([k,n])=>{const d=map[k];if(!d||d[6]==null)return null;return {key:k,name:n,code:String(d[200010]||""),price:d[6],chg:d[11],pct:d[56],high:d[12],low:d[13],vol:k.includes("STOCK")?d[200013]:null,t:d[200007]*1000}}).filter(Boolean);
     if(rows.length){TWRT={at:Date.now(),rows};try{localStorage.setItem("stark-twrt",JSON.stringify(TWRT))}catch(e){}
       const el=document.getElementById("twrtBox");if(el)el.outerHTML=twrtHtml()}}catch(e){}}
-function twrtTick(){if(twrtTimer)return;twrtTimer=setInterval(()=>{if(S.view==="dashboard"&&document.visibilityState!=="hidden")loadTwRt()},30000)}
+function twrtTick(){if(twrtTimer)return;twrtTimer=setInterval(()=>{if(S.view==="dashboard"&&document.visibilityState!=="hidden"){loadTwRt();loadUsRt()}},30000)}
 function twrtHtml(){const t=TWRT;if(!t||!t.rows.length)return `<div class="mkc" id="twrtBox"><div class="mkt1">台股即時行情</div><div class="hint">讀取中…</div></div>`;
   const idx=t.rows.filter(r=>r.key.includes("INDEX")),stk=t.rows.filter(r=>r.key.includes("STOCK"));const main=idx[0];const open=twOpenNow();
   const tm=new Date(Math.max(...t.rows.map(r=>r.t||0)));const tms=`${tm.getMonth()+1}/${tm.getDate()} ${String(tm.getHours()).padStart(2,"0")}:${String(tm.getMinutes()).padStart(2,"0")}`;
@@ -776,7 +776,23 @@ function twrtHtml(){const t=TWRT;if(!t||!t.rows.length)return `<div class="mkc" 
      <div class="rthl"><div>最高 <b>${mktPrice(main.high)}</b></div><div>最低 <b>${mktPrice(main.low)}</b></div><div>昨收 <b>${mktPrice(main.price-main.chg)}</b></div></div></div>`:""}
    <table class="mtb">${idx.slice(1).map(q=>`<tr><td><b>${esc(q.name)}</b></td><td class="mp">${mktPrice(q.price)}</td><td class="mc">${mktChg(q)}</td></tr>`).join("")}
    ${stk.map(q=>`<tr><td><b>${esc(q.name)}</b><small>${esc(q.code)}${q.vol?"・"+fmt(Math.round(q.vol))+" 張":""}</small></td><td class="mp">${mktPrice(q.price)}</td><td class="mc">${mktChg(q)}</td></tr>`).join("")}</table></div>`}
-function vMarket(){loadMarket();loadTwRt();twrtTick();const m=MKT;let open=true;try{open=localStorage.getItem("stark-fold-mkt")!=="0"}catch(e){}
+/* 美股即時（鉅亨網報價 API，盤中每 30 秒更新） */
+const USRT_SYMS=[["GI:DJI:INDEX","道瓊工業"],["GI:IXIC:INDEX","那斯達克"],["GI:INX:INDEX","S&P 500"],["GI:SOX:INDEX","費城半導體"],["USS:NVDA:STOCK","輝達"],["USS:AAPL:STOCK","蘋果"],["USS:MSFT:STOCK","微軟"],["USS:GOOGL:STOCK","Alphabet"],["USS:AMZN:STOCK","亞馬遜"],["USS:TSM:STOCK","台積電ADR"]];
+let USRT=null,usrtAt=0;try{USRT=JSON.parse(localStorage.getItem("stark-usrt")||"null")}catch(e){}
+function usOpenNow(){try{const p=Object.fromEntries(new Intl.DateTimeFormat("en-US",{timeZone:"America/New_York",weekday:"short",hour:"numeric",minute:"numeric",hour12:false}).formatToParts(new Date()).map(x=>[x.type,x.value]));const m=(+p.hour%24)*60+(+p.minute);return !["Sat","Sun"].includes(p.weekday)&&m>=570&&m<960}catch(e){return false}}
+async function loadUsRt(force){const gap=usOpenNow()?25000:10*60000;if(!force&&Date.now()-usrtAt<gap)return;usrtAt=Date.now();
+  try{const r=await fetch("https://ws.api.cnyes.com/ws/api/v1/quote/quotes/"+USRT_SYMS.map(x=>x[0]).join(",")+"?column=G",{cache:"no-store"});if(!r.ok)return;const j=await r.json();
+    const map={};(j.data||[]).forEach(d=>map[d[0]]=d);
+    const rows=USRT_SYMS.map(([k,n])=>{const d=map[k];if(!d||d[6]==null)return null;return {key:k,name:n,code:k.split(":")[1],price:d[6],chg:d[11],pct:d[56],high:d[12],low:d[13],t:d[200007]*1000}}).filter(Boolean);
+    if(rows.length){USRT={at:Date.now(),rows};try{localStorage.setItem("stark-usrt",JSON.stringify(USRT))}catch(e){}
+      const el=document.getElementById("usrtBox");if(el)el.outerHTML=usrtHtml()}}catch(e){}}
+function usrtHtml(){const t=USRT;if(!t||!t.rows.length)return "";
+  const idx=t.rows.filter(r=>r.key.includes("INDEX")),stk=t.rows.filter(r=>r.key.includes("STOCK"));const open=usOpenNow();
+  const tm=new Date(Math.max(...t.rows.map(r=>r.t||0)));const tms=`${tm.getMonth()+1}/${tm.getDate()} ${String(tm.getHours()).padStart(2,"0")}:${String(tm.getMinutes()).padStart(2,"0")}`;
+  const tr=(q,code)=>`<tr><td><b>${esc(q.name)}</b>${code?`<small>${esc(q.code)}</small>`:""}</td><td class="mp">${mktPrice(q.price)}</td><td class="mc">${mktChg(q)}</td></tr>`;
+  return `<div class="mkc mkrt" id="usrtBox"><div class="mkt1">🇺🇸 美股即時行情 <span class="rtb ${open?"on":""}">${open?"● 盤中即時":"已收盤"}</span><span class="rtt">台灣 ${tms}</span></div>
+   <table class="mtb">${idx.map(q=>tr(q)).join("")}</table><div class="sub" style="margin:8px 0 2px">科技權值股</div><table class="mtb">${stk.map(q=>tr(q,true)).join("")}</table></div>`}
+function vMarket(){loadMarket();loadTwRt();loadUsRt();twrtTick();const m=MKT;let open=true;try{open=localStorage.getItem("stark-fold-mkt")!=="0"}catch(e){}
   const head=`<summary class="mkh"><b>📈 市場快訊</b><span class="sub">${m?`資料日 ${esc((m.index[0]||m.tw[0]||{}).date||"")}・更新 ${esc(new Date(m.updated).toLocaleString("zh-TW",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}))}`:"載入中…"}</span><span class="fchev">▾</span></summary>`;
   if(!m)return `<details class="card mkt fold" ${open?"open":""} ontoggle="try{localStorage.setItem('stark-fold-mkt',this.open?'1':'0')}catch(e){}">${head}<div class="hint" style="padding:8px 0">正在讀取行情資料…</div></details>`;
   const fx=m.fx||{},b=fx.bot||{};
@@ -785,10 +801,9 @@ function vMarket(){loadMarket();loadTwRt();twrtTick();const m=MKT;let open=true;
   <div class="mkg">
     <div class="mkc"><div class="mkt1">💵 今日美金匯率</div><div class="mkbig">${mktPrice(fx.market)}<small> TWD</small></div><div>${mktChg({chg:fx.chg})}<span class="sub"> 市場價</span></div>
       ${b.spotBuy?`<table class="mtb fxt"><tr><th></th><th>買入</th><th>賣出</th></tr><tr><td>台銀即期</td><td>${b.spotBuy}</td><td>${b.spotSell}</td></tr><tr><td>台銀現金</td><td>${b.cashBuy}</td><td>${b.cashSell}</td></tr></table>`:""}</div>
-    <div class="mkc"><div class="mkt1">📊 美股昨日收盤</div>${rows((m.index||[]).filter(q=>!/^\^TW/.test(q.sym||"")))}</div>
     ${twrtHtml()}
-    <div class="mkc"><div class="mkt1">🇺🇸 美股科技前五大</div>${rows(m.us||[],true)}</div>
-  </div><div class="hint" style="margin-top:8px">台股為即時報價（盤中每 30 秒更新，來源：鉅亨網）；美股與匯率每日更新（Yahoo Finance、臺灣銀行）。僅供參考，紅漲綠跌。</div></details>`}
+    ${usrtHtml()||`<div class="mkc"><div class="mkt1">📊 美股昨日收盤</div>${rows((m.index||[]).filter(q=>!/^\^TW/.test(q.sym||"")))}</div><div class="mkc"><div class="mkt1">🇺🇸 美股科技前五大</div>${rows(m.us||[],true)}</div>`}
+  </div><div class="hint" style="margin-top:8px">台股、美股為即時報價（盤中每 30 秒更新，來源：鉅亨網；美股盤中為台灣時間晚上約 21:30／22:30 至清晨）；匯率每日更新（臺灣銀行）。僅供參考，紅漲綠跌。</div></details>`}
 function vDash(){
   const cs=S.clients;const pols=cs.flatMap(c=>(c.policies||[]).filter(active));
   const prem=cs.reduce((a,c)=>a+annualSum(c),0);const rem30=reminders(30);const rem7=reminders(7);
