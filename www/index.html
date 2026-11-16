@@ -367,6 +367,7 @@ const VIEWS=[
   {id:"claims",ic:"🧮",n:"怎麼賠"},
   {id:"ecard",ic:"🪪",n:"名片"},
   {id:"marketing",ic:"📣",n:"行銷專區"},
+  {id:"proposals",ic:"📑",n:"常用建議書"},
   {id:"products",ic:"📚",n:"商品庫"},
   {id:"setup",ic:"⚙",n:"設定"},
   {id:"admin",ic:"🛡",n:"帳號管理"}
@@ -743,7 +744,7 @@ function render(){
   if(S.mode==="loading"||(S.mode==="cloud"&&!S.loaded)){m.innerHTML=`<div class="empty"><b>載入中…</b>正在讀取你的客戶資料</div>`;return}
   const banner=S.mode==="local"?`<div class="banner">💾 目前為<b>本機模式</b>：資料只存在這台裝置。到「設定」可以改用雲端同步，或匯出備份。</div>`:"";
   if(S.view==="products"&&!canProd())S.view="dashboard";
-  const fn={dashboard:vDash,clients:vClients,reminders:vRem,claims:vClaims,services:vSvc,ecard:vCard,marketing:vMkt,setup:vSetup,products:vProducts,admin:vAdmin}[S.view]||vDash;
+  const fn={dashboard:vDash,clients:vClients,reminders:vRem,claims:vClaims,services:vSvc,ecard:vCard,marketing:vMkt,proposals:vProps,setup:vSetup,products:vProducts,admin:vAdmin}[S.view]||vDash;
   const pendN2=S.isAdmin&&S.view!=="admin"?(S.apps||[]).filter(a=>a.status==="pending"&&!(S.members||{})[a.uid]).length+(S.resets||[]).filter(a=>a.status==="pending").length:0;
   m.innerHTML=banner+(pendN2?`<a href="#admin" class="banner" style="display:block;background:#fff4e5;border-color:#f7d9a8;color:#8a4b00;text-decoration:none">🔔 有 ${pendN2} 件申請（加入／重設密碼）等待你覆核，點這裡處理 ›</a>`:"")+fn();
 }
@@ -1612,6 +1613,37 @@ function openBulkPdf(){const box=document.createElement("div");document.getEleme
 }
 window.__bulkPdf=runBulkPdf;
 
+/* ========== 常用建議書（各保險公司試算表／建議書，資料檔 proposals/proposals.json） ========== */
+const PROP_BASE="https://sunghan69-sudo.github.io/stark-crm/proposals/";
+let PROPS=(()=>{try{return JSON.parse(localStorage.getItem("stark-props")||"null")}catch(e){return null}})(),propsAt=0,propCo="";
+async function loadProps(force){if(!force&&Date.now()-propsAt<10*60*1000)return;propsAt=Date.now();
+  try{const r=await fetch(PROP_BASE+"proposals.json?t="+Math.floor(Date.now()/600000),{cache:"no-store"});if(!r.ok)return;const j=await r.json();PROPS=j;try{localStorage.setItem("stark-props",JSON.stringify(j))}catch(e){}if(S.view==="proposals"&&!M)render()}catch(e){}}
+function propFileName(x){const ext=(x.file.match(/\.\w+$/)||[".xls"])[0];return `${x.co}_${x.title}${x.code&&!/・/.test(x.code)?"("+x.code+")":""}_${x.kind||"建議書"}_${(x.date||"").replace(/-/g,"")}${ext}`.replace(/[\\/:*?"<>|（）]/g,m=>m==="（"?"(":m==="）"?")":"")}
+function vProps(){loadProps();const items=(PROPS&&PROPS.items)||[];
+  const head=`<div class="top"><div><h1>常用建議書</h1><div class="sub">各保險公司常用試算表／建議書，依公司分類，點「下載」即可用 Excel 開啟${PROPS&&PROPS.updated?"｜更新 "+esc(PROPS.updated):""}</div></div></div>`;
+  if(!items.length)return head+`<div class="card empty"><b>${PROPS?"目前還沒有建議書":"載入中…"}</b>${PROPS?"把試算表或建議書檔案傳給管理者即可上架":"正在讀取建議書清單"}</div>`;
+  const cos=[...new Set(items.map(x=>x.co))].sort((a,b)=>a.localeCompare(b,"zh-Hant-TW-u-co-stroke"));
+  if(propCo&&!cos.includes(propCo))propCo="";
+  const chips=`<div class="row" style="flex-wrap:wrap;gap:6px"><button class="chip ${!propCo?"on":""}" data-act="propCo" data-v="">全部（${items.length}）</button>${cos.map(c=>`<button class="chip ${propCo===c?"on":""}" data-act="propCo" data-v="${esc(c)}">${coBadge(c,16)} ${esc(c)}（${items.filter(x=>x.co===c).length}）</button>`).join("")}</div>`;
+  const card=x=>`<div class="card prop" data-s="${esc([x.co,x.title,x.code,x.cat,x.ver,x.desc,(x.tags||[]).join(" ")].join(" ").toLowerCase())}" style="margin:0">
+    <div class="row" style="justify-content:space-between;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:16px">${esc(x.title)}</div>
+    <div class="sub" style="margin-top:2px">${x.code?`<span class="mono">${esc(x.code)}</span>｜`:""}${esc(x.kind||"建議書")}${x.cur?"｜"+esc(x.cur):""}${x.cat?"｜"+esc(x.cat):""}</div></div>
+    <a class="btn p sm" href="${PROP_BASE+x.file}" download="${esc(propFileName(x))}" target="_blank" rel="noopener">⬇ 下載</a></div>
+    ${x.desc?`<div style="margin-top:8px;font-size:14px;line-height:1.6">${esc(x.desc)}</div>`:""}
+    <div class="row" style="margin-top:8px;flex-wrap:wrap;gap:4px">${(x.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</div>
+    <div class="sub" style="margin-top:8px">版本日 ${esc(x.date||"—")}${x.ver?"｜"+esc(x.ver):""}${x.size?"｜"+esc(x.size):""}${x.note?`｜<span style="color:#b5651d">⚠ ${esc(x.note)}</span>`:""}</div></div>`;
+  const groups=cos.filter(c=>!propCo||c===propCo).map(c=>{const list=items.filter(x=>x.co===c).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+    return `<section class="propgrp" style="margin-top:18px"><h3 class="row" style="gap:8px;margin:0 0 10px">${coBadge(c,26)} ${esc(c)} <span class="sub" style="font-weight:400">${list.length} 份</span></h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px">${list.map(card).join("")}</div></section>`}).join("");
+  return head+`<div class="card"><input class="inp search" id="propQ" placeholder="搜尋商品名稱、代碼、險種…">${chips}</div>${groups}<div class="card empty" id="propNone" style="display:none;margin-top:14px">找不到符合的建議書</div>
+  <div class="sub" style="margin-top:16px">※ 試算結果僅供參考，實際內容以各公司最新版本、條款及核保結果為準。檔案若顯示唯讀或需啟用巨集，請在 Excel 選「啟用內容」。</div>`}
+function filterProps(){const el=document.getElementById("propQ");if(!el)return;const q=el.value.trim().toLowerCase();let n=0;
+  document.querySelectorAll(".card.prop").forEach(c=>{const ok=!q||q.split(/\s+/).every(w=>c.dataset.s.includes(w));c.style.display=ok?"":"none";if(ok)n++});
+  document.querySelectorAll(".propgrp").forEach(g=>{g.style.display=[...g.querySelectorAll(".card.prop")].some(c=>c.style.display!=="none")?"":"none"});
+  const none=document.getElementById("propNone");if(none)none.style.display=n?"none":""}
+document.addEventListener("input",e=>{if(e.target.id==="propQ"&&!e.isComposing)filterProps()});
+document.addEventListener("compositionend",e=>{if(e.target.id==="propQ")filterProps()});
+
 /* ========== 行銷專區（投資型連結標的週報，資料檔 mkt/marketing.json 每週更新） ========== */
 const MKTG_URL="https://sunghan69-sudo.github.io/stark-crm/mkt/marketing.json";
 let MKTG=(()=>{try{return JSON.parse(localStorage.getItem("stark-mktg")||"null")}catch(e){return null}})(),mktgAt=0,mktgRep="",mktgAmt=1000000;
@@ -1695,6 +1727,7 @@ document.addEventListener("click",async e=>{
     case "newClient":openClient(null);break;
     case "bulkPdf":openBulkPdf();break;
     case "tour":openTour(false);break;
+    case "propCo":propCo=el.dataset.v||"";render();break;
     case "cview":CVIEW=el.dataset.v;try{localStorage.setItem("stark-cview",CVIEW)}catch(e){}render();break;
     case "mktgRep":mktgRep=el.dataset.id;render();break;
     case "openClient":openClient(el.dataset.id,el.dataset.tab);break;
