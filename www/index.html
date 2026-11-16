@@ -553,8 +553,8 @@ async function migrateProducts(){if(migrating||!S.sharedOK||!S.isAdmin||!(S.ownP
       if(!cur||(x.updated||0)>(cur.updated||0)){await pcol().doc(x.id).set(Object.assign({},x,{updatedBy:S.email||""}));n++}
       await col().doc(x.id).delete()}
     if(n)toast("已把 "+n+" 個商品搬到共用商品庫")}catch(e){console.warn("migrate",e)}finally{migrating=false}}
-function saveProduct(x){x.type="product";x.updated=Date.now();x.updatedBy=S.email||"";const i=S.products.findIndex(y=>y.id===x.id);if(i>=0)S.products[i]=x;else S.products.push(x);render();return writeProd(x.id,clone(x))}
-function delProduct(id){S.products=S.products.filter(x=>x.id!==id);render();return writeProd(id,null)}
+function saveProduct(x){PV++;_um=null;x.type="product";x.updated=Date.now();x.updatedBy=S.email||"";const i=S.products.findIndex(y=>y.id===x.id);if(i>=0)S.products[i]=x;else S.products.push(x);render();return writeProd(x.id,clone(x))}
+function delProduct(id){PV++;_um=null;S.products=S.products.filter(x=>x.id!==id);render();return writeProd(id,null)}
 function saveProfile(){render();return writeDoc("profile",clone(S.profile))}
 
 function parseCfg(t){
@@ -1190,8 +1190,12 @@ function coKey(n){n=String(n||"").trim();if(!n)return "";const pm=n.match(/([A-Z
   const m=n.match(/([A-Za-z\u4e00-\u9fff]{2,8}?)(人壽|保險)/);if(m&&!/^(其他|未填)/.test(m[1]))return m[1]+"人壽";return "其他"}
 function prodCode(name){const g=[...String(name||"").matchAll(/[（(]([^()（）]+)[)）]/g)].map(m=>m[1].trim()).filter(x=>/^[A-Z0-9][A-Z0-9_\-]{0,7}$/i.test(x)&&/[A-Z_]/i.test(x));return g.length?g[g.length-1].toUpperCase():""}
 function baseName(name){return String(name||"").replace(/[（(][^()（）]*[)）]/g,"").trim()}
-function matchProduct(p){if(!S.products.length)return null;const code=prodCode(p.product),co=coKey(polCo(p)),bn=baseName(p.product);
-  let cand=S.products.filter(x=>x.status!=="停用"&&((code&&x.code&&x.code.toUpperCase()===code)||(bn&&(x.name===bn||(x.aliases||[]).includes(bn)||(x.aliases||[]).includes(p.product)))));
+/* 商品比對快取：商品庫變動（PV）或陣列更換時重建索引，避免大量商品時畫面卡住 */
+let PV=0,_mc=null;function mcache(){if(!_mc||_mc.ref!==S.products||_mc.pv!==PV||_mc.n!==S.products.length){const byCode={},byName={};S.products.forEach(x=>{if(x.status==="停用")return;if(x.code){const k=x.code.toUpperCase();(byCode[k]=byCode[k]||[]).push(x)}[x.name,...(x.aliases||[])].forEach(n=>{if(n)(byName[n]=byName[n]||new Set()).add(x)})});_mc={ref:S.products,pv:PV,n:S.products.length,byCode,byName,memo:new Map()}}return _mc}
+function matchProduct(p){if(!S.products.length)return null;const mc=mcache();const mk=(p.product||"")+"|"+(p.company||"")+"|"+(p.insurer||"")+"|"+(p.start||"");if(mc.memo.has(mk))return mc.memo.get(mk);const r=matchProduct0(p,mc);mc.memo.set(mk,r);return r}
+function matchProduct0(p,mc){const code=prodCode(p.product),co=coKey(polCo(p)),bn=baseName(p.product);
+  const cs=new Set();if(code)(mc.byCode[code]||[]).forEach(x=>cs.add(x));if(bn)(mc.byName[bn]||[]).forEach(x=>cs.add(x));if(p.product)(mc.byName[p.product]||[]).forEach(x=>{if((x.aliases||[]).includes(p.product))cs.add(x)});
+  let cand=[...cs];
   if(co&&co!=="其他"){const same=cand.filter(x=>coKey(x.company)===co);if(same.length)cand=same;else cand=cand.filter(x=>!x.company||x.company==="其他")}
   if(!cand.length)return null;if(code){const exact=cand.filter(x=>x.code&&x.code.toUpperCase()===code);if(exact.length)cand=exact}
   const st=p.start||"9999";cand.sort((a,b)=>(b.status==="已核對")-(a.status==="已核對")||(b.effective||"").localeCompare(a.effective||""));
@@ -1206,7 +1210,7 @@ function computeFromProduct(p,pr){const base=policyBase(p);const t=String(p.sumT
     else if(r.mode==="fixed"&&num(r.a))v=fmtAmt(num(r.a));
     else if(r.mode==="text"&&r.text)v=r.text;
     if(v)out[r.key]=v});return out}
-function prodUsage(pr){let n=0;S.clients.forEach(c=>(c.policies||[]).forEach(p=>{if(active(p)&&matchProduct(p)===pr)n++}));return n}
+let _um=null;function prodUsage(pr){if(!_um||_um.t<Date.now()-1500){const m=new Map();S.clients.forEach(c=>(c.policies||[]).forEach(p=>{if(!active(p))return;const x=matchProduct(p);if(x)m.set(x,(m.get(x)||0)+1)}));_um={m,t:Date.now()}}return _um.m.get(pr)||0}
 function missingProducts(){const m={};S.clients.forEach(c=>(c.policies||[]).forEach(p=>{if(!active(p)||!p.product)return;const pr=matchProduct(p);if(pr&&pr.status==="已核對")return;
   const code=prodCode(p.product),co=coKey(polCo(p))||"未填公司",bn=baseName(p.product);const k=co+"|"+(code||bn);if(!m[k])m[k]={co,code,name:bn,full:p.product,clients:new Set(),draft:pr||null};m[k].clients.add(c.name)}));
   return Object.values(m).sort((a,b)=>b.clients.size-a.clients.size)}
