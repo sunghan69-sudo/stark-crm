@@ -203,6 +203,14 @@ input.inp:focus,select.inp:focus,textarea.inp:focus{outline:2px solid #bcd3ee;bo
 /* e-card */
 .ecard{width:100%;max-width:380px;border-radius:18px;overflow:hidden;background:linear-gradient(140deg,var(--pri) 0%,#24507e 100%);color:#fff;padding:26px 24px;position:relative;box-shadow:0 14px 40px rgba(20,54,92,.3)}
 .tbl.mktg td,.tbl.mktg th{white-space:nowrap}.tbl.mktg td:nth-child(2){white-space:normal;min-width:220px}.tbl .r{text-align:right}.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+.hhgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.hhc{display:flex;gap:12px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;cursor:pointer;transition:box-shadow .15s,transform .15s}
+.hhc:hover{box-shadow:0 6px 18px rgba(15,124,138,.14);transform:translateY(-1px);border-color:#bfe0e4}
+.hha{flex:none;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#fff;background:#8aa4a8}
+.hha.m{background:#0f7c8a}.hha.f{background:#d9746a}
+.hhb{min-width:0}.hhn{font-size:17px;font-weight:700;color:#173b40;display:flex;align-items:baseline;gap:8px}.hhage{font-size:12px;font-weight:500;color:var(--muted)}
+.hhm{font-size:12px;color:var(--muted);margin-top:3px}.hhhit{font-size:12px;color:#b5651d;margin-top:2px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}.seg .btn{border:0;border-radius:0;background:#fff}.seg .btn.on{background:#0f7c8a;color:#fff}
 .ecard:after{content:"";position:absolute;right:-60px;top:-60px;width:200px;height:200px;border-radius:50%;background:rgba(232,131,58,.25)}
 .ecard .nmx{font-size:26px;font-weight:900}
 .ecard .tt{opacity:.85;font-size:14px}
@@ -816,7 +824,23 @@ function remItem(r){
   <div class="body"><div class="t"><span class="dot" style="background:${k.c}"></span>${esc(r.t)}</div><div class="d">${esc(r.sub)}</div></div>
   <div class="row"><button class="btn sm" data-act="copyMsg" data-msg="${esc(r.msg)}">複製</button><a class="btn sm line" href="${lineUrl(r.msg)}" target="_blank" rel="noopener">LINE</a><button class="btn sm ghost hide-m" data-act="openClient" data-id="${r.c.id}">開啟</button></div></div>`;
 }
-function vClients(){
+let CVIEW=(()=>{try{return localStorage.getItem("stark-cview")||"list"}catch(e){return "list"}})(),FQ="",MASK=(()=>{try{return localStorage.getItem("stark-mask")==="1"}catch(e){return false}})();
+function maskNm(n){n=String(n||"");if(!MASK||n.length<2)return n;return n.length===2?n[0]+"O":n[0]+"O".repeat(n.length-2)+n[n.length-1]}
+function households(){const by={};const out=[];S.clients.forEach(c=>{if(c.family){(by[c.family]=by[c.family]||[]).push(c)}else out.push({fam:"",head:c,members:[c]})});
+  Object.keys(by).forEach(f=>{const ms=by[f].slice().sort((a,b)=>(REL_ORDER[relName(a)]??(REL_ORDER[a.relation]??9))-(REL_ORDER[relName(b)]??(REL_ORDER[b.relation]??9)));const head=ms.find(isHead)||ms[0];out.push({fam:f,head,members:ms})});
+  const col=(()=>{try{return new Intl.Collator("zh-Hant-TW-u-co-stroke")}catch(e){return new Intl.Collator("zh-Hant")}})();
+  return out.sort((a,b)=>col.compare(a.head.name||"",b.head.name||""))}
+function vFamGrid(){const q=FQ.trim().toLowerCase();let hs=households();
+  if(q)hs=hs.filter(h=>h.fam.toLowerCase().includes(q)||h.members.some(m=>(m.name||"").toLowerCase().includes(q)||String(m.phone||"").replace(/\D/g,"").includes(q.replace(/\D/g,"")||"\u0000")));
+  const cards=hs.map(h=>{const c=h.head;const a=age(c.birthday);const g=c.gender==="女"?"f":c.gender==="男"?"m":"";const pol=h.members.reduce((n,m)=>n+(m.policies||[]).filter(active).length,0);const prem=h.members.reduce((n,m)=>n+annualSum(m),0);
+    const hit=q&&!((c.name||"").toLowerCase().includes(q))?h.members.find(m=>(m.name||"").toLowerCase().includes(q)):null;
+    return `<div class="hhc" data-act="openClient" data-id="${c.id}" data-tab="${h.fam?"fam":"pol"}"><div class="hha ${g}">${esc((c.name||"?").slice(0,1))}</div><div class="hhb"><div class="hhn">${esc(maskNm(c.name))}${a!==""?`<span class="hhage">${a} 歲</span>`:""}</div>
+      <div class="hhm">${h.members.length>1?`👪 ${h.members.length} 人`:"個人"}｜保單 ${pol} 張${prem?`｜年繳 ${fmt(prem)}`:""}</div>${hit?`<div class="hhhit">符合：${esc(maskNm(hit.name))}（${esc(relName(hit))}）</div>`:""}</div></div>`}).join("");
+  return `<div class="top"><div><h1>戶長列表</h1><div class="sub">請選擇要查看或做建議的家庭｜共 ${hs.length} 戶</div></div>
+   <div class="row"><div class="seg"><button class="btn sm" data-act="cview" data-v="list">☰ 客戶列表</button><button class="btn sm on" data-act="cview" data-v="fam">🏠 戶長列表</button></div>
+   <input class="inp search" id="fq" placeholder="搜尋戶長、家人姓名或電話…" value="${esc(FQ)}"><label class="sub" style="display:flex;align-items:center;gap:6px;white-space:nowrap"><input type="checkbox" id="maskNm" ${MASK?"checked":""}>隱藏姓名</label><button class="btn p" data-act="newClient">＋ 新增客戶</button></div></div>
+   ${hs.length?`<div class="hhgrid">${cards}</div>`:`<div class="card empty"><b>找不到符合的家庭</b>換個關鍵字試試</div>`}`}
+function vClients(){if(CVIEW==="fam")return vFamGrid();
   const list=filtered();const tags=[...new Set(S.clients.flatMap(c=>c.tags||[]))];
   let lastFam=null;
   const rows=list.map(c=>{
@@ -832,7 +856,7 @@ function vClients(){
       <td class="hide-m">${(c.tags||[]).map(t=>`<span class="tag o">${esc(t)}</span>`).join("")}</td></tr>`;
   }).join("");
   return `<div class="top"><div><h1>客戶管理</h1><div class="sub">共 ${S.clients.length} 位，顯示 ${list.length} 位</div></div>
-   <div class="row"><input class="inp search" id="q" placeholder="搜尋姓名、電話、地址、標籤、家庭…" value="${esc(S.q)}"><button class="btn" data-act="bulkPdf">📂 批次匯入保單PDF</button><button class="btn p" data-act="newClient">＋ 新增客戶</button></div></div>
+   <div class="row"><input class="inp search" id="q" placeholder="搜尋姓名、電話、地址、標籤、家庭…" value="${esc(S.q)}"><div class="seg"><button class="btn sm on" data-act="cview" data-v="list">☰ 客戶列表</button><button class="btn sm" data-act="cview" data-v="fam">🏠 戶長列表</button></div><button class="btn" data-act="bulkPdf">📂 批次匯入保單PDF</button><button class="btn p" data-act="newClient">＋ 新增客戶</button></div></div>
    <div class="chips">${FILTERS.map(f=>`<button class="chip ${S.filter===f.id?"on":""}" data-act="filter" data-f="${f.id}">${f.n}</button>`).join("")}</div>
    ${tags.length?`<div class="chips" style="margin-top:-4px"><span class="sub" style="padding:5px 0">標籤：</span>${tags.map(t=>`<button class="chip ${S.tag===t?"on":""}" data-act="tagf" data-t="${esc(t)}">#${esc(t)}</button>`).join("")}</div>`:""}
    <div class="card" style="padding:6px 8px;overflow-x:auto">${list.length?`<table class="tbl"><thead><tr><th>客戶</th><th class="hide-m">家庭</th><th>階段</th><th class="hide-m">保單</th><th class="hide-m">保障缺口</th><th class="hide-m">上次聯絡</th><th class="hide-m">標籤</th></tr></thead><tbody>${rows}</tbody></table>`:`<div class="empty"><b>沒有符合的客戶</b>${S.clients.length?"換個篩選條件試試":"按右上角「新增客戶」開始"}</div>`}</div>
@@ -1653,6 +1677,7 @@ document.addEventListener("click",async e=>{
   switch(a){
     case "newClient":openClient(null);break;
     case "bulkPdf":openBulkPdf();break;
+    case "cview":CVIEW=el.dataset.v;try{localStorage.setItem("stark-cview",CVIEW)}catch(e){}render();break;
     case "mktgRep":mktgRep=el.dataset.id;render();break;
     case "openClient":openClient(el.dataset.id,el.dataset.tab);break;
     case "toggleId":M.showId=!M.showId;applyId();break;
@@ -1749,7 +1774,9 @@ document.addEventListener("change",async e=>{
   if(["cDays","cCost","cMonths"].includes(t.id)){S[t.id]=num(t.value);render()}
 });
 document.addEventListener("change",e=>{if(e.target.id==="mktgAmt"){const v=Math.max(1,num(e.target.value)||100);mktgAmt=v*10000;render()}});
-document.addEventListener("input",e=>{if(e.target.id==="q"){S.q=e.target.value;const pos=e.target.selectionStart;render();const q=document.getElementById("q");q.focus();try{q.setSelectionRange(pos,pos)}catch(_){}}});
+document.addEventListener("change",e=>{if(e.target.id==="maskNm"){MASK=e.target.checked;try{localStorage.setItem("stark-mask",MASK?"1":"0")}catch(_){}render()}});
+document.addEventListener("input",e=>{if(e.target.id==="fq"){FQ=e.target.value;const pos=e.target.selectionStart;render();const q=document.getElementById("fq");q.focus();try{q.setSelectionRange(pos,pos)}catch(_){}return}
+  if(e.target.id==="q"){S.q=e.target.value;const pos=e.target.selectionStart;render();const q=document.getElementById("q");q.focus();try{q.setSelectionRange(pos,pos)}catch(_){}}});
 document.addEventListener("submit",async e=>{
   e.preventDefault();const f=e.target;const fd=Object.fromEntries(new FormData(f).entries());
   if(f.id==="rstForm"){S.authErr="";const btn=f.querySelector("button");btn.disabled=true;
