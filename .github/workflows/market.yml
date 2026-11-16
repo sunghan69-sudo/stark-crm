@@ -5,7 +5,7 @@ on:
     - cron: "10 22 * * 0-4"   # 台灣 06:10（美股收盤後）
     - cron: "40 5 * * 1-5"    # 台灣 13:40（台股收盤後）
     - cron: "20 1 * * 1-5"    # 台灣 09:20（台銀匯率更新）
-    - cron: "0 0 * * *"       # 台灣 08:00 更新今日重點影音
+    - cron: "45 23 * * *"     # 台灣 07:45 更新今日重點影音（GitHub 排程常延遲 5–15 分，約 8 點前上線）
   workflow_dispatch:
 
 permissions:
@@ -22,7 +22,7 @@ jobs:
       - name: 抓取行情
         run: node .github/scripts/market.mjs
         env:
-          VIDEOS: ${{ (github.event.schedule == '0 0 * * *' || github.event_name == 'workflow_dispatch') && '1' || '0' }}
+          VIDEOS: ${{ (github.event.schedule == '45 23 * * *' || github.event_name == 'workflow_dispatch') && '1' || '0' }}
       - name: 發布到 data 分支
         run: |
           cd out
