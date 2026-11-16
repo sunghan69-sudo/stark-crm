@@ -299,8 +299,8 @@ details.fold{align-self:start}details.fold>summary{list-style:none;cursor:pointe
   .side .foot{margin-top:0;margin-left:12px;padding:0;white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}
   .main{max-width:1320px;width:100%;margin:0 auto;padding:24px 32px 60px}
 }
-.mask.drawer{justify-content:flex-end;padding:0;align-items:stretch}
-.mask.drawer>.modal{max-width:1000px;border-radius:18px 0 0 18px;min-height:100vh;animation:drawIn .22s ease-out;box-shadow:-12px 0 40px rgba(0,0,0,.22)}
+.mask.drawer{justify-content:flex-end;padding:0;align-items:stretch;overflow:hidden}
+.mask.drawer>.modal{max-width:1000px;border-radius:18px 0 0 18px;height:100vh;height:100dvh;overflow-y:auto;overscroll-behavior:contain;background:#fff;animation:drawIn .22s ease-out;box-shadow:-12px 0 40px rgba(0,0,0,.22)}
 .mask.drawer .mh{position:sticky;top:0;background:#fff;z-index:2;border-radius:18px 0 0 0}
 @keyframes drawIn{from{transform:translateX(40px);opacity:.4}to{transform:none;opacity:1}}
 @media (max-width:900px){.mask.drawer>.modal{border-radius:0}}
