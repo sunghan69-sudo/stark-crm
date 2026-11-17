@@ -33,6 +33,10 @@ input,select,textarea{font:inherit;color:inherit}
 .nav a.on{background:#fff;color:var(--pri)}
 .nav .ic{width:20px;text-align:center}
 .nav .nf{display:inline}.nav .ns{display:none}
+.navfab{display:none;position:fixed;left:14px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:58;width:50px;height:50px;border-radius:50%;border:0;background:var(--pri);color:#fff;font-size:22px;line-height:1;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(10,30,60,.35);cursor:pointer;transition:opacity .2s,transform .1s}
+.navfab:active{transform:scale(.94)}
+.navback{display:none}
+body.gate .navfab{display:none!important}
 .side .foot{margin-top:auto;padding:14px 18px;font-size:12px;opacity:.7}
 .main{flex:1;min-width:0;padding:26px 30px 90px}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;flex-wrap:wrap}
@@ -233,16 +237,21 @@ body.gate .side{display:none}
 .secure{-webkit-text-security:disc;text-security:disc}
 .btn.line{background:#06c755;border-color:#06c755;color:#fff}
 @media (max-width:900px){
-  .side{position:fixed;bottom:0;top:auto;left:0;right:0;width:auto;height:auto;flex-direction:row;z-index:40}
-  .brand,.side .foot{display:none}
-  .nav{flex-direction:row;justify-content:space-between;align-items:stretch;width:100%;padding:4px 3px calc(4px + env(safe-area-inset-bottom,0px));gap:0}
-  .nav a{position:relative;flex:1 1 0;min-width:0;flex-direction:column;gap:2px;font-size:10px;line-height:1.1;padding:5px 2px;border-radius:8px;text-align:center}
-  .nav a .ic{font-size:18px;width:auto;line-height:1}
-  .nav a.on{background:rgba(255,255,255,.15);color:#fff}
-  .nav .nf{display:none}
-  .nav .ns{display:inline;white-space:nowrap}
-  .nav .nbadge{position:absolute;top:2px;right:50%;transform:translateX(18px);margin:0;padding:0 5px;font-size:9px}
-  .main{padding:18px 14px 90px}
+  .side{position:fixed;top:0;left:0;bottom:0;right:auto;width:76%;max-width:300px;height:100%;height:100dvh;flex-direction:column;z-index:60;transform:translateX(-100%);transition:transform .25s ease;box-shadow:2px 0 22px rgba(0,0,0,.35);overflow-y:auto;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+  body.nav-open .side{transform:none}
+  .brand{display:block}
+  .side .foot{display:block}
+  .nav{flex-direction:column;justify-content:flex-start;width:100%;gap:2px;padding:8px 10px;overflow:visible}
+  .nav a{position:relative;flex:none;flex-direction:row;align-items:center;gap:12px;justify-content:flex-start;text-align:left;font-size:15px;padding:12px 14px;border-radius:9px}
+  .nav a .ic{font-size:19px;width:24px;text-align:center}
+  .nav a.on{background:#fff;color:var(--pri)}
+  .nav .nf{display:inline}
+  .nav .ns{display:none}
+  .navfab{display:flex}
+  .navback{display:block;position:fixed;inset:0;background:rgba(10,20,40,.42);z-index:55;opacity:0;pointer-events:none;transition:opacity .25s}
+  body.nav-open .navback{opacity:1;pointer-events:auto}
+  body.nav-open .navfab{opacity:0;pointer-events:none}
+  .main{padding:16px 14px 40px}
   .k4{grid-template-columns:1fr 1fr}
   .g2{grid-template-columns:1fr}
   .form{grid-template-columns:1fr 1fr}
@@ -365,6 +374,8 @@ details.fold{align-self:start}details.fold>summary{list-style:none;cursor:pointe
   </aside>
   <main class="main" id="main"></main>
 </div>
+<div class="navback" id="navBack"></div>
+<button class="navfab" id="navFab" aria-label="選單" title="選單">☰</button>
 <div id="modalRoot"></div>
 <script src="vendor/firebase-app-compat.js"></script>
 <script src="vendor/firebase-auth-compat.js"></script>
@@ -1782,6 +1793,13 @@ async function demo(){
 function canProd(){return S.mode!=="cloud"||!!S.isAdmin}
 function route(){const h=(location.hash||"").slice(1);S.view=VIEWS.some(v=>v.id===h)&&(h!=="products"||canProd())?h:"dashboard";render();try{window.scrollTo(0,0)}catch(_){}}
 window.addEventListener("hashchange",route);
+(function(){const fab=document.getElementById("navFab"),back=document.getElementById("navBack"),navEl=document.getElementById("nav");
+  const close=()=>document.body.classList.remove("nav-open");
+  if(fab)fab.addEventListener("click",()=>document.body.classList.toggle("nav-open"));
+  if(back)back.addEventListener("click",close);
+  if(navEl)navEl.addEventListener("click",e=>{if(e.target.closest("a"))close()});
+  window.addEventListener("hashchange",close);
+})();
 document.addEventListener("click",async e=>{
   const el=e.target.closest("[data-act]");if(!el)return;const a=el.dataset.act;
   if(a==="maskClose"){if(e.target===el)closeModal();return}
