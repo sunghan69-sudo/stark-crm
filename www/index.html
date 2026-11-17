@@ -1753,7 +1753,7 @@ let invQ="",invClearArm=0;
 function invN(n,usd){if(n==null||n===""||isNaN(+n))return"—";return (+n).toLocaleString("en-US",{minimumFractionDigits:usd?2:0,maximumFractionDigits:usd?2:0})}
 function invU(n){return n==null||isNaN(+n)?"—":(+n).toLocaleString("en-US",{minimumFractionDigits:4,maximumFractionDigits:4})}
 function invP(v){if(v==null||isNaN(+v))return"—";const x=+v*100;return `<span class="${x>0?"mup":x<0?"mdn":""}">${x>0?"+":""}${x.toFixed(2)}%</span>`}
-/* 報表的姓名、ID 是遮罩過的（呂*誼／A227****35），用身分證前 4 碼＋後 2 碼比對 CRM 客戶，比不到再用姓名頭尾字 */
+/* 報表的姓名、ID 是遮罩過的（例：王*明／A123****45），用身分證前 4 碼＋後 2 碼比對 CRM 客戶，比不到再用姓名頭尾字 */
 function invMatch(cu){const m=String(cu.id||"").toUpperCase().match(/^([A-Z]\d{3})\*+(\d{2})$/);
   let hit=m?S.clients.filter(c=>{const id=String(c.idNo||"").toUpperCase().replace(/\s/g,"");return id.length===10&&id.startsWith(m[1])&&id.endsWith(m[2])}):[];
   if(!hit.length){const nm=String(cu.name||"");if(nm.length>=2){const byNm=S.clients.filter(c=>{const n=String(c.name||"").trim();return n.length===nm.length&&n[0]===nm[0]&&n[n.length-1]===nm[nm.length-1]});if(byNm.length===1)hit=byNm}}
