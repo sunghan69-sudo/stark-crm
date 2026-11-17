@@ -533,8 +533,8 @@ function lastContactDays(c){const d=pd(c.lastContact);return d?daysBetween(d,tod
 /* ========== 儲存層（Firebase 雲端同步 / 本機模式） ========== */
 const LS="stark-local-v1",CFG_KEY="stark-fb-config",MODE_KEY="stark-mode";
 let FB=null,unsub=null,punsub=null,migrating=false;
-function lsLoad(){try{const j=JSON.parse(localStorage.getItem(LS)||"null");if(j){S.clients=j.clients||[];S.products=j.products||[];S.profile=Object.assign(clone(DEF_PROFILE),j.profile||{})}}catch(e){}}
-function lsSave(){try{localStorage.setItem(LS,JSON.stringify({clients:S.clients,products:S.products,profile:S.profile}))}catch(e){}}
+function lsLoad(){try{const j=JSON.parse(localStorage.getItem(LS)||"null");if(j){S.clients=j.clients||[];S.products=j.products||[];S.profile=Object.assign(clone(DEF_PROFILE),j.profile||{});S.ignoredMissing=j.ignoredMissing||[]}}catch(e){}}
+function lsSave(){try{localStorage.setItem(LS,JSON.stringify({clients:S.clients,products:S.products,profile:S.profile,ignoredMissing:S.ignoredMissing||[]}))}catch(e){}}
 function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
 function lsSet(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}
 function col(){return FB.fs.collection("users").doc(S.uid).collection("items")}
@@ -663,9 +663,9 @@ async function initStore(){
     checkAccess(u,()=>{S.mode="cloud";S.loaded=false;setSync("同步中…");render();
     let timer=setTimeout(()=>setSync("⚠ 目前離線，顯示手機內的資料"),10000);
     unsub=col().onSnapshot({includeMetadataChanges:true},snap=>{
-      const cl=[],pr=[];let prof=null;
-      snap.docs.forEach(d=>{const v=d.data();if(!v)return;if(d.id==="profile")prof=v;else if(v.type==="client")cl.push(Object.assign({},v,{id:d.id}));else if(v.type==="product")pr.push(Object.assign({},v,{id:d.id}))});
-      S.clients=cl;S.ownProducts=pr;mergeProducts();migrateProducts();watchNeeds();S.profile=Object.assign(clone(DEF_PROFILE),prof||{});
+      const cl=[],pr=[];let prof=null,ig=null;
+      snap.docs.forEach(d=>{const v=d.data();if(!v)return;if(d.id==="profile")prof=v;else if(d.id==="ignoredMissing")ig=v;else if(v.type==="client")cl.push(Object.assign({},v,{id:d.id}));else if(v.type==="product")pr.push(Object.assign({},v,{id:d.id}))});
+      S.clients=cl;S.ownProducts=pr;S.ignoredMissing=(ig&&ig.keys)||[];mergeProducts();migrateProducts();watchNeeds();S.profile=Object.assign(clone(DEF_PROFILE),prof||{});
       if(!snap.metadata.fromCache){clearTimeout(timer);setSync()}else if(!S.loaded)setSync("離線資料（連上網路後自動同步）");
       S.loaded=true;reportNeeds();if(!M)render();if(!S.tourChecked&&!snap.metadata.fromCache){S.tourChecked=true;maybeAutoTour(FB.auth.currentUser)}
     },err=>{clearTimeout(timer);setSync("⚠ 同步錯誤："+(err.code||""));S.loaded=true;render()});
@@ -1229,17 +1229,18 @@ function computeFromProduct(p,pr){const base=policyBase(p);const t=String(p.sumT
 let _um=null;function prodUsage(pr){if(!_um||_um.t<Date.now()-1500){const m=new Map();S.clients.forEach(c=>(c.policies||[]).forEach(p=>{if(!active(p))return;const x=matchProduct(p);if(x)m.set(x,(m.get(x)||0)+1)}));_um={m,t:Date.now()}}return _um.m.get(pr)||0}
 function missingProducts(){const m={};S.clients.forEach(c=>(c.policies||[]).forEach(p=>{if(!active(p)||!p.product)return;const pr=matchProduct(p);if(pr&&pr.status==="已核對")return;
   const code=prodCode(p.product),co=coKey(polCo(p))||"未填公司",bn=baseName(p.product);const k=co+"|"+(code||bn);if(!m[k])m[k]={co,code,name:bn,full:p.product,clients:new Set(),draft:pr||null};m[k].clients.add(c.name)}));
-  return Object.values(m).sort((a,b)=>b.clients.size-a.clients.size)}
+  const ig=S.ignoredMissing||[];return Object.values(m).filter(x=>!ig.includes(x.co+"|"+(x.code||x.name))).sort((a,b)=>b.clients.size-a.clients.size)}
 function finfoSearchUrl(co,name,code){return "https://www.google.com/search?q="+encodeURIComponent(["site:finfo.tw",co==="未填公司"?"":co,name,code].filter(Boolean).join(" "))}
 function termsSearchUrl(co,name,code){return "https://www.google.com/search?q="+encodeURIComponent([co==="未填公司"?"":co,name,code,"條款"].filter(Boolean).join(" "))}
 function vProducts(){
   const co=S.prodCo;const missAll=allMissing().filter(x=>!co||x.co===co);const mf=S.missF||"";const nDraft=missAll.filter(x=>x.draft).length,nNew=missAll.length-nDraft;const miss=missAll.filter(x=>!mf||(mf==="new"?!x.draft:!!x.draft));const list=S.products.filter(x=>!co||coKey(x.company)===co).sort((a,b)=>(a.company||"").localeCompare(b.company||"")||(a.code||"").localeCompare(b.code||""));
+  const mkey=x=>x.co+"|"+(x.code||x.name);const sel=(S.missSel||[]).filter(k=>miss.some(x=>mkey(x)===k));
   return `<div class="top"><div><h1>商品明細庫</h1><div class="sub">每個商品設定一次給付規則，所有持有該商品的客戶自動算出保障明細</div></div><div class="row">${STARTER_PRODUCTS.some(x=>!S.products.some(y=>y.id===x.id))?`<button class="btn" data-act="prodStarter">📥 載入預建商品草稿（${STARTER_PRODUCTS.filter(x=>!S.products.some(y=>y.id===x.id)).length}）</button>`:""}<button class="btn a" data-act="prodImport">📄 上傳條款建立商品</button><button class="btn" data-act="prodNew">＋ 手動新增</button><button class="btn" data-act="rematch">🔄 重新比對保單</button></div></div>
   <div class="chips"><button class="chip ${!co?"on":""}" data-act="prodCo" data-c="">全部</button>${cosList().map(c=>`<button class="chip ${co===c?"on":""}" data-act="prodCo" data-c="${c}">${c}</button>`).join("")}</div>
   <div class="card" style="margin-bottom:14px"><h2>⏳ 待補商品 <span class="sub">（客戶保單裡有、但商品庫還沒有已核對規則的）</span></h2>
    <div class="chips" style="margin:-4px 0 10px"><button class="chip ${!mf?"on":""}" data-act="missF" data-f="">全部 ${missAll.length}</button><button class="chip ${mf==="draft"?"on":""}" data-act="missF" data-f="draft">草稿待核對 ${nDraft}</button><button class="chip ${mf==="new"?"on":""}" data-act="missF" data-f="new">未建立 ${nNew}</button></div>
-   ${miss.length?`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>公司</th><th>代碼</th><th>商品名稱</th><th>客戶數</th><th>狀態</th><th></th></tr></thead><tbody>
-   ${miss.slice(0,400).map(x=>`<tr><td>${coName(x.co)}</td><td><b>${esc(x.code||"—")}</b></td><td>${esc(x.name)}</td><td>${x.clients.size}${x.ext?`<span class="sub">＋其他帳號 ${x.ext}</span>`:""}</td><td>${x.draft?`<span class="tag y">草稿待核對</span>`:`<span class="tag r">未建立</span>`}</td>
+   ${miss.length?`<div class="row" style="gap:8px;margin:0 0 8px;flex-wrap:wrap;align-items:center"><button class="btn sm ghost" data-act="missSelAll">☑ 全選</button><button class="btn sm ghost" data-act="missSelNone">清除</button><span class="sub">已選 ${sel.length} / ${miss.length}</span><button class="btn sm" data-act="missDelSel"${sel.length?` style="color:#c0392b;border-color:#e3b7b0"`:` disabled style="opacity:.5"`}>🗑 刪除所選${sel.length?`（${sel.length}）`:""}</button></div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th style="width:36px"></th><th>公司</th><th>代碼</th><th>商品名稱</th><th>客戶數</th><th>狀態</th><th></th></tr></thead><tbody>
+   ${miss.slice(0,400).map(x=>`<tr><td><input type="checkbox" class="mck" data-act="missTog" data-mk="${esc(mkey(x))}"${sel.includes(mkey(x))?" checked":""}></td><td>${coName(x.co)}</td><td><b>${esc(x.code||"—")}</b></td><td>${esc(x.name)}</td><td>${x.clients.size}${x.ext?`<span class="sub">＋其他帳號 ${x.ext}</span>`:""}</td><td>${x.draft?`<span class="tag y">草稿待核對</span>`:`<span class="tag r">未建立</span>`}</td>
      <td class="row" style="flex-wrap:nowrap">${x.draft?`<button class="btn sm p" data-act="prodEdit" data-id="${x.draft.id}">核對</button>`:`<a class="btn sm" href="${termsSearchUrl(x.co,x.name,x.code)}" target="_blank" rel="noopener">🔍 查條款</a><a class="btn sm" href="${finfoSearchUrl(x.co,x.name,x.code)}" target="_blank" rel="noopener">🔍 Finfo 查</a><button class="btn sm a" data-act="prodImport" data-co="${esc(x.co)}" data-code="${esc(x.code)}" data-name="${esc(x.name)}">📄 上傳條款</button>`}</td></tr>`).join("")}</tbody></table></div>`:`<div class="empty" style="padding:20px">目前沒有待補商品 👍</div>`}</div>
   <div class="card"><div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h2 style="margin:0">📚 商品庫（${list.length}）</h2></div>${list.length?`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>公司</th><th>代碼</th><th>商品名稱</th><th>版本日期</th><th>規則</th><th>套用</th><th>狀態</th><th></th></tr></thead><tbody>
    ${list.map(x=>`<tr class="click" data-act="prodEdit" data-id="${x.id}"><td>${coName(x.company)}</td><td><b>${esc(x.code||"")}</b></td><td>${esc(x.name||"")}</td><td class="sub">${esc(x.effective||"")}</td><td>${(x.rules||[]).filter(r=>r.mode).length} 項</td><td>${prodUsage(x)} 筆</td>
@@ -1864,6 +1865,16 @@ document.addEventListener("click",async e=>{
     case "prodEdit":{const x=S.products.find(y=>y.id===el.dataset.id);if(x)openProductEditor(x,false);break}
     case "prodDel":{const x=S.products.find(y=>y.id===el.dataset.id);if(x)confirmBox("確定刪除商品庫裡的「"+coName(x.company)+" "+(x.code?x.code+" ":"")+(x.name||"")+"」？\n已套用這個商品的客戶會改回估算值。",async()=>{await delProduct(x.id);toast("已刪除商品")});break}
     case "rematch":{PV++;_um=null;_mc=null;render();toast("已重新比對保單與商品庫");break}
+    case "missTog":{const k=el.dataset.mk;const s=new Set(S.missSel||[]);s.has(k)?s.delete(k):s.add(k);S.missSel=[...s];render();break}
+    case "missSelAll":{const co=S.prodCo,mf=S.missF||"";const m=allMissing().filter(x=>!co||x.co===co).filter(x=>!mf||(mf==="new"?!x.draft:!!x.draft));S.missSel=m.map(x=>x.co+"|"+(x.code||x.name));render();break}
+    case "missSelNone":{S.missSel=[];render();break}
+    case "missDelSel":{const sel=new Set(S.missSel||[]);if(!sel.size)break;const picked=allMissing().filter(x=>sel.has(x.co+"|"+(x.code||x.name)));if(!picked.length)break;
+      const names=picked.slice(0,8).map(x=>"・"+coName(x.co)+" "+(x.name||"")).join("\n");
+      confirmBox("確定刪除所選 "+picked.length+" 筆待補商品？\n\n"+names+(picked.length>8?"\n…共 "+picked.length+" 筆":"")+"\n\n草稿會一併刪掉；未建立的會從待補清單移除（之後同一筆不再出現）。",async()=>{
+        const drafts=picked.filter(x=>x.draft);for(const x of drafts){await delProduct(x.draft.id)}
+        const cur=new Set(S.ignoredMissing||[]);picked.forEach(x=>cur.add(x.co+"|"+(x.code||x.name)));S.ignoredMissing=[...cur];
+        await writeDoc("ignoredMissing",{type:"meta",keys:S.ignoredMissing});
+        S.missSel=[];PV++;_um=null;_mc=null;render();toast("已刪除 "+picked.length+" 筆待補商品");});break}
     case "prodImport":openTermsImport({co:el.dataset.co||S.prodCo||"",code:el.dataset.code||"",name:el.dataset.name||""});break;
     case "scanPol":openScan();break;
     case "report":{const c=M.c;const fam=c.family?S.clients.filter(x=>x.family===c.family):[];let saved=[1,2,4];try{saved=JSON.parse(localStorage.getItem("stark-rep-sec")||"[1,2,4]")}catch(e){}let cv={on:true,style:"A"};try{cv=Object.assign(cv,JSON.parse(localStorage.getItem("stark-rep-cover")||"{}"))}catch(e){}
