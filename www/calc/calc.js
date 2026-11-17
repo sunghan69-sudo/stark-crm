@@ -77,7 +77,18 @@ const CSS=`.sc-ov{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:9
 .sc-t tr.hl td{background:#fffbe6}.sc-wrap{overflow:auto;max-height:70vh}.sc-wrap thead th{position:sticky;top:0;z-index:1}
 .sc-load{padding:60px;text-align:center;color:#64748b}.sc-note{font-size:12px;color:#94a3b8;margin-top:6px}
 @media (max-width:860px){.sc-bd{grid-template-columns:1fr}.sc-form{border-right:0;border-bottom:1px solid #e3e8ef}.sc-hd h2{font-size:15px}}
-@media print{body>*:not(.sc-ov){display:none!important}.sc-ov{position:static;background:none}.sc-form,.sc-hd button{display:none}.sc-bd{display:block}.sc-wrap{max-height:none;overflow:visible}}`;
+.sc-pick{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#eef7f8;border:1px solid #cbe3e7;border-radius:10px;padding:8px 10px;margin-bottom:12px}
+.sc-pbtn{background:#0f7c8a;color:#fff;border:0;border-radius:8px;padding:6px 11px;font-size:13px;cursor:pointer}
+.sc-age{font-size:12.5px;color:#475569;display:flex;align-items:center;gap:5px}.sc-agei{width:62px;padding:5px 7px;border:1px solid #cfd8e3;border-radius:7px;font-size:14px}
+.sc-pov{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:10001;display:flex;align-items:center;justify-content:center;padding:16px}
+.sc-pbox{background:#fff;border-radius:14px;width:min(420px,100%);max-height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.sc-ph{display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid #eef1f5}.sc-ph b{flex:1}.sc-ph button{background:none;border:0;font-size:16px;cursor:pointer;color:#64748b}
+.sc-psearch{margin:10px 14px;padding:9px 11px;border:1px solid #cfd8e3;border-radius:9px;font-size:15px}
+.sc-plist{overflow:auto;padding:0 8px 10px}
+.sc-pitem{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;background:#fff;border:0;border-bottom:1px solid #f1f4f8;padding:11px 8px;font-size:15px;color:#0f172a;cursor:pointer}
+.sc-pitem:hover{background:#f0f9fa}.sc-pitem small{color:#94a3b8;font-size:12px;white-space:nowrap}
+.sc-pempty{padding:24px;text-align:center;color:#94a3b8;font-size:14px}
+@media print{body>*:not(.sc-ov){display:none!important}.sc-ov{position:static;background:none}.sc-form,.sc-hd button,.sc-pick{display:none}.sc-bd{display:block}.sc-wrap{max-height:none;overflow:visible}}`;
 function ensureCss(){if(document.getElementById("sc-css"))return;const s=document.createElement("style");s.id="sc-css";s.textContent=CSS;document.head.appendChild(s)}
 function nfmt(v,kind){if(v===""||v==null)return "";if(typeof v==="boolean")return v?"✓":"";if(typeof v!=="number")return esc(v);
   if(kind==="pct")return (v*100).toFixed(2)+"%";if(kind==="x2")return v.toFixed(2);if(kind==="raw")return String(v);
@@ -103,7 +114,30 @@ async function open(item){ensureCss();
     const hint=f.hint?S.get(f.hint):"";const lbl=f.labelCell?S.get(f.labelCell)||f.label:f.label;
     return `<label class="sc-f" for="${id}">${esc(lbl)}${inner}${hint?`<span class="sc-hint">${esc(hint)}</span>`:""}</label>`}
   function visible(f){if(!f.show)return true;const v=S.evalF(f.show);return v===true||v===1}
+  function insuredFields(){let nameF=null,genderF=null,birthF=null,firstRoc=null;
+    fields.forEach(f=>{const lb=String((f.labelCell&&S.get(f.labelCell))||f.label||"");
+      if(f.type==="roc"){if(!firstRoc)firstRoc=f;if(/生日|出生/.test(lb))birthF=birthF||f}
+      else if(f.type==="select"){if(/性別/.test(lb))genderF=genderF||f}
+      else if(/姓名/.test(lb))nameF=nameF||f});
+    if(!birthF)birthF=firstRoc;return {nameF,genderF,birthF}}
+  function setBirth(bf,d){if(!bf||!d||isNaN(d))return;const vals=[d.getFullYear()-1911,d.getMonth()+1,d.getDate()];bf.cells.forEach((c,i)=>S.set(c,vals[i]));(bf.mirror||[]).forEach((c,i)=>S.set(c,vals[i]))}
+  function applyInsured(cli){const {nameF,genderF,birthF}=insuredFields();S.hf.batch(()=>{
+      if(nameF&&cli.name!=null){S.set(nameF.cell,cli.name);(nameF.mirror||[]).forEach(m=>S.set(m,cli.name))}
+      if(genderF&&cli.gender){const o=S.opts(genderF.opts)||[];const g=String(cli.gender);const opt=o.find(x=>String(x)===g)||o.find(x=>String(x).indexOf(g[0])>=0);if(opt!=null){S.set(genderF.cell,opt);(genderF.mirror||[]).forEach(m=>S.set(m,opt))}}
+      if(birthF&&cli.birthday)setBirth(birthF,new Date(cli.birthday));});
+    fixSelects();drawForm();drawOut()}
+  function applyAge(a){const {birthF}=insuredFields();a=Math.round(+a);if(!birthF||!a||a<0)return;const n=new Date();S.hf.batch(()=>setBirth(birthF,new Date(n.getFullYear()-a,n.getMonth(),n.getDate())));fixSelects();drawForm();drawOut()}
+  function showPicker(){const list=((window.STARK_CLIENTS&&window.STARK_CLIENTS())||[]).filter(c=>c&&c.name);
+    const pov=document.createElement("div");pov.className="sc-pov";
+    pov.innerHTML=`<div class="sc-pbox"><div class="sc-ph"><b>搜尋客戶帶入</b><button data-pc="x">✕</button></div><input class="sc-psearch" placeholder="輸入姓名搜尋…"><div class="sc-plist"></div></div>`;
+    ov.appendChild(pov);const se=pov.querySelector(".sc-psearch"),li=pov.querySelector(".sc-plist");
+    const draw=q=>{const fl=list.filter(c=>!q||c.name.indexOf(q)>=0).slice(0,80);li.innerHTML=fl.length?fl.map(c=>`<button class="sc-pitem" data-i="${list.indexOf(c)}"><span>${esc(c.name)}</span><small>${c.gender?esc(c.gender)+" ":""}${c.birthday?esc(c.birthday):""}</small></button>`).join(""):`<div class="sc-pempty">${list.length?"找不到符合的客戶":"目前沒有客戶資料"}</div>`};
+    draw("");se.addEventListener("input",()=>draw(se.value.trim()));
+    pov.addEventListener("click",e=>{if(e.target.closest("[data-pc]")||e.target===pov){pov.remove();return}const it=e.target.closest(".sc-pitem");if(it){const c=list[+it.dataset.i];pov.remove();if(c)applyInsured(c)}});
+    setTimeout(()=>se.focus(),40)}
+  form.addEventListener("click",e=>{const b=e.target.closest("[data-pick]");if(!b)return;if(b.dataset.pick==="cli")showPicker();else if(b.dataset.pick==="age"){const inp=form.querySelector(".sc-agei");applyAge(inp&&inp.value)}});
   function drawForm(){const sc=form.scrollTop;let h="";
+    const inf=insuredFields();if(inf.nameF||inf.birthF)h+=`<div class="sc-pick"><button type="button" class="sc-pbtn" data-pick="cli">🔍 搜尋客戶帶入</button>${inf.birthF?`<span class="sc-age">或輸入保險年齡 <input type="number" class="sc-agei" min="0" max="99" placeholder="歲"> <button type="button" class="sc-pbtn" data-pick="age">帶入</button></span>`:""}</div>`;
     (spec.groups||[]).forEach(g=>{h+=`<div class="sc-g"><h4>${esc(g.title)}</h4>${g.fields.filter(visible).map(f=>f.row?`<div class="sc-row">${fieldHtml(f)}</div>`:fieldHtml(f)).join("")}</div>`});
     if(spec.riders&&spec.riders.length){h+=`<div class="sc-g"><h4>${esc(spec.riderTitle||"附約")}</h4>`+spec.riders.map(r=>{const on=!!S.get(r.flag);const nm=(r.labelCell&&S.get(r.labelCell))||r.label;const p=r.prem?S.get(r.prem):"";
       return `<div class="sc-rd ${on?"on":""}"><label class="t"><input type="checkbox" data-c="${esc(r.flag)}" data-chk="1" ${on?"checked":""}><span>${esc(nm)}${r.hint&&S.get(r.hint)?`<br><span class="sc-hint" style="font-weight:400">${esc(S.get(r.hint))}</span>`:""}</span>${on&&p!==""?`<span class="sc-p">${nfmt(p)} 元</span>`:""}</label>${on&&r.fields&&r.fields.length?`<div class="sc-in">${r.fields.map(fieldHtml).join("")}</div>`:""}</div>`}).join("")+`</div>`}
