@@ -1133,15 +1133,25 @@ function mCov(){
     return `<div class="covrow"><div class="n">${x.n}</div><div class="bar"><i class="${cls}" style="width:${Math.min(100,r*100)}%"></i></div><div class="x"><b style="color:var(--ink)">${fmt(v[x.k])}</b> / ${fmt(t)} ${x.u}${r<1?` <span style="color:var(--bad)">缺 ${fmt(t-v[x.k])}</span>`:" ✓"}</div></div>`}).join("")}
   <div class="row" style="margin-top:12px"><button class="btn" data-act="copyCov">複製保障摘要給客戶</button><button class="btn" data-act="gotoClaim">→ 理賠情境試算</button><button class="btn a" data-act="report">📄 保單健檢報表</button></div>${famRows}${mCovDetail()}`;
 }
+function gcalUrl(title,date,time,details){
+  if(!date)return "";const d=date.replace(/-/g,"");
+  const mt=String(time||"").match(/^(\d{1,2}):(\d{2})/);
+  if(!mt){return "https://calendar.google.com/calendar/render?action=TEMPLATE&ctz=Asia%2FTaipei&text="+encodeURIComponent(title)+"&dates="+d+"/"+d+(details?"&details="+encodeURIComponent(details):"");}
+  const sh=+mt[1],sm=mt[2];const eh=(sh+1)%24;
+  const pad=n=>String(n).padStart(2,"0");
+  const start=d+"T"+pad(sh)+sm+"00",end=d+"T"+pad(eh)+sm+"00";
+  return "https://calendar.google.com/calendar/render?action=TEMPLATE&ctz=Asia%2FTaipei&text="+encodeURIComponent(title)+"&dates="+start+"/"+end+(details?"&details="+encodeURIComponent(details):"");}
 function mLog(){
-  const c=M.c;const ls=(c.logs||[]).slice().sort((a,b)=>(b.date||"").localeCompare(a.date||""));
-  return `<form id="logForm" class="form" style="grid-template-columns:150px 130px 1fr auto;align-items:end">
+  const c=M.c;const ls=(c.logs||[]).slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.time||"").localeCompare(a.time||""));
+  return `<form id="logForm" class="form" style="grid-template-columns:140px 110px 110px 1fr auto;align-items:end">
     <label>日期<input class="inp" type="date" name="date" value="${ds(today())}"></label>
+    <label>時間<input class="inp" type="time" name="time" title="填了時間就會幫你加到 Google 日曆"></label>
     <label>方式<select class="inp" name="type">${LOG_TYPES.map(t=>`<option>${t}</option>`).join("")}</select></label>
-    <label>內容<input class="inp" name="content" placeholder="例：電話關心，約下週送建議書" required></label>
+    <label>內容<input class="inp" name="content" placeholder="例：約下週三下午送建議書" required></label>
     <button class="btn p" type="submit">新增</button></form>
+  <div class="hint" style="margin:-4px 0 8px">填「時間」＝這是約訪／行程，新增後會自動幫你開 Google 日曆新增頁（按儲存即可）。只留日期＝一般聯絡紀錄。</div>
   <div class="row" style="justify-content:space-between;align-items:center;margin:6px 0 12px;gap:8px;flex-wrap:wrap"><span class="hint" style="margin:0">新增紀錄會自動更新「上次聯絡」日期</span>${S.isAdmin?`<a class="btn sm" href="https://calendar.google.com/calendar/u/0/r/search?q=${encodeURIComponent(c.name||"")}" target="_blank" rel="noopener" title="在 Google 日曆搜尋這位客戶的排程">📅 看「${esc(c.name)}」的日曆排程</a>`:""}</div>
-  ${ls.length?ls.map(l=>`<div class="li"><div class="when"><b style="font-size:14px">${esc((l.date||"").slice(5).replace("-","/"))}</b><span>${esc((l.date||"").slice(0,4))}</span></div><div class="body"><div><span class="tag">${esc(l.type)}</span>${esc(l.content)}</div></div><button class="btn sm ghost" data-act="delLog" data-lid="${l.id}">✕</button></div>`).join(""):`<div class="empty">還沒有互動紀錄</div>`}`;
+  ${ls.length?ls.map(l=>`<div class="li"><div class="when"><b style="font-size:14px">${esc((l.date||"").slice(5).replace("-","/"))}</b><span>${esc(l.time||(l.date||"").slice(0,4))}</span></div><div class="body"><div><span class="tag">${esc(l.type)}</span>${l.time?`<span class="tag o">⏰ ${esc(l.time)}</span> `:""}${esc(l.content)}</div></div><a class="btn sm ghost" href="${gcalUrl(c.name+"｜"+l.content,l.date,l.time,"方式："+l.type)}" target="_blank" rel="noopener" title="加到 Google 日曆">📅</a><button class="btn sm ghost" data-act="delLog" data-lid="${l.id}">✕</button></div>`).join(""):`<div class="empty">還沒有互動紀錄</div>`}`;
 }
 function mSvc(){
   const c=M.c;const ss=(c.services||[]).slice().sort((a,b)=>(b.date||"").localeCompare(a.date||""));
@@ -2054,8 +2064,9 @@ document.addEventListener("submit",async e=>{
   }
   if(f.id==="covdForm"){M.c.covDetail={};COVD_KEYS.forEach(k=>{const v=(fd[k]||"").trim();if(v)M.c.covDetail[k]=v});await commitM();toast("詳細保障已儲存");drawModal();return}
   if(f.id==="logForm"){
-    M.c.logs=M.c.logs||[];M.c.logs.push({id:"l"+uid(),date:fd.date,type:fd.type,content:fd.content});
+    M.c.logs=M.c.logs||[];M.c.logs.push({id:"l"+uid(),date:fd.date,time:fd.time||"",type:fd.type,content:fd.content});
     if(!M.c.lastContact||fd.date>M.c.lastContact)M.c.lastContact=fd.date;await commitM();drawModal();
+    if(fd.time){try{window.open(gcalUrl(M.c.name+"｜"+fd.content,fd.date,fd.time,"方式："+fd.type),"_blank");toast("已新增，為你開啟 Google 日曆新增頁")}catch(e){}}
   }
   if(f.id==="svcForm"){M.c.services=M.c.services||[];M.c.services.push({id:"s"+uid(),date:fd.date,type:fd.type,status:fd.status,note:fd.note});await commitM();drawModal();toast("已新增服務件")}
   if(f.id==="profForm"){
