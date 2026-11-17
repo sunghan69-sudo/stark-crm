@@ -164,6 +164,6 @@ async function open(item){ensureCss();
     fixSelects();drawForm();drawOut();const ms=performance.now()-t0;if(ms>1500)console.log("calc ms",ms)}
   let tmr=null;form.addEventListener("change",e=>{const el=e.target;if(!el.matches("input,select"))return;clearTimeout(tmr);apply(el)});
   // 初始：套用預設值
-  S.hf.batch(()=>{(spec.init||[]).forEach(([c,v])=>S.set(c,v))});fixSelects();drawForm();drawOut()}
+  S.hf.batch(()=>{(spec.init||[]).forEach(([c,v])=>S.set(c,v));(spec.forceTrue||[]).forEach(c=>{try{S.set(c,true)}catch(e){}})});fixSelects();drawForm();drawOut()}
 window.StarkCalc={open,fmtNum};
 })();
