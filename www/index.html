@@ -1747,7 +1747,7 @@ function vMkt(){loadMktg();const reps=(MKTG&&MKTG.reports)||[];
     <div class="hint" style="margin-top:10px">${rep.rateNote?esc(rep.rateNote)+"。":""}預估單位數：台幣＝金額÷淨值；美金＝(金額÷匯率)÷淨值。預估每月配息＝金額×月配息率（未扣任何保單費用）。${rep.note?esc(String(rep.note).replace(/。$/,""))+"。":""}資料來源：${esc(rep.source)}。本資料不構成投資建議，實際依申購日淨值與匯率為準。</div></div>`}
 
 /* ========== 操作說明影片：新註冊帳號第一次進系統自動播放一次；其他帳號從總覽「🎬 操作說明影片」開啟 ========== */
-const TOUR_SRC="media/tour.mp4",TOUR_SINCE=Date.parse("2026-11-16T09:20:00Z");
+const TOUR_SRC="media/tour.mp4?v=62",TOUR_SINCE=Date.parse("2026-11-16T09:20:00Z");
 function openTour(auto){if(document.getElementById("tourBox"))return;const box=document.createElement("div");box.id="tourBox";document.getElementById("modalRoot").appendChild(box);
   box.innerHTML=`<div class="mask"><div class="modal" style="max-width:960px"><div class="mh"><b>🎬 史塔克客戶管理系統｜操作說明</b><button class="btn ghost x" data-x>✕</button></div>
     <div class="mb" style="padding:0;background:#000"><video id="tourVid" src="${TOUR_SRC}" controls playsinline preload="auto" style="width:100%;display:block;max-height:72vh;background:#000"></video></div>
