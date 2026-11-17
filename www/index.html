@@ -395,6 +395,7 @@ const VIEWS=[
   {id:"claims",ic:"🧮",n:"怎麼賠",s:"理賠"},
   {id:"ecard",ic:"🪪",n:"名片",s:"名片"},
   {id:"marketing",ic:"📣",n:"行銷專區",s:"行銷"},
+  {id:"invrep",ic:"💹",n:"投資型報表",s:"投資型"},
   {id:"proposals",ic:"📑",n:"常用建議書",s:"建議書"},
   {id:"products",ic:"📚",n:"商品庫",s:"商品庫"},
   {id:"setup",ic:"⚙",n:"設定",s:"設定"},
@@ -534,8 +535,8 @@ function lastContactDays(c){const d=pd(c.lastContact);return d?daysBetween(d,tod
 /* ========== 儲存層（Firebase 雲端同步 / 本機模式） ========== */
 const LS="stark-local-v1",CFG_KEY="stark-fb-config",MODE_KEY="stark-mode";
 let FB=null,unsub=null,punsub=null,migrating=false;
-function lsLoad(){try{const j=JSON.parse(localStorage.getItem(LS)||"null");if(j){S.clients=j.clients||[];S.products=j.products||[];S.profile=Object.assign(clone(DEF_PROFILE),j.profile||{});S.ignoredMissing=j.ignoredMissing||[];S.remindTerms=j.remindTerms||[]}}catch(e){}}
-function lsSave(){try{localStorage.setItem(LS,JSON.stringify({clients:S.clients,products:S.products,profile:S.profile,ignoredMissing:S.ignoredMissing||[],remindTerms:S.remindTerms||[]}))}catch(e){}}
+function lsLoad(){try{const j=JSON.parse(localStorage.getItem(LS)||"null");if(j){S.clients=j.clients||[];S.products=j.products||[];S.profile=Object.assign(clone(DEF_PROFILE),j.profile||{});S.ignoredMissing=j.ignoredMissing||[];S.remindTerms=j.remindTerms||[];S.invReport=j.invReport||null}}catch(e){}}
+function lsSave(){try{localStorage.setItem(LS,JSON.stringify({clients:S.clients,products:S.products,profile:S.profile,ignoredMissing:S.ignoredMissing||[],remindTerms:S.remindTerms||[],invReport:S.invReport||null}))}catch(e){}}
 function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
 function lsSet(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}
 function col(){return FB.fs.collection("users").doc(S.uid).collection("items")}
@@ -660,14 +661,14 @@ async function initStore(){
   }catch(e){S.mode="setup";S.cfgErr=String(e.message||e);render();return}
   FB.auth.onAuthStateChanged(u=>{
     if(unsub){unsub();unsub=null}S.tourChecked=false;if(punsub){punsub();punsub=null}if(needUnsub){needUnsub();needUnsub=null}S.sharedOK=false;S.sharedProducts=[];S.ownProducts=[];
-    if(!u){stopGate();S.isAdmin=false;S.mode="login";S.uid=null;S.clients=[];S.profile=clone(DEF_PROFILE);setSync("未登入");render();return}
+    if(!u){stopGate();S.isAdmin=false;S.mode="login";S.uid=null;S.clients=[];S.invReport=null;S.profile=clone(DEF_PROFILE);setSync("未登入");render();return}
     S.uid=u.uid;S.email=u.email;
     checkAccess(u,()=>{S.mode="cloud";S.loaded=false;setSync("同步中…");render();
     let timer=setTimeout(()=>setSync("⚠ 目前離線，顯示手機內的資料"),10000);
     unsub=col().onSnapshot({includeMetadataChanges:true},snap=>{
-      const cl=[],pr=[];let prof=null,ig=null,rt=null,tq=null;
-      snap.docs.forEach(d=>{const v=d.data();if(!v)return;if(d.id==="profile")prof=v;else if(d.id==="ignoredMissing")ig=v;else if(d.id==="remindTerms")rt=v;else if(d.id==="termReqKeys")tq=v;else if(v.type==="client")cl.push(Object.assign({},v,{id:d.id}));else if(v.type==="product")pr.push(Object.assign({},v,{id:d.id}))});
-      S.clients=cl;S.ownProducts=pr;S.ignoredMissing=(ig&&ig.keys)||[];S.remindTerms=(rt&&rt.keys)||[];S.termReqKeys=(tq&&tq.keys)||[];mergeProducts();migrateProducts();watchNeeds();S.profile=Object.assign(clone(DEF_PROFILE),prof||{});
+      const cl=[],pr=[];let prof=null,ig=null,rt=null,tq=null,iv=null;
+      snap.docs.forEach(d=>{const v=d.data();if(!v)return;if(d.id==="profile")prof=v;else if(d.id==="ignoredMissing")ig=v;else if(d.id==="remindTerms")rt=v;else if(d.id==="termReqKeys")tq=v;else if(d.id==="invReport")iv=v;else if(v.type==="client")cl.push(Object.assign({},v,{id:d.id}));else if(v.type==="product")pr.push(Object.assign({},v,{id:d.id}))});
+      S.clients=cl;S.ownProducts=pr;S.ignoredMissing=(ig&&ig.keys)||[];S.remindTerms=(rt&&rt.keys)||[];S.termReqKeys=(tq&&tq.keys)||[];S.invReport=iv;mergeProducts();migrateProducts();watchNeeds();S.profile=Object.assign(clone(DEF_PROFILE),prof||{});
       if(!snap.metadata.fromCache){clearTimeout(timer);setSync()}else if(!S.loaded)setSync("離線資料（連上網路後自動同步）");
       S.loaded=true;reportNeeds();if(!M)render();if(!S.tourChecked&&!snap.metadata.fromCache){S.tourChecked=true;maybeAutoTour(FB.auth.currentUser)}
     },err=>{clearTimeout(timer);setSync("⚠ 同步錯誤："+(err.code||""));S.loaded=true;render()});
@@ -765,7 +766,7 @@ function filtered(){
 function render(){
   const nav=document.getElementById("nav");
   const pendN=S.isAdmin?(S.apps||[]).filter(a=>a.status==="pending"&&!(S.members||{})[a.uid]).length+(S.resets||[]).filter(a=>a.status==="pending").length:0;
-  nav.innerHTML=VIEWS.filter(v=>(v.id!=="admin"||S.isAdmin)&&(v.id!=="products"||canProd())).map(v=>`<a href="#${v.id}" class="${S.view===v.id?"on":""}"><span class="ic">${v.ic}</span><span class="nlbl"><span class="nf">${v.n}</span><span class="ns">${v.s||v.n}</span></span>${v.id==="admin"&&pendN?`<span class="nbadge">${pendN}</span>`:""}</a>`).join("");
+  nav.innerHTML=VIEWS.filter(v=>(v.id!=="admin"||S.isAdmin)&&(v.id!=="products"||canProd())&&(v.id!=="invrep"||canInv())).map(v=>`<a href="#${v.id}" class="${S.view===v.id?"on":""}"><span class="ic">${v.ic}</span><span class="nlbl"><span class="nf">${v.n}</span><span class="ns">${v.s||v.n}</span></span>${v.id==="admin"&&pendN?`<span class="nbadge">${pendN}</span>`:""}</a>`).join("");
   document.getElementById("brandSub").textContent=S.profile.agent?"Stark Insurance CRM｜"+S.profile.agent:"Stark Insurance CRM";
   const m=document.getElementById("main");
   document.body.classList.toggle("gate",S.mode==="setup"||S.mode==="login"||S.mode==="gate");
@@ -774,8 +775,8 @@ function render(){
   if(S.mode==="login"){m.innerHTML=S.authMode==="reset"?vReset():vLogin();return}
   if(S.mode==="loading"||(S.mode==="cloud"&&!S.loaded)){m.innerHTML=`<div class="empty"><b>載入中…</b>正在讀取你的客戶資料</div>`;return}
   const banner=S.mode==="local"?`<div class="banner">💾 目前為<b>本機模式</b>：資料只存在這台裝置。到「設定」可以改用雲端同步，或匯出備份。</div>`:"";
-  if(S.view==="products"&&!canProd())S.view="dashboard";
-  const fn={dashboard:vDash,clients:vClients,reminders:vRem,claims:vClaims,services:vSvc,ecard:vCard,marketing:vMkt,proposals:vProps,setup:vSetup,products:vProducts,admin:vAdmin}[S.view]||vDash;
+  if(S.view==="products"&&!canProd())S.view="dashboard";if(S.view==="invrep"&&!canInv())S.view="dashboard";
+  const fn={dashboard:vDash,clients:vClients,reminders:vRem,claims:vClaims,services:vSvc,ecard:vCard,marketing:vMkt,invrep:vInv,proposals:vProps,setup:vSetup,products:vProducts,admin:vAdmin}[S.view]||vDash;
   const pendN2=S.isAdmin&&S.view!=="admin"?(S.apps||[]).filter(a=>a.status==="pending"&&!(S.members||{})[a.uid]).length+(S.resets||[]).filter(a=>a.status==="pending").length:0;
   m.innerHTML=banner+(pendN2?`<a href="#admin" class="banner" style="display:block;background:#fff4e5;border-color:#f7d9a8;color:#8a4b00;text-decoration:none">🔔 有 ${pendN2} 件申請（加入／重設密碼）等待你覆核，點這裡處理 ›</a>`:"")+fn();
 }
@@ -1746,6 +1747,64 @@ function vMkt(){loadMktg();const reps=(MKTG&&MKTG.reports)||[];
   <div class="card"><h2>重點摘要</h2><ul style="margin:0;padding-left:20px;line-height:1.9">${(rep.summary||[]).map(t=>`<li>${esc(t)}</li>`).join("")}</ul>
     <div class="hint" style="margin-top:10px">${rep.rateNote?esc(rep.rateNote)+"。":""}預估單位數：台幣＝金額÷淨值；美金＝(金額÷匯率)÷淨值。預估每月配息＝金額×月配息率（未扣任何保單費用）。${rep.note?esc(String(rep.note).replace(/。$/,""))+"。":""}資料來源：${esc(rep.source)}。本資料不構成投資建議，實際依申購日淨值與匯率為準。</div></div>`}
 
+/* ========== 投資型客戶報表（僅管理員可見；客戶資料存在自己帳號 users/{uid}/items/invReport，不放進公開的程式碼） ========== */
+function canInv(){return S.mode!=="cloud"||!!S.isAdmin}
+let invQ="",invClearArm=0;
+function invN(n,usd){if(n==null||n===""||isNaN(+n))return"—";return (+n).toLocaleString("en-US",{minimumFractionDigits:usd?2:0,maximumFractionDigits:usd?2:0})}
+function invU(n){return n==null||isNaN(+n)?"—":(+n).toLocaleString("en-US",{minimumFractionDigits:4,maximumFractionDigits:4})}
+function invP(v){if(v==null||isNaN(+v))return"—";const x=+v*100;return `<span class="${x>0?"mup":x<0?"mdn":""}">${x>0?"+":""}${x.toFixed(2)}%</span>`}
+/* 報表的姓名、ID 是遮罩過的（呂*誼／A227****35），用身分證前 4 碼＋後 2 碼比對 CRM 客戶，比不到再用姓名頭尾字 */
+function invMatch(cu){const m=String(cu.id||"").toUpperCase().match(/^([A-Z]\d{3})\*+(\d{2})$/);
+  let hit=m?S.clients.filter(c=>{const id=String(c.idNo||"").toUpperCase().replace(/\s/g,"");return id.length===10&&id.startsWith(m[1])&&id.endsWith(m[2])}):[];
+  if(!hit.length){const nm=String(cu.name||"");if(nm.length>=2){const byNm=S.clients.filter(c=>{const n=String(c.name||"").trim();return n.length===nm.length&&n[0]===nm[0]&&n[n.length-1]===nm[nm.length-1]});if(byNm.length===1)hit=byNm}}
+  return hit}
+function invPolicy(p,R){const usd=p.ccy==="美金";const nm=c=>(R.names&&R.names[c])||c;const months=R.months||[];
+  const prem=p.prem||[],funds=p.funds||[],dist=p.dist||[];
+  const invTot=prem.reduce((s,x)=>s+(+x.amt||0),0);const valTot=funds.reduce((s,x)=>s+(+x.val||0),0),costTot=funds.reduce((s,x)=>s+(+x.cost||0),0);
+  const codes=[...funds.map(f=>f.code)];dist.forEach(d=>{if(!codes.includes(d.code))codes.push(d.code)});
+  const cellAmt=(c,m)=>dist.filter(d=>d.code===c&&String(d.date).slice(0,6)===m&&d.st==="已完成").reduce((s,d)=>s+(+d.amtP||0),0);
+  const pend=dist.filter(d=>d.st==="處理中");const real=dist.filter(d=>d.st!=="不處理");
+  const mTot=months.map(m=>codes.reduce((s,c)=>s+cellAmt(c,m),0));const allTot=mTot.reduce((a,b)=>a+b,0);
+  return `<div class="card" style="margin:10px 0;box-shadow:none;border:1px solid var(--line)">
+  <div class="row" style="flex-wrap:wrap;gap:8px;align-items:baseline"><b class="mono">${esc(p.no)}</b><span>${esc(p.product)}</span><span class="tag">${esc(p.ccy)}</span><span class="sub">被保險人 ${esc(p.insured)}｜生效日 ${esc(p.eff)}</span></div>
+  <div class="row" style="flex-wrap:wrap;gap:18px;margin:10px 0 4px">
+    <div><div class="sub">投入金額</div><b style="font-size:18px">${invN(invTot,usd)}</b></div>
+    <div><div class="sub">持有成本</div><b style="font-size:18px">${funds.length?invN(costTot,usd):"—"}</b></div>
+    <div><div class="sub">目前價值</div><b style="font-size:18px">${funds.length?invN(valTot,usd):"—"}</b></div>
+    <div><div class="sub">報酬率</div><b style="font-size:18px">${funds.length&&costTot?invP(valTot/costTot-1):"—"}</b></div>
+    <div><div class="sub">累計已領配息</div><b style="font-size:18px;color:#0f7c8a">${invN(allTot,usd)}</b></div></div>
+  <h3 style="margin:14px 0 6px;font-size:14px">① 投入金額</h3>
+  <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>投入日</th><th>類別</th><th>狀態</th><th>投入標的</th><th class="r">金額（${esc(p.ccy)}）</th></tr></thead><tbody>
+  ${prem.map(x=>`<tr><td>${esc(x.date||"—")}</td><td>${esc(x.typ)}</td><td>${esc(x.st)}</td><td class="sub">${esc(nm(x.code))}</td><td class="r">${invN(x.amt,usd)}</td></tr>`).join("")||`<tr><td colspan="5" class="sub">無</td></tr>`}
+  <tr><td colspan="4" class="r"><b>投入合計</b></td><td class="r"><b>${invN(invTot,usd)}</b></td></tr></tbody></table></div>
+  <h3 style="margin:14px 0 6px;font-size:14px">② 目前標的、投資比例與單位數</h3>
+  ${funds.length?`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>投資標的</th><th>幣別</th><th class="r">持有成本</th><th class="r">目前價值</th><th class="r">投資比例</th><th class="r">原本單位數</th><th class="r">目前單位數</th><th class="r hide-m">配息增加</th><th class="r">報酬率</th></tr></thead><tbody>
+  ${funds.map(f=>`<tr><td><b>${esc(nm(f.code))}</b><div class="sub mono">${esc(f.code)}</div></td><td>${esc(f.ccy)}</td><td class="r">${invN(f.cost,usd)}</td><td class="r">${invN(f.val,usd)}</td><td class="r"><b>${valTot?((f.val/valTot)*100).toFixed(2)+"%":"—"}</b></td><td class="r">${invU(f.buyU)}</td><td class="r">${invU(f.units)}</td><td class="r hide-m">${invU((+f.units||0)-(+f.buyU||0))}</td><td class="r">${invP(f.ret)}</td></tr>`).join("")}
+  </tbody></table></div>`:`<div class="hint">尚無投資標的資料（保單剛成立、保費尚未投入）</div>`}
+  <h3 style="margin:14px 0 6px;font-size:14px">③ 各標的每月領息／資產撥回（${esc(p.ccy)}，未領月份為 0）</h3>
+  <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>投資標的</th>${months.map(m=>`<th class="r">${esc(m)}</th>`).join("")}<th class="r">合計</th></tr></thead><tbody>
+  ${(codes.length?codes:["—"]).map(c=>{const v=months.map(m=>c==="—"?0:cellAmt(c,m));return `<tr><td>${c==="—"?'<span class="sub">尚無標的</span>':esc(nm(c))}</td>${v.map(x=>`<td class="r">${invN(x,usd)}</td>`).join("")}<td class="r"><b>${invN(v.reduce((a,b)=>a+b,0),usd)}</b></td></tr>`}).join("")}
+  <tr><td><b>每月合計</b></td>${mTot.map(x=>`<td class="r"><b>${invN(x,usd)}</b></td>`).join("")}<td class="r"><b>${invN(allTot,usd)}</b></td></tr></tbody></table></div>
+  ${pend.map(d=>`<div class="hint">註：${esc(nm(d.code))} ${esc(d.date)} 配息 ${invN(d.amtF,true)}（標的幣別）處理中，${esc(p.ccy)}金額尚未入帳，暫列 0。</div>`).join("")}
+  ${real.length?`<h3 style="margin:14px 0 6px;font-size:14px">④ 配息明細（現金給付／再投入）</h3><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>配息基準日</th><th>投資標的</th><th class="r">金額（標的幣別）</th><th class="r">金額（${esc(p.ccy)}）</th><th class="r">現金給付</th><th class="r">再投入</th><th>狀態</th></tr></thead><tbody>
+  ${real.map(d=>`<tr><td>${esc(d.date)}</td><td>${esc(nm(d.code))}</td><td class="r">${invN(d.amtF,true)}</td><td class="r">${invN(d.amtP,usd)}</td><td class="r">${invN(d.cash,usd)}</td><td class="r">${invN(d.rein,usd)}</td><td>${esc(d.st)}</td></tr>`).join("")}</tbody></table></div>`:""}
+  </div>`}
+function vInv(){if(!canInv())return vDash();const R=S.invReport;
+  const imp=`<label class="btn a" style="cursor:pointer">📥 匯入報表資料<input type="file" id="invFile" accept=".json,application/json" style="display:none"></label>`;
+  const head=`<div class="top"><div><h1>投資型客戶報表</h1><div class="sub">${R?`${esc(R.company||"")}・資料來源 ${esc(R.source||"")}・資料日期 ${esc(R.date||"")}・${(R.customers||[]).length} 位客戶`:"客戶投資標的、投入金額與每月配息"}</div></div><div class="row" style="gap:8px">${imp}${R?`<button class="btn ghost" data-act="invClear">${invClearArm>Date.now()?"再按一次確認清除":"清除資料"}</button>`:""}</div></div>
+  <div class="banner" style="background:#fff7ec;border-color:#f3d6ad;color:#8a5a14">🔒 僅管理員帳號可見。客戶資料只存在你自己的雲端帳號，不會出現在其他使用者的系統或公開的程式碼裡。</div>`;
+  if(!R)return head+`<div class="card empty"><b>還沒有報表資料</b>按右上角「匯入報表資料」，選擇 Claude 產生的「投資型客戶報表資料_日期.json」。</div>`;
+  const q=invQ.trim();const list=(R.customers||[]).filter(cu=>!q||(cu.name||"").includes(q)||(cu.id||"").includes(q.toUpperCase())||(cu.policies||[]).some(p=>(p.no||"").includes(q.toUpperCase())));
+  const sumRow=cu=>{const ps=cu.policies||[];const by={};ps.forEach(p=>{const k=p.ccy;by[k]=by[k]||{inv:0,val:0,dist:0};by[k].inv+=(p.prem||[]).reduce((s,x)=>s+(+x.amt||0),0);by[k].val+=(p.funds||[]).reduce((s,x)=>s+(+x.val||0),0);by[k].dist+=(p.dist||[]).filter(d=>d.st==="已完成").reduce((s,d)=>s+(+d.amtP||0),0)});
+    return Object.entries(by).map(([k,v])=>`${esc(k)}：投入 ${invN(v.inv,k==="美金")}｜價值 ${invN(v.val,k==="美金")}｜已領配息 ${invN(v.dist,k==="美金")}`).join("<br>")};
+  return head+`<div class="card"><input class="inp" id="invQ" placeholder="搜尋客戶姓名、ID 或保單號碼" value="${esc(invQ)}"></div>
+  ${list.map(cu=>{const mt=invMatch(cu);return `<details class="card" style="padding:0"><summary style="cursor:pointer;padding:14px 16px;list-style:none"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><div><b style="font-size:16px">${esc(cu.name)}</b> <span class="sub mono">${esc(cu.id)}</span> <span class="tag">${(cu.policies||[]).length} 張保單</span>${mt.length?` <span class="tag g">CRM：${esc(mt.map(c=>c.name).join("、"))}</span>`:` <span class="tag">CRM 未對應</span>`}</div><div class="sub" style="text-align:right">${sumRow(cu)}</div></div></summary>
+  <div style="padding:0 16px 14px">${mt.length?`<div class="row" style="gap:8px;margin-bottom:6px">${mt.map(c=>`<button class="btn sm ghost" data-act="openClient" data-id="${c.id}" data-tab="pol">開啟 ${esc(c.name)} 客戶資料 ›</button>`).join("")}</div>`:""}
+  ${(cu.policies||[]).map(p=>invPolicy(p,R)).join("")}</div></details>`}).join("")||`<div class="card empty"><b>找不到符合的客戶</b></div>`}
+  <div class="hint">投入金額＝新契約投入＋續期保費實際進入投資帳戶的淨額（已扣保費費用）。原本單位數＝安聯「申購單位數餘額」；目前單位數含配息再投入。每月配息依配息基準日月份歸屬，含現金給付與再投入。CRM 對應用身分證前 4 碼＋後 2 碼比對。</div>`}
+async function invImport(file){try{const j=JSON.parse(await file.text());if(!j||j.kind!=="stark-invreport"||!Array.isArray(j.customers))throw new Error("不是投資型客戶報表資料檔");
+  j.type="invreport";j.importedAt=new Date().toISOString();S.invReport=j;await writeDoc("invReport",clone(j));toast(`已匯入 ${j.customers.length} 位客戶（資料日期 ${j.date||""}）`);render()}catch(err){toast("匯入失敗："+(err.message||err))}}
+
 /* ========== 操作說明影片：新註冊帳號第一次進系統自動播放一次；其他帳號從總覽「🎬 操作說明影片」開啟 ========== */
 const TOUR_SRC="media/tour.mp4?v=62",TOUR_SINCE=Date.parse("2026-11-16T09:20:00Z");
 function openTour(auto){if(document.getElementById("tourBox"))return;const box=document.createElement("div");box.id="tourBox";document.getElementById("modalRoot").appendChild(box);
@@ -1794,7 +1853,7 @@ async function demo(){
 
 /* ========== 事件 ========== */
 function canProd(){return S.mode!=="cloud"||!!S.isAdmin}
-function route(){const h=(location.hash||"").slice(1);S.view=VIEWS.some(v=>v.id===h)&&(h!=="products"||canProd())?h:"dashboard";render();try{window.scrollTo(0,0)}catch(_){}}
+function route(){const h=(location.hash||"").slice(1);S.view=VIEWS.some(v=>v.id===h)&&(h!=="products"||canProd())&&(h!=="invrep"||canInv())?h:"dashboard";render();try{window.scrollTo(0,0)}catch(_){}}
 window.addEventListener("hashchange",route);
 (function(){const fab=document.getElementById("navFab"),back=document.getElementById("navBack"),navEl=document.getElementById("nav");
   const close=()=>document.body.classList.remove("nav-open");
@@ -1820,6 +1879,7 @@ document.addEventListener("click",async e=>{
     case "propCo":propCo=el.dataset.v||"";render();break;
     case "cview":CVIEW=el.dataset.v;try{localStorage.setItem("stark-cview",CVIEW)}catch(e){}render();break;
     case "mktgRep":mktgRep=el.dataset.id;render();break;
+    case "invClear":if(invClearArm>Date.now()){invClearArm=0;S.invReport=null;await writeDoc("invReport",null);toast("已清除投資型報表資料");render()}else{invClearArm=Date.now()+5000;render();setTimeout(()=>{if(S.view==="invrep"&&!M)render()},5100)}break;
     case "openClient":openClient(el.dataset.id,el.dataset.tab);break;
     case "toggleId":M.showId=!M.showId;applyId();break;
     case "switchClient":openClient(el.dataset.id,M.tab);break;
@@ -1929,6 +1989,8 @@ document.addEventListener("change",async e=>{
   if(t.dataset.act==="svcStatus"){const s=M.c.services.find(x=>x.id===t.dataset.sid);s.status=t.value;await commitM();toast("狀態已更新")}
   if(["cDays","cCost","cMonths"].includes(t.id)){S[t.id]=num(t.value);render()}
 });
+document.addEventListener("change",e=>{if(e.target.id==="invFile"&&e.target.files&&e.target.files[0]){invImport(e.target.files[0]);e.target.value=""}});
+document.addEventListener("input",e=>{if(e.target.id==="invQ"){invQ=e.target.value;const pos=e.target.selectionStart;render();const el=document.getElementById("invQ");if(el){el.focus();try{el.setSelectionRange(pos,pos)}catch(_){}}}});
 document.addEventListener("change",e=>{if(e.target.id==="mktgAmt"){const v=Math.max(1,num(e.target.value)||100);mktgAmt=v*10000;render()}});
 document.addEventListener("change",e=>{if(e.target.id==="maskNm"){MASK=e.target.checked;try{localStorage.setItem("stark-mask",MASK?"1":"0")}catch(_){}render()}});
 function onSearchInput(e){if(e.target.id==="fq"){FQ=e.target.value}else if(e.target.id==="q"){S.q=e.target.value}else return;const id=e.target.id,pos=e.target.selectionStart;render();const q=document.getElementById(id);if(q){q.focus();try{q.setSelectionRange(pos,pos)}catch(_){}}}
