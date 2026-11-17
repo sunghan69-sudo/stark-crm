@@ -557,10 +557,11 @@ function reportNeeds(){if(S.mode!=="cloud"||S.isAdmin||!S.uid)return;clearTimeou
   const items=missingProducts().map(x=>({co:x.co,code:x.code||"",name:x.name,full:x.full,n:x.clients.size}));const sig=JSON.stringify(items);if(sig===needSig)return;needSig=sig;
   FB.fs.collection("prodNeeds").doc(S.uid).set({email:S.email||"",items,updated:Date.now()}).catch(()=>{})}catch(e){}},4000)}
 let needUnsub=null;function watchNeeds(){if(needUnsub||!S.isAdmin)return;needUnsub=FB.fs.collection("prodNeeds").onSnapshot(snap=>{S.needs=snap.docs.map(d=>Object.assign({uid:d.id},d.data()));if(!M&&S.view==="products")render()},()=>{})}
-function allMissing(){const miss=missingProducts();if(!S.isAdmin||!(S.needs||[]).length)return miss;const by={};miss.forEach(x=>{x.ext=0;by[x.co+"|"+(x.code||x.name)]=x});
-  (S.needs||[]).forEach(nd=>{if(nd.uid===S.uid)return;(nd.items||[]).forEach(it=>{const pr=matchProduct({product:it.full||it.name,company:it.co});if(pr&&pr.status==="已核對")return;const k=it.co+"|"+(it.code||it.name);
+function allMissing(){const ig=new Set(S.ignoredMissing||[]);const ignOk=x=>!ig.has(x.co+"|"+(x.code||x.name));
+  const miss=missingProducts();if(!S.isAdmin||!(S.needs||[]).length)return miss.filter(ignOk);const by={};miss.forEach(x=>{x.ext=0;by[x.co+"|"+(x.code||x.name)]=x});
+  (S.needs||[]).forEach(nd=>{if(nd.uid===S.uid)return;(nd.items||[]).forEach(it=>{const k=it.co+"|"+(it.code||it.name);if(ig.has(k))return;const pr=matchProduct({product:it.full||it.name,company:it.co});if(pr&&pr.status==="已核對")return;
     if(!by[k]){by[k]={co:it.co,code:it.code,name:it.name,full:it.full,clients:new Set(),draft:pr||null,ext:0};miss.push(by[k])}by[k].ext+=(it.n||1)})});
-  return miss.sort((a,b)=>(b.clients.size+(b.ext||0))-(a.clients.size+(a.ext||0)))}
+  return miss.filter(ignOk).sort((a,b)=>(b.clients.size+(b.ext||0))-(a.clients.size+(a.ext||0)))}
 function mergeProducts(){if(!S.sharedOK){S.products=(S.ownProducts||[]).slice();return}
   const m={};(S.ownProducts||[]).forEach(x=>m[x.id]=x);(S.sharedProducts||[]).forEach(x=>m[x.id]=x);S.products=Object.values(m)}
 async function migrateProducts(){if(migrating||!S.sharedOK||!S.isAdmin||!(S.ownProducts||[]).length)return;migrating=true;
