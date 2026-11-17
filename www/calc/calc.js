@@ -150,7 +150,7 @@ async function open(item){ensureCss();
     out.innerHTML=h}
   function tableHtml(t){const sh=t.sheet;const cell=(c,r)=>S.get(`'${sh}'!${c}${r}`);
     const rows=[];for(let r=t.from;r<=t.to;r++){if(t.flag){const f=cell(t.flag,r);if(f===false||f===0||f==="0")continue}if(t.stop&&(cell(t.stop,r)===""||cell(t.stop,r)==null))break;if(t.need&&(cell(t.need,r)===""||cell(t.need,r)==null))continue;rows.push(r)}
-    if(!rows.length)return "";
+    if(!rows.length)return t.from!=null?`<div class="sc-card"><h3>${esc(t.title)}</h3><div style="color:#9a4b00;background:#fff4e5;border:1px solid #f5c58a;border-radius:8px;padding:9px 11px;font-size:13px;line-height:1.6">⚠ 依目前輸入，此表無法產生逐年數值。<br>常見原因：被保險人<b>年齡</b>或<b>投保金額</b>不符投保規則——例如未滿 15 足歲的身故保額上限、低於最低投保金額、或超過最高投保金額。請調整上方「投保內容」的年齡或金額後再看。</div></div>`:"";
     let cols=t.cols;if(t.hideEmpty)cols=cols.filter(c=>c.keep||rows.some(r=>{const v=cell(c.c,r);return v!==""&&v!==0&&v!=null&&v!=="-"}));
     const head=cols.map(c=>{let lb=c.label;if(!lb&&t.head)for(const hr of t.head){const v=cell(c.c,hr);if(v!==""&&v!=null){lb=String(v).replace(/\n/g," ");break}}return `<th>${esc(lb||"")}</th>`}).join("");
     const body=rows.map(r=>`<tr class="${t.hl&&t.hl.includes(cell(t.hlCol||"B",r))?"hl":""}">${cols.map(c=>{const v=cell(c.c,r);return `<td class="${c.l?"l":""}">${nfmt(v,c.fmt)}</td>`}).join("")}</tr>`).join("");
