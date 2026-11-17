@@ -1140,7 +1140,7 @@ function mLog(){
     <label>方式<select class="inp" name="type">${LOG_TYPES.map(t=>`<option>${t}</option>`).join("")}</select></label>
     <label>內容<input class="inp" name="content" placeholder="例：電話關心，約下週送建議書" required></label>
     <button class="btn p" type="submit">新增</button></form>
-  <div class="hint" style="margin:6px 0 12px">新增紀錄會自動更新「上次聯絡」日期</div>
+  <div class="row" style="justify-content:space-between;align-items:center;margin:6px 0 12px;gap:8px;flex-wrap:wrap"><span class="hint" style="margin:0">新增紀錄會自動更新「上次聯絡」日期</span>${S.isAdmin?`<a class="btn sm" href="https://calendar.google.com/calendar/u/0/r/search?q=${encodeURIComponent(c.name||"")}" target="_blank" rel="noopener" title="在 Google 日曆搜尋這位客戶的排程">📅 看「${esc(c.name)}」的日曆排程</a>`:""}</div>
   ${ls.length?ls.map(l=>`<div class="li"><div class="when"><b style="font-size:14px">${esc((l.date||"").slice(5).replace("-","/"))}</b><span>${esc((l.date||"").slice(0,4))}</span></div><div class="body"><div><span class="tag">${esc(l.type)}</span>${esc(l.content)}</div></div><button class="btn sm ghost" data-act="delLog" data-lid="${l.id}">✕</button></div>`).join(""):`<div class="empty">還沒有互動紀錄</div>`}`;
 }
 function mSvc(){
