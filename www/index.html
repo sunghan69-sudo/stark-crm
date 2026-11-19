@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>史塔克客戶管理系統</title>
 <meta name="theme-color" content="#14365c">
+<meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -1052,7 +1053,7 @@ function vSetup(){
 
 /* ========== 客戶彈窗 ========== */
 let M=null; // {c, tab, editPol}
-function applyId(){const sh=M&&M.showId;const d=document.getElementById("idDisp");if(d)d.textContent=sh?d.dataset.full:d.dataset.mask;const i=document.getElementById("idInput");if(i)i.classList.toggle("secure",!sh);document.querySelectorAll("[data-act=toggleId]").forEach(b=>b.textContent=sh?"🙈":"👁")}
+function applyId(){const sh=M&&M.showId;const d=document.getElementById("idDisp");if(d)d.textContent=sh&&M&&M.c?(M.c.idNo||d.dataset.mask):d.dataset.mask;const i=document.getElementById("idInput");if(i)i.classList.toggle("secure",!sh);document.querySelectorAll("[data-act=toggleId]").forEach(b=>b.textContent=sh?"🙈":"👁")}
 function openClient(id,tab){const c=id?clone(cById(id)):{id:uid(),name:"",stage:"潛在",tags:[],policies:[],logs:[],services:[],isNew:true};M={c,tab:tab||(id?"pol":"info"),editPol:null,showId:false};drawModal()}
 function closeModal(){M=null;document.getElementById("modalRoot").innerHTML="";render()}
 function drawModal(){
@@ -1060,7 +1061,7 @@ function drawModal(){
   const fam=c.family?S.clients.filter(x=>x.family===c.family&&x.id!==c.id):[];
   const body={info:mInfo,fam:mFam,pol:mPol,cov:mCov,log:mLog,svc:mSvc}[M.tab]();
   document.getElementById("modalRoot").innerHTML=`<div class="mask drawer" data-act="maskClose"><div class="modal">
-    <div class="mh"><span class="av" style="width:44px;height:44px;font-size:16px">${esc((c.name||"新").slice(-2))}</span><div><div class="nm" style="font-size:18px">${esc(c.name||"新增客戶")}</div><div class="sub">${c.birthday?age(c.birthday)+" 歲・":""}${c.idNo?`<span id="idDisp" data-full="${esc(c.idNo)}" data-mask="${esc(maskId(c.idNo))}">${esc(maskId(c.idNo))}</span><button type="button" class="eye" data-act="toggleId" title="顯示 / 隱藏身分證字號">👁</button>・`:""}${esc(c.stage||"")}${c.family?"・🏠 "+esc(c.family):""}${!c.isNew?"・年繳保費 "+fmt(annualSum(c))+" 元":""}</div></div>
+    <div class="mh"><span class="av" style="width:44px;height:44px;font-size:16px">${esc((c.name||"新").slice(-2))}</span><div><div class="nm" style="font-size:18px">${esc(c.name||"新增客戶")}</div><div class="sub">${c.birthday?age(c.birthday)+" 歲・":""}${c.idNo?`<span id="idDisp" data-mask="${esc(maskId(c.idNo))}">${esc(maskId(c.idNo))}</span><button type="button" class="eye" data-act="toggleId" title="顯示 / 隱藏身分證字號">👁</button>・`:""}${esc(c.stage||"")}${c.family?"・🏠 "+esc(c.family):""}${!c.isNew?"・年繳保費 "+fmt(annualSum(c))+" 元":""}</div></div>
     ${c.address&&!c.isNew?`<a class="btn sm x" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address)}" target="_blank" rel="noopener">📍 導航</a>`:""}${c.phone&&!c.isNew?`<a class="btn sm x" href="tel:${esc(c.phone.replace(/[^\d+]/g,""))}">📞 撥打</a>`:""}<button class="btn ghost ${c.phone&&!c.isNew?"":"x"}" data-act="close">✕</button></div>
     ${c.isNew?"":`<div class="tabs">${tabs.map(t=>`<button class="${M.tab===t[0]?"on":""}" data-act="mtab" data-t="${t[0]}">${t[1]}</button>`).join("")}</div>`}
     ${fam.length&&!c.isNew&&M.tab!=="fam"?`<div style="padding:10px 22px 0" class="row"><span class="sub">全家成員：</span>${fam.map(x=>`<button class="chip" data-act="switchClient" data-id="${x.id}">${esc(x.name)}${x.relation?"（"+esc(x.relation)+"）":""}</button>`).join("")}</div>`:""}
