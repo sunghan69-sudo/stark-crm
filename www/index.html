@@ -1853,13 +1853,15 @@ async function polImport(file){try{
     let c=findClient(p);
     if(!c){c={id:uid(),type:"client",name:p.insured||"",idNo:p.insuredId||"",stage:"已成交",source:"永旭匯入",tags:[],policies:[],logs:[],services:[]};S.clients.push(c);newC++;newList.push(p.insured);}
     c.policies=c.policies||[];
+    if(!(c.tags||[]).includes("永旭客戶")){c.tags=[...(c.tags||[]),"永旭客戶"];}
+    touched[c.id]=c;
     if(c.policies.some(x=>String(x.policyNo||"").trim()===String(p.policyNo).trim())){dup++;dupList.push(p.company+" "+p.policyNo+"（"+p.insured+"）");continue;}
     c.policies.push({id:uid(),company:p.company,product:"",type:"壽險",policyNo:p.policyNo,holder:p.holder||p.insured,status:"有效",start:p.start||"",payYears:"",freq:+p.freq||0,premium:+p.premium||0,payMethod:"",currency:p.currency||"TWD",sumText:"",beneficiary:"",cov:{},covd:{},rider:false,note:"永旭匯入"+(j.date?" "+j.date:"")+"（商品名稱待補）"});
     added++;touched[c.id]=c;
   }
   for(const id in touched){await saveClient(clone(touched[id]));}
   lsSave();render();
-  const msg=`永旭保單匯入完成：新增 ${added} 張、跳過重複 ${dup} 張、新建客戶 ${newC} 位`;
+  const msg=`永旭保單匯入完成：新增 ${added} 張、跳過重複 ${dup} 張、新建客戶 ${newC} 位；相關客戶已標記「永旭客戶」標籤`;
   toast(msg);
   try{console.log("[永旭匯入]",msg);if(dupList.length)console.log("跳過重複：\n"+dupList.join("\n"));if(newList.length)console.log("新建客戶："+newList.join("、"));}catch(e){}
   alert(msg+(dup?"\n\n跳過重複保單：\n"+dupList.join("\n"):"")+(newC?"\n\n新建客戶："+newList.join("、"):""));
