@@ -1842,7 +1842,9 @@ function vInv(){if(!canInv())return vDash();const R=S.invReport;
   ${(cu.policies||[]).map(p=>invPolicy(p,R)).join("")}</div></details>`}).join("")||`<div class="card empty"><b>找不到符合的客戶</b></div>`}
   <div class="hint">投入金額＝新契約投入＋續期保費實際進入投資帳戶的淨額（已扣保費費用）。原本單位數＝安聯「申購單位數餘額」；目前單位數含配息再投入。每月配息依配息基準日月份歸屬，含現金給付與再投入。CRM 對應用身分證前 4 碼＋後 2 碼比對。</div>`}
 async function invImport(file){try{const j=JSON.parse(await file.text());if(!j||j.kind!=="stark-invreport"||!Array.isArray(j.customers))throw new Error("不是投資型客戶報表資料檔");
-  j.type="invreport";j.importedAt=new Date().toISOString();S.invReport=j;await writeDoc("invReport",clone(j));toast(`已匯入 ${j.customers.length} 位客戶（資料日期 ${j.date||""}）`);render()}catch(err){toast("匯入失敗："+(err.message||err))}}
+  j.type="invreport";j.importedAt=new Date().toISOString();S.invReport=j;await writeDoc("invReport",clone(j));
+  let tagged=0;const seen=new Set();for(const cu of j.customers){for(const c of invMatch(cu)){if(seen.has(c.id))continue;seen.add(c.id);if(!(c.tags||[]).includes("投資型客戶")){c.tags=[...(c.tags||[]),"投資型客戶"];await saveClient(clone(c));tagged++;}}}
+  toast(`已匯入 ${j.customers.length} 位客戶（資料日期 ${j.date||""}）；標記投資型客戶 ${tagged} 位`);render()}catch(err){toast("匯入失敗："+(err.message||err))}}
 async function polImport(file){try{
   const j=JSON.parse(await file.text());
   if(!j||j.kind!=="stark-policyimport"||!Array.isArray(j.policies))throw new Error("不是永旭保單匯入檔");
