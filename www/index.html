@@ -943,7 +943,7 @@ function vClients(){if(CVIEW==="fam")return vFamGrid();
       <td class="hide-m">${(c.tags||[]).map(t=>`<span class="tag o">${esc(t)}</span>`).join("")}</td></tr>`;
   }).join("");
   return `<div class="top"><div><h1>客戶管理</h1><div class="sub">共 ${S.clients.length} 位，顯示 ${list.length} 位</div></div>
-   <div class="row"><input class="inp search" id="q" placeholder="搜尋姓名、電話、地址、標籤、家庭…" value="${esc(S.q)}"><div class="seg"><button class="btn sm on" data-act="cview" data-v="list">☰ 客戶列表</button><button class="btn sm" data-act="cview" data-v="fam">🏠 戶長列表</button></div><button class="btn" data-act="bulkPdf">📂 批次匯入保單PDF</button><button class="btn p" data-act="newClient">＋ 新增客戶</button></div></div>
+   <div class="row"><input class="inp search" id="q" placeholder="搜尋姓名、電話、地址、標籤、家庭…" value="${esc(S.q)}"><div class="seg"><button class="btn sm on" data-act="cview" data-v="list">☰ 客戶列表</button><button class="btn sm" data-act="cview" data-v="fam">🏠 戶長列表</button></div><button class="btn" data-act="bulkPdf">📂 批次匯入保單PDF</button>${S.isAdmin?`<label class="btn" style="cursor:pointer">📥 匯入永旭保單<input type="file" id="polFile" accept=".json,application/json" style="display:none"></label>`:""}<button class="btn p" data-act="newClient">＋ 新增客戶</button></div></div>
    <div class="chips">${FILTERS.map(f=>`<button class="chip ${S.filter===f.id?"on":""}" data-act="filter" data-f="${f.id}">${f.n}</button>`).join("")}</div>
    ${tags.length?`<div class="chips" style="margin-top:-4px"><span class="sub" style="padding:5px 0">標籤：</span>${tags.map(t=>`<button class="chip ${S.tag===t?"on":""}" data-act="tagf" data-t="${esc(t)}">#${esc(t)}</button>`).join("")}</div>`:""}
    <div class="card" style="padding:6px 8px;overflow-x:auto">${list.length?`<table class="tbl"><thead><tr><th>客戶</th><th class="hide-m">家庭</th><th>階段</th><th class="hide-m">保單</th><th class="hide-m">保障缺口</th><th class="hide-m">上次聯絡</th><th class="hide-m">標籤</th></tr></thead><tbody>${rows}</tbody></table>`:`<div class="empty"><b>沒有符合的客戶</b>${S.clients.length?"換個篩選條件試試":"按右上角「新增客戶」開始"}</div>`}</div>
@@ -1843,6 +1843,27 @@ function vInv(){if(!canInv())return vDash();const R=S.invReport;
   <div class="hint">投入金額＝新契約投入＋續期保費實際進入投資帳戶的淨額（已扣保費費用）。原本單位數＝安聯「申購單位數餘額」；目前單位數含配息再投入。每月配息依配息基準日月份歸屬，含現金給付與再投入。CRM 對應用身分證前 4 碼＋後 2 碼比對。</div>`}
 async function invImport(file){try{const j=JSON.parse(await file.text());if(!j||j.kind!=="stark-invreport"||!Array.isArray(j.customers))throw new Error("不是投資型客戶報表資料檔");
   j.type="invreport";j.importedAt=new Date().toISOString();S.invReport=j;await writeDoc("invReport",clone(j));toast(`已匯入 ${j.customers.length} 位客戶（資料日期 ${j.date||""}）`);render()}catch(err){toast("匯入失敗："+(err.message||err))}}
+async function polImport(file){try{
+  const j=JSON.parse(await file.text());
+  if(!j||j.kind!=="stark-policyimport"||!Array.isArray(j.policies))throw new Error("不是永旭保單匯入檔");
+  const norm=s=>String(s||"").toUpperCase().replace(/\s/g,"");
+  const findClient=p=>{const id=norm(p.insuredId);if(id){const h=S.clients.filter(c=>norm(c.idNo)===id);if(h.length)return h[0];}const nm=String(p.insured||"").trim();if(nm){const h=S.clients.filter(c=>String(c.name||"").trim()===nm&&!norm(c.idNo));if(h.length===1)return h[0];const h2=S.clients.filter(c=>String(c.name||"").trim()===nm);if(h2.length===1)return h2[0];}return null;};
+  let added=0,dup=0,newC=0;const touched={},dupList=[],newList=[];
+  for(const p of j.policies){
+    let c=findClient(p);
+    if(!c){c={id:uid(),type:"client",name:p.insured||"",idNo:p.insuredId||"",stage:"已成交",source:"永旭匯入",tags:[],policies:[],logs:[],services:[]};S.clients.push(c);newC++;newList.push(p.insured);}
+    c.policies=c.policies||[];
+    if(c.policies.some(x=>String(x.policyNo||"").trim()===String(p.policyNo).trim())){dup++;dupList.push(p.company+" "+p.policyNo+"（"+p.insured+"）");continue;}
+    c.policies.push({id:uid(),company:p.company,product:"",type:"壽險",policyNo:p.policyNo,holder:p.holder||p.insured,status:"有效",start:p.start||"",payYears:"",freq:+p.freq||0,premium:+p.premium||0,payMethod:"",currency:p.currency||"TWD",sumText:"",beneficiary:"",cov:{},covd:{},rider:false,note:"永旭匯入"+(j.date?" "+j.date:"")+"（商品名稱待補）"});
+    added++;touched[c.id]=c;
+  }
+  for(const id in touched){await saveClient(clone(touched[id]));}
+  lsSave();render();
+  const msg=`永旭保單匯入完成：新增 ${added} 張、跳過重複 ${dup} 張、新建客戶 ${newC} 位`;
+  toast(msg);
+  try{console.log("[永旭匯入]",msg);if(dupList.length)console.log("跳過重複：\n"+dupList.join("\n"));if(newList.length)console.log("新建客戶："+newList.join("、"));}catch(e){}
+  alert(msg+(dup?"\n\n跳過重複保單：\n"+dupList.join("\n"):"")+(newC?"\n\n新建客戶："+newList.join("、"):""));
+}catch(err){toast("匯入失敗："+(err.message||err));alert("匯入失敗："+(err.message||err))}}
 
 /* ========== 操作說明影片：新註冊帳號第一次進系統自動播放一次；其他帳號從總覽「🎬 操作說明影片」開啟 ========== */
 const TOUR_SRC="media/tour.mp4?v=62",TOUR_SINCE=Date.parse("2026-11-16T09:20:00Z");
@@ -2034,6 +2055,7 @@ document.addEventListener("change",async e=>{
   if(["cDays","cCost","cMonths"].includes(t.id)){S[t.id]=num(t.value);render()}
 });
 document.addEventListener("change",e=>{if(e.target.id==="invFile"&&e.target.files&&e.target.files[0]){invImport(e.target.files[0]);e.target.value=""}});
+document.addEventListener("change",e=>{if(e.target.id==="polFile"&&e.target.files&&e.target.files[0]){polImport(e.target.files[0]);e.target.value=""}});
 document.addEventListener("input",e=>{if(e.target.id==="invQ"){invQ=e.target.value;const pos=e.target.selectionStart;render();const el=document.getElementById("invQ");if(el){el.focus();try{el.setSelectionRange(pos,pos)}catch(_){}}}});
 document.addEventListener("change",e=>{if(e.target.id==="mktgAmt"){const v=Math.max(1,num(e.target.value)||100);mktgAmt=v*10000;render()}});
 document.addEventListener("change",e=>{if(e.target.id==="maskNm"){MASK=e.target.checked;try{localStorage.setItem("stark-mask",MASK?"1":"0")}catch(_){}render()}});
