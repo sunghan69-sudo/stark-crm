@@ -3,3 +3,5 @@ android/
 *.apk
 graphify-out/cache/
 graphify-out/manifest.json
+graphify-src/
+graphify-out/.graphify*
