@@ -1,0 +1,10 @@
+# graphify 分析時略過：第三方套件、壓縮檔、圖片影片、試算表、簽章
+www/vendor/
+www/calc/hyperformula.full.min.js
+www/proposals/
+www/mkt/
+www/media/
+www/icons/
+assets/
+keystore/
+graphify-out/

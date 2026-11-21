@@ -1,3 +1,5 @@
 node_modules/
 android/
 *.apk
+graphify-out/cache/
+graphify-out/manifest.json
