@@ -1906,10 +1906,14 @@ function runPolicyAudit(){
     if(!String(p.sumText||"").trim()&&!Object.values(p.cov||{}).some(v=>num(v)>0)&&!/豁免/.test(prod))add(c,p,"保額空白",3);
     if(!p.start)add(c,p,"投保日期空白",3);else if(p.start>tdy)add(c,p,"投保日期在未來："+p.start,2);
     const w=auditWan(p.sumText);
-    if(w>=500&&!["投資型","儲蓄/年金","壽險"].includes(p.type))add(c,p,"保額異常大："+p.sumText+"（請核對）",1);
+    if(p.type==="醫療"&&w>=300)add(c,p,"醫療保額異常大："+p.sumText+"（醫療保額少見逾 300 萬，疑數字誤植）",2);
     if(p.type==="意外"&&/醫療|限額/.test(prod)&&w>=20)add(c,p,"傷害醫療保額偏高："+p.sumText+"（通常≤10萬，疑匯入錯誤）",1);
   }));
-  Object.entries(byNo).forEach(([no,g])=>{if(g.cos.size>1){const it=g.items[0];add(it.c,it.p,"同一保單號出現多家保險公司："+[...g.cos].join("、"),1)}if(g.clients.size>1){const it=g.items[0];add(it.c,it.p,"保單號重複，跨 "+g.clients.size+" 位客戶",1)}});
+  const famOf={};S.clients.forEach(c=>{famOf[c.id]=String(c.family||"").trim()});
+  Object.entries(byNo).forEach(([no,g])=>{
+    if(g.cos.size>1){const it=g.items[0];add(it.c,it.p,"同一保單號出現多家保險公司："+[...g.cos].join("、"),1)}
+    if(g.clients.size>1){const fams=new Set([...g.clients].map(id=>famOf[id]||("__"+id)));if(fams.size>1){const it=g.items[0];add(it.c,it.p,"保單號重複，跨 "+g.clients.size+" 位不同家庭客戶（疑匯入重號，家庭共用件不列入）",2)}}
+  });
   const seen=new Set();const uniq=issues.filter(x=>{const k=x.cid+"|"+x.no+"|"+x.msg;if(seen.has(k))return false;seen.add(k);return true});
   uniq.sort((a,b)=>a.sev-b.sev);
   const sevTag={1:'<span class="tag" style="background:#fdecea;color:#c0392b">重要</span>',2:'<span class="tag" style="background:#fff5e0;color:#9a6a00">建議</span>',3:'<span class="tag">提醒</span>'};
