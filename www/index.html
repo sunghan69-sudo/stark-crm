@@ -1898,11 +1898,11 @@ function auditWan(t){t=String(t||"").replace(/,/g,"");if(!t)return 0;const mw=t.
 function runPolicyAudit(){
   const issues=[];const byNo={};
   S.clients.forEach(c=>(c.policies||[]).forEach(p=>{const no=String(p.policyNo||"").trim();if(!no)return;const g=byNo[no]=byNo[no]||{clients:new Set(),cos:new Set(),items:[]};g.clients.add(c.id);if(String(p.company||"").trim())g.cos.add(String(p.company).trim());g.items.push({c,p})}));
-  const add=(c,p,msg,sev)=>issues.push({cid:c.id,cname:c.name||"(無名)",no:p.policyNo||"",product:p.product||"(無商品名)",msg,sev:sev||2});
+  const add=(c,p,msg,sev,fix)=>issues.push({cid:c.id,pid:p.id,cname:c.name||"(無名)",no:p.policyNo||"",product:p.product||"(無商品名)",msg,sev:sev||2,fix:fix||""});
   const tdy=ds(today());
   S.clients.forEach(c=>(c.policies||[]).filter(active).forEach(p=>{
     const prod=String(p.product||"").trim();
-    if(!prod)add(c,p,"商品名稱空白（待補）",2);
+    if(!prod)add(c,p,"商品名稱空白（待補）",2,"prod");
     if(!String(p.sumText||"").trim()&&!Object.values(p.cov||{}).some(v=>num(v)>0)&&!/豁免/.test(prod))add(c,p,"保額空白",3);
     if(!p.start)add(c,p,"投保日期空白",3);else if(p.start>tdy)add(c,p,"投保日期在未來："+p.start,2);
     const w=auditWan(p.sumText);
@@ -1917,10 +1917,22 @@ function runPolicyAudit(){
   const seen=new Set();const uniq=issues.filter(x=>{const k=x.cid+"|"+x.no+"|"+x.msg;if(seen.has(k))return false;seen.add(k);return true});
   uniq.sort((a,b)=>a.sev-b.sev);
   const sevTag={1:'<span class="tag" style="background:#fdecea;color:#c0392b">重要</span>',2:'<span class="tag" style="background:#fff5e0;color:#9a6a00">建議</span>',3:'<span class="tag">提醒</span>'};
+  const pnames=[...new Set(S.products.map(x=>x&&x.name).filter(Boolean).concat(S.clients.flatMap(c=>(c.policies||[]).map(p=>String(p.product||"").trim())).filter(Boolean)))].sort((a,b)=>a.localeCompare(b,"zh-Hant"));
+  const blankN=uniq.filter(x=>x.fix==="prod").length;
+  const rowCtrl=x=>x.fix==="prod"
+    ?`<div class="row" style="gap:6px;white-space:nowrap"><input class="inp" list="auditProd" placeholder="輸入商品名稱" style="width:170px;padding:5px 8px;font-size:13px"><button class="btn sm p" data-fixprod="${esc(x.cid)}|${esc(x.pid)}">儲存</button></div>`
+    :`<button class="btn sm" data-open="${esc(x.cid)}" style="white-space:nowrap">開啟 ›</button>`;
   const r=document.getElementById("modalRoot");const box=document.createElement("div");
-  box.innerHTML=`<div class="mask"><div class="modal" style="max-width:880px;width:94%"><div class="mh"><b>🩺 保單資料健檢（${uniq.length} 項）</b><button class="btn ghost x" data-x>✕</button></div><div class="mb" style="max-height:72vh;overflow:auto">${uniq.length?`<div class="hint" style="margin-bottom:10px">掃描全系統 ${S.clients.length} 位客戶的有效保單，列出疑似匯入或資料錯誤。點「開啟」可直接修正。</div>`+uniq.map(x=>`<div class="row" style="justify-content:space-between;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line)"><div style="min-width:0"><div>${sevTag[x.sev]||""} <b>${esc(x.cname)}</b> <span class="sub mono">${esc(x.no)}</span></div><div class="sub">${esc(x.product)} — ${esc(x.msg)}</div></div><button class="btn sm" data-open="${esc(x.cid)}" style="white-space:nowrap">開啟 ›</button></div>`).join(""):`<div class="empty"><b>太好了，沒有發現明顯問題 🎉</b>已掃描 ${S.clients.length} 位客戶。</div>`}</div></div></div>`;
+  box.innerHTML=`<div class="mask"><div class="modal" style="max-width:880px;width:94%"><div class="mh"><b>🩺 保單資料健檢（${uniq.length} 項）</b><button class="btn ghost x" data-x>✕</button></div><div class="mb" style="max-height:72vh;overflow:auto"><datalist id="auditProd">${pnames.map(n=>`<option value="${esc(n)}">`).join("")}</datalist>${uniq.length?`<div class="hint" style="margin-bottom:10px">掃描全系統 ${S.clients.length} 位客戶的有效保單，列出疑似匯入或資料錯誤。${blankN?"其中 <b>"+blankN+"</b> 筆商品名稱空白，可在右側直接輸入補上（有自動提示）；其餘點「開啟」修正。":"點「開啟」可直接修正。"}</div>`+uniq.map(x=>`<div class="row" style="justify-content:space-between;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line)"><div style="min-width:0"><div>${sevTag[x.sev]||""} <b>${esc(x.cname)}</b> <span class="sub mono">${esc(x.no)}</span></div><div class="sub">${esc(x.product)} — ${esc(x.msg)}</div></div>${rowCtrl(x)}</div>`).join(""):`<div class="empty"><b>太好了，沒有發現明顯問題 🎉</b>已掃描 ${S.clients.length} 位客戶。</div>`}</div></div></div>`;
   r.appendChild(box);box.querySelector("[data-x]").onclick=()=>box.remove();
   box.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{box.remove();openClient(b.dataset.open,"pol")});
+  box.querySelectorAll("[data-fixprod]").forEach(b=>b.onclick=async()=>{
+    const wrap=b.closest(".row");const inp=wrap.querySelector("input");const val=(inp.value||"").trim();if(!val){inp.focus();return}
+    const [cid,pid]=b.dataset.fixprod.split("|");const c=S.clients.find(x=>x.id===cid);if(!c)return;const p=(c.policies||[]).find(x=>x.id===pid);if(!p)return;
+    p.product=val;if(typeof typeOf==="function"){const t=typeOf(val);if(t&&t!=="其他"&&(!p.type||p.type==="壽險"))p.type=t}
+    b.disabled=true;inp.disabled=true;b.textContent="已補 ✓";b.classList.remove("p");const issueRow=wrap.parentElement;if(issueRow)issueRow.style.opacity=".55";
+    try{await saveClient(c);toast("已補上："+val)}catch(e){b.disabled=false;inp.disabled=false;b.textContent="儲存";toast("儲存失敗，請重試")}
+  });
 }
 /* ========== 匯出 ========== */
 function csv(rows){return rows.map(r=>r.map(v=>{v=String(v==null?"":v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(",")).join("\n")}
