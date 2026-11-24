@@ -943,7 +943,7 @@ function vClients(){if(CVIEW==="fam")return vFamGrid();
       <td class="hide-m">${(c.tags||[]).map(t=>`<span class="tag o">${esc(t)}</span>`).join("")}</td></tr>`;
   }).join("");
   return `<div class="top"><div><h1>客戶管理</h1><div class="sub">共 ${S.clients.length} 位，顯示 ${list.length} 位</div></div>
-   <div class="row"><input class="inp search" id="q" placeholder="搜尋姓名、電話、地址、標籤、家庭…" value="${esc(S.q)}"><div class="seg"><button class="btn sm on" data-act="cview" data-v="list">☰ 客戶列表</button><button class="btn sm" data-act="cview" data-v="fam">🏠 戶長列表</button></div><button class="btn" data-act="bulkPdf">📂 批次匯入保單PDF</button>${S.isAdmin?`<label class="btn" style="cursor:pointer">📥 匯入永旭保單<input type="file" id="polFile" accept=".json,application/json" style="display:none"></label>`:""}<button class="btn p" data-act="newClient">＋ 新增客戶</button></div></div>
+   <div class="row"><input class="inp search" id="q" placeholder="搜尋姓名、電話、地址、標籤、家庭…" value="${esc(S.q)}"><div class="seg"><button class="btn sm on" data-act="cview" data-v="list">☰ 客戶列表</button><button class="btn sm" data-act="cview" data-v="fam">🏠 戶長列表</button></div><button class="btn" data-act="bulkPdf">📂 批次匯入保單PDF</button>${S.isAdmin?`<label class="btn" style="cursor:pointer">📥 匯入永旭保單<input type="file" id="polFile" accept=".json,application/json" style="display:none"></label><button class="btn" data-act="polAudit">🩺 保單健檢</button>`:""}<button class="btn p" data-act="newClient">＋ 新增客戶</button></div></div>
    <div class="chips">${FILTERS.map(f=>`<button class="chip ${S.filter===f.id?"on":""}" data-act="filter" data-f="${f.id}">${f.n}</button>`).join("")}</div>
    ${tags.length?`<div class="chips" style="margin-top:-4px"><span class="sub" style="padding:5px 0">標籤：</span>${tags.map(t=>`<button class="chip ${S.tag===t?"on":""}" data-act="tagf" data-t="${esc(t)}">#${esc(t)}</button>`).join("")}</div>`:""}
    <div class="card" style="padding:6px 8px;overflow-x:auto">${list.length?`<table class="tbl"><thead><tr><th>客戶</th><th class="hide-m">家庭</th><th>階段</th><th class="hide-m">保單</th><th class="hide-m">保障缺口</th><th class="hide-m">上次聯絡</th><th class="hide-m">標籤</th></tr></thead><tbody>${rows}</tbody></table>`:`<div class="empty"><b>沒有符合的客戶</b>${S.clients.length?"換個篩選條件試試":"按右上角「新增客戶」開始"}</div>`}</div>
@@ -1894,6 +1894,30 @@ function confirmBox(msg,onYes){
   r.appendChild(box);box.querySelector("[data-n]").onclick=()=>box.remove();box.querySelector("[data-y]").onclick=()=>{box.remove();onYes()};
 }
 
+function auditWan(t){t=String(t||"").replace(/,/g,"");if(!t)return 0;const mw=t.match(/([\d.]+)\s*萬/);if(mw)return parseFloat(mw[1]);const my=t.match(/([\d.]+)\s*元/);if(my)return parseFloat(my[1])/10000;return 0}
+function runPolicyAudit(){
+  const issues=[];const byNo={};
+  S.clients.forEach(c=>(c.policies||[]).forEach(p=>{const no=String(p.policyNo||"").trim();if(!no)return;const g=byNo[no]=byNo[no]||{clients:new Set(),cos:new Set(),items:[]};g.clients.add(c.id);if(String(p.company||"").trim())g.cos.add(String(p.company).trim());g.items.push({c,p})}));
+  const add=(c,p,msg,sev)=>issues.push({cid:c.id,cname:c.name||"(無名)",no:p.policyNo||"",product:p.product||"(無商品名)",msg,sev:sev||2});
+  const tdy=ds(today());
+  S.clients.forEach(c=>(c.policies||[]).filter(active).forEach(p=>{
+    const prod=String(p.product||"").trim();
+    if(!prod)add(c,p,"商品名稱空白（待補）",2);
+    if(!String(p.sumText||"").trim()&&!Object.values(p.cov||{}).some(v=>num(v)>0)&&!/豁免/.test(prod))add(c,p,"保額空白",3);
+    if(!p.start)add(c,p,"投保日期空白",3);else if(p.start>tdy)add(c,p,"投保日期在未來："+p.start,2);
+    const w=auditWan(p.sumText);
+    if(w>=500&&!["投資型","儲蓄/年金","壽險"].includes(p.type))add(c,p,"保額異常大："+p.sumText+"（請核對）",1);
+    if(p.type==="意外"&&/醫療|限額/.test(prod)&&w>=20)add(c,p,"傷害醫療保額偏高："+p.sumText+"（通常≤10萬，疑匯入錯誤）",1);
+  }));
+  Object.entries(byNo).forEach(([no,g])=>{if(g.cos.size>1){const it=g.items[0];add(it.c,it.p,"同一保單號出現多家保險公司："+[...g.cos].join("、"),1)}if(g.clients.size>1){const it=g.items[0];add(it.c,it.p,"保單號重複，跨 "+g.clients.size+" 位客戶",1)}});
+  const seen=new Set();const uniq=issues.filter(x=>{const k=x.cid+"|"+x.no+"|"+x.msg;if(seen.has(k))return false;seen.add(k);return true});
+  uniq.sort((a,b)=>a.sev-b.sev);
+  const sevTag={1:'<span class="tag" style="background:#fdecea;color:#c0392b">重要</span>',2:'<span class="tag" style="background:#fff5e0;color:#9a6a00">建議</span>',3:'<span class="tag">提醒</span>'};
+  const r=document.getElementById("modalRoot");const box=document.createElement("div");
+  box.innerHTML=`<div class="mask"><div class="modal" style="max-width:880px;width:94%"><div class="mh"><b>🩺 保單資料健檢（${uniq.length} 項）</b><button class="btn ghost x" data-x>✕</button></div><div class="mb" style="max-height:72vh;overflow:auto">${uniq.length?`<div class="hint" style="margin-bottom:10px">掃描全系統 ${S.clients.length} 位客戶的有效保單，列出疑似匯入或資料錯誤。點「開啟」可直接修正。</div>`+uniq.map(x=>`<div class="row" style="justify-content:space-between;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line)"><div style="min-width:0"><div>${sevTag[x.sev]||""} <b>${esc(x.cname)}</b> <span class="sub mono">${esc(x.no)}</span></div><div class="sub">${esc(x.product)} — ${esc(x.msg)}</div></div><button class="btn sm" data-open="${esc(x.cid)}" style="white-space:nowrap">開啟 ›</button></div>`).join(""):`<div class="empty"><b>太好了，沒有發現明顯問題 🎉</b>已掃描 ${S.clients.length} 位客戶。</div>`}</div></div></div>`;
+  r.appendChild(box);box.querySelector("[data-x]").onclick=()=>box.remove();
+  box.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{box.remove();openClient(b.dataset.open,"pol")});
+}
 /* ========== 匯出 ========== */
 function csv(rows){return rows.map(r=>r.map(v=>{v=String(v==null?"":v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(",")).join("\n")}
 function exportCsv(){copy(csv([["姓名","身分證字號","性別","生日","年齡","手機","LINE","Email","通訊地址","戶籍地址","職業","年收入(萬)","家庭","身分","階段","來源","標籤","上次聯絡","下次追蹤","有效保單數","年化保費","備註"]].concat(S.clients.map(c=>[c.name,c.idNo,c.gender,c.birthday,age(c.birthday),c.phone,c.line,c.email,c.address,c.address2,c.job,c.income,c.family,c.relation,c.stage,c.source,(c.tags||[]).join("、"),c.lastContact,c.nextFollow,(c.policies||[]).filter(active).length,Math.round(annualSum(c)),c.notes]))))}
@@ -1933,6 +1957,7 @@ document.addEventListener("click",async e=>{
   switch(a){
     case "newClient":openClient(null);break;
     case "bulkPdf":openBulkPdf();break;
+    case "polAudit":runPolicyAudit();break;
     case "tour":openTour(false);break;
     case "propCalc":{const it=((PROPS&&PROPS.items)||[]).find(x=>x.id===el.dataset.id);if(!it)break;
       if(!window.StarkCalc){toast("試算引擎載入中…");await new Promise((res,rej)=>{const sc=document.createElement("script");sc.src="calc/calc.js?v=8";sc.onload=res;sc.onerror=()=>rej(new Error("載入失敗"));document.head.appendChild(sc)}).catch(e=>toast("試算引擎載入失敗，請確認網路"))}
