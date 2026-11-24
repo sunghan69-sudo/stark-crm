@@ -1858,7 +1858,9 @@ async function polImport(file){try{
     if(!(c.tags||[]).includes("永旭客戶")){c.tags=[...(c.tags||[]),"永旭客戶"];}
     touched[c.id]=c;
     if(c.policies.some(x=>String(x.policyNo||"").trim()===String(p.policyNo).trim())){dup++;dupList.push(p.company+" "+p.policyNo+"（"+p.insured+"）");continue;}
-    c.policies.push({id:uid(),company:p.company,product:"",type:"壽險",policyNo:p.policyNo,holder:p.holder||p.insured,status:"有效",start:p.start||"",payYears:"",freq:+p.freq||0,premium:+p.premium||0,payMethod:"",currency:p.currency||"TWD",sumText:"",beneficiary:"",cov:{},covd:{},rider:false,note:"永旭匯入"+(j.date?" "+j.date:"")+"（商品名稱待補）"});
+    const FQMAP={"躉":0,"月":1,"季":3,"半年":6,"年":12},lbl=String(p.freqLabel||"").replace(/繳$/,"").trim();
+    const freqV=(lbl in FQMAP)?FQMAP[lbl]:(+p.freq||0);
+    c.policies.push({id:uid(),company:p.company,product:"",type:"壽險",policyNo:p.policyNo,holder:p.holder||p.insured,status:"有效",start:p.start||"",payYears:"",freq:freqV,premium:+p.premium||0,payMethod:"",currency:p.currency||"TWD",sumText:"",beneficiary:"",cov:{},covd:{},rider:false,note:"永旭匯入"+(j.date?" "+j.date:"")+"（商品名稱待補）"});
     added++;touched[c.id]=c;
   }
   for(const id in touched){await saveClient(clone(touched[id]));}
