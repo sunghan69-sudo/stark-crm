@@ -1021,7 +1021,28 @@ function vSvc(){
   </tbody></table>`:`<div class="empty"><b>目前沒有服務件</b>到客戶頁的「服務件」分頁新增理賠或保全申請。</div>`}</div>
   ${open.length?`<div class="hint" style="margin-top:8px">未結案 ${open.length} 件</div>`:""}`;
 }
+/* 管理員專屬：LINE 電子名片（GitHub Pages + LIFF） */
+const MY_ECARD={page:"https://sunghan69-sudo.github.io/card/",liff:"https://liff.line.me/2012764589-B07h9e5m",img:"https://sunghan69-sudo.github.io/card/card.jpg"};
+function myCardText(){return ["【蔡松翰｜資深副總】","永旭保險經紀人．彰北營業部　MDRT","📱 0987-734-588","☎ 04-7119957","✉ sunghan69@gmail.com","📍 500 彰化市延平路 38 號 2 樓","壽險 13 家・產險 14 家｜品牌不受限　專業更客觀","👉 電子名片："+MY_ECARD.liff].join("\n")}
+function vMyCard(){
+  const L=MY_ECARD.liff, share="https://line.me/R/msg/text/?"+encodeURIComponent("這是我的電子名片，存起來方便聯絡 👉 "+L);
+  return `<div class="top"><div><h1>電子名片</h1><div class="sub">你的 LINE 電子名片（永旭藍銀版）。在 LINE 打開連結，可直接「分享名片給好友」</div></div></div>
+  <div class="grid g2"><div>
+    <div class="card" style="padding:0;overflow:hidden;max-width:420px"><iframe src="${MY_ECARD.page}" title="蔡松翰 LINE 電子名片" style="display:block;width:100%;height:760px;border:0;background:#EEF1F5" loading="lazy"></iframe></div>
+  </div><div>
+    <div class="card"><h2>名片連結</h2><div class="msgbox" style="word-break:break-all">${L}</div>
+      <div class="row" style="margin-top:12px;flex-wrap:wrap;gap:8px">
+        <button class="btn a" data-act="copyMyCardLink">複製名片連結</button>
+        <a class="btn p" href="${share}" target="_blank" rel="noopener">用 LINE 傳給客戶</a>
+        <a class="btn" href="${L}" target="_blank" rel="noopener">在 LINE 打開</a>
+      </div>
+      <div class="hint" style="margin-top:10px">客戶在 LINE 點開連結後，按「分享名片給好友」或「傳送到此聊天室」，對方收到的是藍銀名片卡＋「打電話」「看完整名片」按鈕。</div></div>
+    <div class="card" style="margin-top:14px"><h2>名片文字</h2><div class="msgbox">${esc(myCardText())}</div><div class="row" style="margin-top:12px"><button class="btn a" data-act="copyCard">複製名片文字</button></div></div>
+    <div class="card" style="margin-top:14px"><h2>分享卡片預覽</h2><img src="${MY_ECARD.img}" alt="分享卡片" style="display:block;width:100%;max-width:380px;border-radius:14px"></div>
+  </div></div>`;
+}
 function vCard(){
+  if(isAdminUser())return vMyCard();
   const p=S.profile;
   const text=cardText();
   return `<div class="top"><div><h1>電子名片</h1><div class="sub">在「設定」填寫你的資料，這裡會自動產生名片，可複製文字轉傳給客戶</div></div></div>
@@ -1033,7 +1054,7 @@ function vCard(){
     <div class="card"><h2>名片文字</h2><div class="msgbox">${esc(text)}</div><div class="row" style="margin-top:12px"><button class="btn a" data-act="copyCard">複製名片文字</button><a class="btn" href="#setup">編輯資料</a></div></div>
   </div>`;
 }
-function cardText(){const p=S.profile;return [`【${p.agent||"你的名字"}｜${p.title||"保險顧問"}】`,p.company,p.slogan?"「"+p.slogan+"」":"",p.phone?"📱 "+p.phone:"",p.line?"💬 LINE："+p.line:"",p.email?"✉ "+p.email:"",p.area?"📍 服務區域："+p.area:"","保單健檢・理賠協助・家庭保障規劃，歡迎隨時聯絡我！"].filter(Boolean).join("\n")}
+function cardText(){if(isAdminUser())return myCardText();const p=S.profile;return [`【${p.agent||"你的名字"}｜${p.title||"保險顧問"}】`,p.company,p.slogan?"「"+p.slogan+"」":"",p.phone?"📱 "+p.phone:"",p.line?"💬 LINE："+p.line:"",p.email?"✉ "+p.email:"",p.area?"📍 服務區域："+p.area:"","保單健檢・理賠協助・家庭保障規劃，歡迎隨時聯絡我！"].filter(Boolean).join("\n")}
 function vSetup(){
   const p=S.profile;const f=(k,n,ph)=>`<label>${n}<input class="inp" name="${k}" value="${esc(p[k])}" placeholder="${esc(ph||"")}"></label>`;
   return `<div class="top"><div><h1>設定</h1><div class="sub">個人資料、保障建議目標、訊息範本、備份</div></div></div>
@@ -2007,6 +2028,7 @@ document.addEventListener("click",async e=>{
     case "claimSc":S.claimSc=el.dataset.k;render();break;
     case "copyClaim":copy(claimText());break;
     case "copyCard":copy(cardText());break;
+    case "copyMyCardLink":copy(MY_ECARD.liff);break;
     case "copyCov":copy(covSummary(M.c));break;
     case "gotoClaim":S.claimCid=M.c.id;closeModal();location.hash="claims";break;
     case "editCo":{const base=M.c.policies.find(x=>x.id===el.dataset.pid);if(!base)break;const no=(base.policyNo||"").trim();
