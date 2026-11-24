@@ -34,6 +34,8 @@ jobs:
           sed -i "s/versionCode 1$/versionCode ${{ github.run_number }}/" android/app/build.gradle
           sed -i "s/versionName \"1.0\"/versionName \"1.0.${{ github.run_number }}\"/" android/app/build.gradle
           grep -E "versionCode|versionName" android/app/build.gradle
+      - name: 寫入 App 版號（供 App 內檢查新版本）
+        run: echo "window.STARK_BUILD=${{ github.run_number }};" > www/app-version.js
       - name: 使用固定簽章（之後更新可直接覆蓋安裝）
         run: mkdir -p ~/.android && cp keystore/debug.keystore ~/.android/debug.keystore
       - name: 同步網頁檔並編譯
