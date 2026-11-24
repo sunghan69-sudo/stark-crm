@@ -1,28 +1,30 @@
-# Graph Report - stark-crm  (2026-11-21)
+# Graph Report - stark-crm  (2026-11-24)
 
 ## Corpus Check
-- 14 files · ~11,922 words
+- 16 files · ~12,312 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 4 file(s) not represented in the graph (top: (none) 2, .rules 1, .webmanifest 1)
 
 ## Summary
-- 170 nodes · 202 edges · 12 communities (8 shown, 4 thin omitted)
+- 174 nodes · 205 edges · 15 communities (9 shown, 6 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 3 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `62a980b8`
+- Built from commit: `7f5130f8`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- web
+- build.yml
 - positive/README.md
+- web
 - with
 - open
 - package.json
 - graph.yml
 - steps
+- app-update.js
 - market.mjs
 - 史塔克客戶管理系統 Stark Insurance CRM
 - music.py
@@ -46,11 +48,15 @@
 ## Import Cycles
 - None detected.
 
-## Communities (12 total, 4 thin omitted)
+## Communities (15 total, 6 thin omitted)
 
-### Community 0 - "web"
-Cohesion: 0.09
-Nodes (22): name, runs-on, cancel-in-progress, group, name, url, jobs, android (+14 more)
+### Community 0 - "build.yml"
+Cohesion: 0.14
+Nodes (13): name, runs-on, jobs, android, name, on, push, workflow_dispatch (+5 more)
+
+### Community 2 - "web"
+Cohesion: 0.22
+Nodes (9): cancel-in-progress, group, name, url, web, concurrency, environment, name (+1 more)
 
 ### Community 3 - "with"
 Cohesion: 0.13
@@ -81,15 +87,17 @@ Cohesion: 0.20
 Nodes (9): 功能, 史塔克客戶管理系統 Stark Insurance CRM, 專案結構, 從 claude.ai 版本搬資料, 注意, 第一步：建立 Firebase（雲端資料庫，免費，約 10 分鐘）, 第三步：在手機安裝 APK, 第二步：放上 GitHub（自動編譯 APK＋架設網頁版） (+1 more)
 
 ## Knowledge Gaps
-- **4 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `web` connect `web` to `with`?**
-  _High betweenness centrality (0.024) - this node is a cross-community bridge._
-- **Should `web` be split into smaller, more focused modules?**
-  _Cohesion score 0.08695652173913043 - nodes in this community are weakly interconnected._
+- **Why does `web` connect `web` to `build.yml`, `with`?**
+  _High betweenness centrality (0.023) - this node is a cross-community bridge._
+- **Should `build.yml` be split into smaller, more focused modules?**
+  _Cohesion score 0.14285714285714285 - nodes in this community are weakly interconnected._
+- **Why does `jobs` connect `build.yml` to `web`?**
+  _High betweenness centrality (0.021) - this node is a cross-community bridge._
 - **Should `with` be split into smaller, more focused modules?**
   _Cohesion score 0.13333333333333333 - nodes in this community are weakly interconnected._
 - **Should `package.json` be split into smaller, more focused modules?**
