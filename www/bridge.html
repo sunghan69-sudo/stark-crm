@@ -65,4 +65,38 @@ window.addEventListener("message",async e=>{if(e.origin!==ALLOW)return;const m=e
     if(m.type==="job"){const r=await makeDraft(m.job);stats.ok++;log("✓ "+m.job.code+" "+m.job.name+"（"+r.rules+" 條）");reply({ok:true,...r})}
   }catch(err){stats.fail++;log("✗ "+(m.job&&m.job.code)+" "+String(err&&err.message||err).slice(0,120));reply({ok:false,err:String(err&&err.message||err).slice(0,300)})}
   $st.textContent=`已登入管理員｜完成 ${stats.ok}・失敗 ${stats.fail}`});
+
+/* ===== Gemini 自動核對：拿條款原檔對草稿規則，通過就改成「已核對」 ===== */
+const VERIFY_PROMPT=`你是台灣人身保險條款審核員。附件是某商品的官方文件（條款為準，業務員須知／給付內容／DM 只能補充）。
+下面是另一位分析師整理的「給付計算規則」草稿 JSON。請逐條對照附件核對：
+- 規則的 key、mode、a、b、plan 是否和條款一致（倍數、金額、計畫別、保額單位 basis）。
+- 錯的改正；條款有、草稿漏掉的補上；條款沒有的刪掉。每一筆都要有 cite（條號或文件名＋原文摘錄 30 字內）。
+- 商品本身沒有可計算的給付（例如批註條款、投資標的批註條款），rules 給空陣列即可，verdict 仍可為 pass。
+- 附件看不出來、或附件不是這個商品的文件，verdict 填 unsure。
+只回傳一個 JSON 物件：{"verdict":"pass|fixed|unsure","basis":"保額的意義","rules":[同草稿格式],"notes":"一句話說明改了什麼或為何不確定"}
+key 只能用：${COVD.map(g=>g[1].map(i=>i[0]+"="+g[0]+"/"+i[1]).join("、")).join("、")}
+mode=mult：保額×a；range：保額×a~保額×b；fixed：固定金額 a 元；text：無法量化，寫在 text。
+
+草稿：
+`;
+async function drafts(){const s=await fs.collection("products").where("company","==","國泰人壽").get();
+  return s.docs.map(d=>({id:d.id,...d.data()})).filter(x=>(x.status||"草稿")==="草稿").map(x=>({id:x.id,code:(x.code||"").toUpperCase(),aliases:x.aliases||[],name:x.name||"",aiTried:!!(x.aiVerify&&x.aiVerify.verdict)}))}
+async function verify(m){const ref=fs.collection("products").doc(m.id);const snap=await ref.get();if(!snap.exists)throw new Error("找不到商品");const x=snap.data();
+  if((x.status||"草稿")!=="草稿")return {skip:true,verdict:"already"};
+  const draft=JSON.stringify({code:x.code,name:x.name,basis:x.basis||"",rules:x.rules||[]});
+  const blobs=m.files.map(f=>new Blob([f.buf],{type:f.mime}));
+  const r=await window.StarkAI.extract(cfg,["gemini-flash-latest","gemini-3.6-flash","gemini-3.5-flash","gemini-2.5-flash"],VERIFY_PROMPT+draft,blobs);
+  const t=r.text.trim().replace(/^```(json)?/,"").replace(/```$/,"");const d=JSON.parse(t.slice(t.indexOf("{"),t.lastIndexOf("}")+1));
+  const verdict=["pass","fixed","unsure"].includes(d.verdict)?d.verdict:"unsure";
+  const rules=(d.rules||[]).filter(r=>COVD_KEYS.includes(r.key)&&["mult","range","fixed","text"].includes(r.mode)).map(r=>({key:r.key,mode:r.mode,a:r.a==null?"":String(r.a),b:r.b==null?"":String(r.b),plan:r.plan||"",text:r.text||"",cite:r.cite||""}));
+  const av={by:"Gemini",at:Date.now(),verdict,notes:String(d.notes||"").slice(0,300),files:m.files.map(f=>f.label),before:(x.rules||[]).length,after:rules.length};
+  const up={aiVerify:av,updated:Date.now()};
+  if(verdict!=="unsure"){up.rules=rules;if(d.basis)up.basis=d.basis;up.status="已核對";up.updatedBy="Gemini 自動核對"}
+  await ref.update(up);return {verdict,rules:rules.length,before:av.before}}
+window.addEventListener("message",async e=>{if(e.origin!==ALLOW)return;const m=e.data||{};if(m.type!=="drafts"&&m.type!=="verify")return;
+  const reply=x=>e.source.postMessage(Object.assign({rid:m.rid},x),e.origin);if(!ready){reply({ok:false,err:"not-admin"});return}
+  try{if(m.type==="drafts"){reply({ok:true,list:await drafts()});return}
+    const r=await verify(m);stats.ok++;log((r.verdict==="unsure"?"？ ":"☑ ")+m.code+" "+m.name+"｜"+r.verdict+(r.rules!=null?"（"+r.before+"→"+r.rules+" 條）":""));reply({ok:true,...r})}
+  catch(err){stats.fail++;log("✗ 核對 "+m.code+" "+String(err&&err.message||err).slice(0,120));reply({ok:false,err:String(err&&err.message||err).slice(0,300)})}
+  $st.textContent=`已登入管理員｜完成 ${stats.ok}・失敗 ${stats.fail}`});
 </script></body></html>
