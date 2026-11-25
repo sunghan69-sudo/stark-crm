@@ -99,4 +99,15 @@ window.addEventListener("message",async e=>{if(e.origin!==ALLOW)return;const m=e
     const r=await verify(m);stats.ok++;log((r.verdict==="unsure"?"？ ":"☑ ")+m.code+" "+m.name+"｜"+r.verdict+(r.rules!=null?"（"+r.before+"→"+r.rules+" 條）":""));reply({ok:true,...r})}
   catch(err){stats.fail++;log("✗ 核對 "+m.code+" "+String(err&&err.message||err).slice(0,120));reply({ok:false,err:String(err&&err.message||err).slice(0,300)})}
   $st.textContent=`已登入管理員｜完成 ${stats.ok}・失敗 ${stats.fail}`});
+
+/* ===== 重複草稿整理：同代碼＋同生效日＋同名稱只留一筆，其餘改「停用」並註明 ===== */
+async function dedupe(){const s=await fs.collection("products").where("company","==","國泰人壽").get();const all=s.docs.map(d=>({id:d.id,...d.data()}));
+  const g={};all.filter(x=>(x.status||"草稿")!=="停用"&&x.code).forEach(x=>{const k=(x.code||"").toUpperCase()+"|"+(x.effective||"")+"|"+(x.name||"").replace(/\s|國泰人壽/g,"");(g[k]=g[k]||[]).push(x)});
+  let n=0;const batch=[];for(const k in g){const arr=g[k];if(arr.length<2)continue;
+    arr.sort((a,b)=>((b.status==="已核對")-(a.status==="已核對"))||((b.rules||[]).length-(a.rules||[]).length)||((b.updated||0)-(a.updated||0)));
+    const keep=arr[0];for(const x of arr.slice(1)){if(x.status==="已核對"&&keep.status==="已核對"&&JSON.stringify(x.rules)!==JSON.stringify(keep.rules))continue;
+      batch.push(fs.collection("products").doc(x.id).update({status:"停用",dupOf:keep.id,dupNote:"重複匯入，保留 "+keep.id,updated:Date.now(),updatedBy:"重複整理"}));n++}}
+  await Promise.all(batch);return n}
+window.addEventListener("message",async e=>{if(e.origin!==ALLOW)return;const m=e.data||{};if(m.type!=="dedupe")return;const reply=x=>e.source.postMessage(Object.assign({rid:m.rid},x),e.origin);
+  if(!ready){reply({ok:false,err:"not-admin"});return}try{const n=await dedupe();log("🧹 重複草稿改停用 "+n+" 筆");reply({ok:true,n})}catch(err){reply({ok:false,err:String(err&&err.message||err).slice(0,300)})}});
 </script></body></html>
