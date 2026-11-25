@@ -1,0 +1,68 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="robots" content="noindex">
+<title>史塔克 · 條款匯入橋接</title>
+<style>body{font:14px system-ui,sans-serif;margin:24px;color:#223}#log{white-space:pre-wrap;font-size:12px;color:#556;max-height:70vh;overflow:auto}</style>
+<script src="vendor/firebase-app-compat.js"></script>
+<script src="vendor/firebase-auth-compat.js"></script>
+<script src="vendor/firebase-firestore-compat.js"></script>
+<script src="vendor/stark-ai.js"></script>
+<script src="firebase-config.js"></script>
+</head><body>
+<h3>史塔克商品庫 · 國泰條款匯入中</h3>
+<div id="st">準備中…</div><div id="log"></div>
+<script>
+/* 只接受國泰商品專區分頁送來的檔案；只有管理員登入時才能寫入商品庫（由 Firestore 規則把關） */
+const ALLOW="https://w3.cathaylife.com.tw";
+const COVD=[
+ ["身故給付",[["d_gen","一般身故"],["d_acc","意外身故(含一般身故)"],["d_can","癌症身故(含一般身故)"]]],
+ ["生存給付",[["s_ann","年金"],["s_mat","滿期金"]]],
+ ["意外醫療",[["a_hosp","住院日額保險金"],["a_disc","出院療養金"],["a_visit","回診金"],["a_icu","每日加護病房"],["a_frac","意外骨折"]]],
+ ["疾病醫療",[["i_hosp","住院日額保險金"],["i_disc","出院療養金"],["i_icu","每日加護病房"],["i_opd","住院前後門診"],["i_er","急診保險金"]]],
+ ["手術醫療",[["o_proc","特定處置保險金"],["o_dev","特定醫材補助保險金"],["o_opd","門診手術"],["o_in","住院手術"],["o_major","重大手術"]]],
+ ["實支實付",[["r_room","每日住院限額"],["r_misc","醫療及雜費限額"],["r_misc10","醫療及雜費限額(需扣自負額10萬)"],["r_misc20","醫療及雜費限額(需扣自負額20萬)"],["r_opd","門診手術限額"],["r_surg","手術保險金限額(最高倍數)"],["r_inj","傷害醫療限額"]]],
+ ["重疾給付",[["c_ci","重大疾病給付"],["c_sp","特定傷病"],["c_cisp","重大疾病暨特定傷病保險金"],["c_major","重大傷病"]]],
+ ["癌症醫療",[["k_first","初次罹癌"],["k_early","初期或輕度癌症保險金"],["k_severe","重度癌症保險金"],["k_surg","癌症住院手術"],["k_hosp","住院日額保險金"],["k_disc","出院療養金"],["k_home","在家療養金"],["k_opd","門診保險金"]]],
+ ["長照給付",[["l_once","長期照顧復健保險金(一次)"],["l_year","長期照顧保險金(分期-年)"]]],
+ ["失能給付",[["x_year","失能生活扶助保險金(分期-年)"],["x_month","失能生活扶助保險金(分期-月)"],["x_acc","意外失能生活扶助保險金(分期-月)"]]]
+];
+const COVD_KEYS=COVD.flatMap(g=>g[1].map(i=>i[0]));
+const TERMS_PROMPT=`你是台灣人身保險條款分析師。附件是一份保險商品條款（或商品說明書／DM）。請讀出各項給付，整理成計算規則，只回傳一個 JSON 物件：
+{"company":"保險公司","code":"商品代碼（例如 BG_、TZ-11，條款上沒有就空字串）","name":"商品名稱（不含代碼）","effective":"核准或備查日期 YYYY-MM-DD（民國年加1911）","approval":"文號","aliases":["其他常見寫法"],"basis":"保額的意義，例如『住院日額保險金額（元/日）』或『保險金額（萬元）』",
+"rules":[{"key":"項目key","plan":"計畫別（沒有就空字串）","mode":"mult|range|fixed|text","a":倍數或金額,"b":範圍上限倍數,"text":"文字說明","cite":"第幾條：原文摘錄（30字內）"}]}
+規則：
+1. key 只能用：${COVD.map(g=>g[1].map(i=>i[0]+"="+g[0]+"/"+i[1]).join("、")).join("、")}。條款沒有的項目不要列。
+2. mode=mult：給付金額 = 保單保額 × a（例如住院日額保險金 a=1；加護病房 a=2；出院療養 a=0.5；壽險身故 a=1）。
+   mode=range：給付金額 = 保單保額 × a ~ 保單保額 × b（例如手術依等級 a=最低倍數，b=最高倍數）。
+   mode=fixed：固定金額（元）放 a。無法量化（例如依實際費用、按比例）用 mode=text 並在 text 寫說明。
+3. 若不同計畫別給付不同，每個計畫各列一筆並填 plan（例如 "M10"）。
+4. 每一筆都要有 cite（條號＋原文摘錄），沒有把握就不要列。`;
+const EXTRA=`
+
+補充：附件可能同時包含「條款」「業務員須知」「給付內容」「商品說明／DM」。以條款為準；條款沒寫清楚的給付金額、計畫別、保額單位，可以用業務員須知、給付內容表補上，cite 註明來自哪份文件（例如「業務員須知：…」）。`;
+const cfg=window.STARK_FIREBASE_CONFIG;const app=firebase.apps.length?firebase.app():firebase.initializeApp(cfg);
+const auth=firebase.auth(),fs=firebase.firestore();
+const $st=document.getElementById("st"),$log=document.getElementById("log");
+const log=s=>{$log.textContent=s+"\n"+$log.textContent.slice(0,20000)};
+let ready=false,stats={ok:0,fail:0};
+auth.onAuthStateChanged(u=>{ready=!!(u&&u.email==="sunghan69@gmail.com");$st.textContent=ready?"已登入管理員，等待國泰分頁送檔…":"請先在史塔克客戶管理系統用管理員帳號登入";if(window.opener)window.opener.postMessage({type:"bridge-ready",ready},ALLOW)});
+const uid=()=>"pd"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+async function existing(){const s=await fs.collection("products").where("company","==","國泰人壽").get();return s.docs.map(d=>{const x=d.data();return {code:(x.code||"").toUpperCase(),name:x.name||"",aliases:x.aliases||[],status:x.status||""}})}
+async function extract(blobs){const models=["gemini-flash-latest","gemini-3.6-flash","gemini-3.5-flash","gemini-2.5-flash"];
+  const r=await window.StarkAI.extract(cfg,models,TERMS_PROMPT+EXTRA,blobs);const t=r.text.trim().replace(/^```(json)?/,"").replace(/```$/,"");return JSON.parse(t.slice(t.indexOf("{"),t.lastIndexOf("}")+1))}
+async function makeDraft(j){
+  const blobs=j.files.map(f=>new Blob([f.buf],{type:f.mime}));
+  const d=await extract(blobs);
+  const rules=(d.rules||[]).filter(r=>COVD_KEYS.includes(r.key)&&["mult","range","fixed","text"].includes(r.mode)).map(r=>({key:r.key,mode:r.mode,a:r.a==null?"":String(r.a),b:r.b==null?"":String(r.b),plan:r.plan||"",text:r.text||"",cite:r.cite||""}));
+  const code=(j.code||d.code||"").toUpperCase();
+  const pr={id:uid(),type:"product",company:"國泰人壽",code,name:j.name||d.name||"",effective:/^\d{4}-\d{2}-\d{2}$/.test(d.effective||"")?d.effective:"",approval:d.approval||"",
+    aliases:[...new Set([...(d.aliases||[]),...(j.codes||[]).filter(c=>c&&c.toUpperCase()!==code)])].filter(Boolean),basis:d.basis||"",status:"草稿",rules,
+    source:"國泰商品專區（"+j.files.map(f=>f.label).join("、")+"）"+(j.disc?"；停售 "+j.disc:""),importNote:"國泰條款批次匯入（含業務員須知）",
+    updated:Date.now(),updatedBy:"sunghan69@gmail.com"};
+  await fs.collection("products").doc(pr.id).set(pr);return {id:pr.id,rules:rules.length}}
+window.addEventListener("message",async e=>{if(e.origin!==ALLOW)return;const m=e.data||{};const reply=x=>e.source.postMessage(Object.assign({rid:m.rid},x),e.origin);
+  if(!ready){reply({ok:false,err:"not-admin"});return}
+  try{
+    if(m.type==="codes"){reply({ok:true,list:await existing()});return}
+    if(m.type==="job"){const r=await makeDraft(m.job);stats.ok++;log("✓ "+m.job.code+" "+m.job.name+"（"+r.rules+" 條）");reply({ok:true,...r})}
+  }catch(err){stats.fail++;log("✗ "+(m.job&&m.job.code)+" "+String(err&&err.message||err).slice(0,120));reply({ok:false,err:String(err&&err.message||err).slice(0,300)})}
+  $st.textContent=`已登入管理員｜完成 ${stats.ok}・失敗 ${stats.fail}`});
+</script></body></html>
