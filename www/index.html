@@ -1109,7 +1109,7 @@ function mFam(){
       <a class="fn" data-act="switchClient" data-id="${x.id}">${esc(x.name)}</a>
       <div class="fr"><span>${avatar(x)} ${esc(relName(x))}</span><b>${age(x.birthday)!==""?age(x.birthday)+"歲":""}</b></div>
       <div class="fs">保單 ${policyGroups((x.policies||[]).filter(active)).length} 張・年繳 ${fmt(annualSum(x))} 元</div>
-      <div class="fb"><button class="btn sm ghost" data-act="famMerge" data-id="${x.id}">🔗 合併重複</button><button class="btn sm ghost" data-act="famMove" data-id="${x.id}">🔄 重新歸戶</button></div></div>`).join("")}
+      <div class="fb"><button class="btn sm ghost" data-act="famMerge" data-id="${x.id}">🔗 合併重複</button><button class="btn sm ghost" data-act="famMove" data-id="${x.id}">🔄 重新歸戶</button><button class="btn sm ghost" style="color:var(--bad)" data-act="famDel" data-id="${x.id}">🗑 刪除</button></div></div>`).join("")}
     <div class="famadd"><button class="btn" data-act="famJoinOther">＋ 加入現有客戶</button><button class="btn" data-act="famNew">＋ 新增客戶</button></div></div>`;
 }
 function famDialog(title,inner,onOk){const box=document.createElement("div");box.innerHTML=`<div class="mask"><div class="modal sm"><div class="mh"><b>${title}</b><button class="btn ghost x" data-x>✕</button></div><form class="mb" id="famForm">${inner}<div class="row" style="margin-top:14px;justify-content:flex-end"><button type="button" class="btn" data-x>取消</button><button class="btn p" type="submit">確定</button></div></form></div></div>`;
@@ -1993,7 +1993,7 @@ function openText(title,text,editable,onOk){
 }
 function confirmBox(msg,onYes){
   const r=document.getElementById("modalRoot");const box=document.createElement("div");
-  box.innerHTML=`<div class="mask"><div class="modal sm"><div class="mb" style="padding-top:24px">${esc(msg)}</div><div class="mf"><button class="btn" data-n>取消</button><button class="btn p" style="background:var(--bad);border-color:var(--bad)" data-y>確定刪除</button></div></div></div>`;
+  box.innerHTML=`<div class="mask"><div class="modal sm"><div class="mb" style="padding-top:24px;white-space:pre-line">${esc(msg)}</div><div class="mf"><button class="btn" data-n>取消</button><button class="btn p" style="background:var(--bad);border-color:var(--bad)" data-y>確定刪除</button></div></div></div>`;
   r.appendChild(box);box.querySelector("[data-n]").onclick=()=>box.remove();box.querySelector("[data-y]").onclick=()=>{box.remove();onYes()};
 }
 
@@ -2139,6 +2139,9 @@ document.addEventListener("click",async e=>{
           const sim=nameSim(dup.name,keep.name);
           if(!confirm(`確定把「${dup.name}」併入「${keep.name}」，合併後姓名為「${nm}」？${sim<0.5?"\n（兩個名字差很多，請再確認是同一人）":""}\n\n併入保單 ${pl.added.length} 項：\n${ls(pl.added)||"（無）"}${pl.skipped.length?`\n\n視為重複略過 ${pl.skipped.length} 項：\n${ls(pl.skipped)}`:""}${pl.conflicts.length?`\n\n資料不同、保留「${keep.name}」的：${pl.conflicts.join("、")}（會記在服務紀錄）`:""}\n\n合併後「${dup.name}」這筆會刪除。`))return;
           if(!(await mergeClients(pl)))return;if(M&&M.c&&(M.c.id===dup.id||M.c.id===keep.id))M.c=clone(cById(keep.id));drawModal();toast(`已合併為「${nm}」，併入 ${pl.added.length} 項保單`)});break}
+    case "famDel":{const x=liveC(cById(el.dataset.id)||M.c);if(!x)break;const n=(x.policies||[]).length;
+      confirmBox("確定刪除客戶「"+x.name+"」？"+(n?"\n⚠️ 這位客戶底下還有 "+n+" 項保單，會一起刪除。":"")+"\n此動作無法復原。",async()=>{const me=M&&M.c&&M.c.id===x.id;const fam=x.family;await delClient(x.id);
+        if(me){const o=famMembers(fam).find(y=>y.id!==x.id);if(o)M={c:clone(cById(o.id)),tab:"fam",editPol:null,showId:false};else{closeModal();toast("已刪除");return}}drawModal();toast("已刪除「"+x.name+"」")});break}
     case "famMove":{const x=liveC(cById(el.dataset.id)||M.c);const fams=[...new Set(S.clients.map(y=>y.family).filter(Boolean))];
       famDialog("重新歸戶｜"+esc(x.name),`<label class="sub">歸到哪個家庭<select class="inp" name="fam">${fams.map(f=>`<option ${f===x.family?"selected":""}>${esc(f)}</option>`).join("")}<option value="__new">＋ 以 ${esc(x.name)} 為戶長另立新家庭</option><option value="__none">移出家庭（獨立）</option></select></label>${relSelect(x.relation||"其他")}`,
         async d=>{if(d.fam==="__none"){x.family="";x.relation=""}else if(d.fam==="__new"){x.family=x.name+"家";x.relation="戶長"}else{x.family=d.fam;x.relation=d.relation;await setHeadIfNeeded(d.fam,x)}await saveMember(x);drawModal();toast(x.name+" 已更新歸戶")});break}
