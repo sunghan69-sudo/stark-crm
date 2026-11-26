@@ -1319,7 +1319,7 @@ function vProdStats(){const {rows,T}=prodStats();const last=(()=>{try{return JSO
    <div class="hint" style="margin-top:8px">點公司可篩選下方清單。條款數不含停用；綠色＝已核對、黃色＝草稿。${last?`上次 Gemini 整理：${esc(agoTxt(last.at))}，合併重複 ${last.dup||0} 筆、修正公司名 ${last.co||0} 筆${last.ai!=null?`（其中 Gemini 判定 ${last.ai} 筆）`:""}。`:""}</div></div>`}
 /* Gemini 整理資料庫：①公司名稱統一 ②同代碼＋同版本日＋同名稱的重複條款合併 ③請 Gemini 找出名稱寫法不同的重複（程式再驗證代碼／版本日一致才合併）。重複的只改「停用」並記錄保留哪一筆，可隨時改回。 */
 async function tidyProducts(){if(S.tidyBusy)return;const step=t=>{S.tidyBusy=t;render()};const res={co:0,dup:0,ai:0,at:Date.now()};
-  const touch=x=>{x.updated=Date.now();x.updatedBy="Gemini 整理資料庫";writeProd(x.id,clone(x))};
+  const pend=[];const touch=x=>{x.updated=Date.now();x.updatedBy="Gemini 整理資料庫";pend.push(writeProd(x.id,clone(x)))};
   const best=arr=>arr.slice().sort((a,b)=>((b.status==="已核對")-(a.status==="已核對"))||((b.rules||[]).length-(a.rules||[]).length)||((b.updated||0)-(a.updated||0)))[0];
   const retire=(keep,arr,why)=>{let n=0;arr.forEach(x=>{if(x===keep||x.status==="停用")return;if(x.status==="已核對"&&keep.status==="已核對"&&JSON.stringify(x.rules)!==JSON.stringify(keep.rules))return;
     keep.aliases=[...new Set([...(keep.aliases||[]),x.name,...(x.aliases||[])].filter(a=>a&&a!==keep.name))];x.status="停用";x.dupOf=keep.id;x.dupNote=why+"，保留 "+(keep.code||"")+" "+keep.name;touch(x);n++});if(n)touch(keep);return n};
@@ -1339,6 +1339,7 @@ async function tidyProducts(){if(S.tidyBusy)return;const step=t=>{S.tidyBusy=t;r
           (d&&d.groups||[]).forEach(gr=>{const arr=[...new Set((gr||[]).map(Number))].map(j=>chunk[j]).filter(x=>x&&x.status!=="停用");if(arr.length<2)return;
             const codes=new Set(arr.map(x=>String(x.code||"").toUpperCase()).filter(Boolean)),effs=new Set(arr.map(x=>x.effective).filter(Boolean));if(codes.size>1||effs.size>1)return;
             const n=retire(best(arr),arr,"Gemini 判定重複");res.dup+=n;res.ai+=n})}}}
+    step(`④ 儲存到雲端（${pend.length} 筆）…`);await Promise.all(pend);
     lsSet("stark-tidy-last",JSON.stringify(res));PV++;_um=null;_mc=null;
     toast(`整理完成：合併重複 ${res.dup} 筆、修正公司名 ${res.co} 筆`)}
   catch(e){toast("整理失敗："+(e&&e.message||e))}finally{S.tidyBusy="";render()}}
