@@ -588,6 +588,11 @@ async function migrateProducts(){if(migrating||!S.sharedOK||!S.isAdmin||!(S.ownP
     if(n)toast("已把 "+n+" 個商品搬到共用商品庫")}catch(e){console.warn("migrate",e)}finally{migrating=false}}
 function saveProduct(x){PV++;_um=null;x.type="product";x.updated=Date.now();x.updatedBy=S.email||"";const i=S.products.findIndex(y=>y.id===x.id);if(i>=0)S.products[i]=x;else S.products.push(x);render();return writeProd(x.id,clone(x))}
 function delProduct(id){PV++;_um=null;S.products=S.products.filter(x=>x.id!==id);render();return writeProd(id,null)}
+function isHolderItem(it){return /要保人/.test(String(it.target||""))||/要保人.*豁免|豁免.*要保人/.test(String(it.product||""))}
+function holderToMain(flat){const m={};flat.forEach(it=>{const k=String(it.policyNo||"").trim();if(k&&!isHolderItem(it)&&!it.rider&&it.insured&&!m[k])m[k]=it.insured});flat.forEach(it=>{const k=String(it.policyNo||"").trim();if(k&&isHolderItem(it)&&m[k]){it.insured=m[k];if(!/要保人/.test(String(it.target||"")))it.target="要保人"}});return flat}
+let holderFixed=false;async function migrateHolderRiders(){if(holderFixed)return;holderFixed=true;try{const owner={};S.clients.forEach(c=>(c.policies||[]).forEach(p=>{const k=String(p.policyNo||"").trim();if(k&&!isHolderItem(p)&&!p.rider&&!owner[k])owner[k]=c}));const touched=new Set();let n=0;
+  S.clients.slice().forEach(c=>{(c.policies||[]).slice().forEach(p=>{const k=String(p.policyNo||"").trim();const o=owner[k];if(!k||!o||o.id===c.id||!isHolderItem(p))return;c.policies=c.policies.filter(x=>x!==p);if(!/要保人/.test(String(p.target||"")))p.target="要保人";o.policies=(o.policies||[]).concat([p]);touched.add(c);touched.add(o);n++})});
+  for(const c of touched)await saveClient(c);if(n)toast("已把 "+n+" 項要保人豁免附約歸回主約那張保單")}catch(e){console.warn("holderfix",e);holderFixed=false}}
 function saveProfile(){render();return writeDoc("profile",clone(S.profile))}
 
 function parseCfg(t){
@@ -682,7 +687,7 @@ async function initStore(){
     unsub=col().onSnapshot({includeMetadataChanges:true},snap=>{
       const cl=[],pr=[];let prof=null,ig=null,rt=null,tq=null,iv=null,ix=null;
       snap.docs.forEach(d=>{const v=d.data();if(!v)return;if(d.id==="profile")prof=v;else if(d.id==="ignoredMissing")ig=v;else if(d.id==="remindTerms")rt=v;else if(d.id==="termReqKeys")tq=v;else if(d.id==="invReport")iv=v;else if(d.id==="invExclude")ix=v;else if(v.type==="client")cl.push(Object.assign({},v,{id:d.id}));else if(v.type==="product")pr.push(Object.assign({},v,{id:d.id}))});
-      S.clients=cl;S.ownProducts=pr;S.ignoredMissing=(ig&&ig.keys)||[];S.remindTerms=(rt&&rt.keys)||[];S.termReqKeys=(tq&&tq.keys)||[];S.invReport=iv;S.invExclude=(ix&&ix.keys)||[];mergeProducts();migrateProducts();watchNeeds();S.profile=Object.assign(clone(DEF_PROFILE),prof||{});
+      S.clients=cl;S.ownProducts=pr;S.ignoredMissing=(ig&&ig.keys)||[];S.remindTerms=(rt&&rt.keys)||[];S.termReqKeys=(tq&&tq.keys)||[];S.invReport=iv;S.invExclude=(ix&&ix.keys)||[];mergeProducts();migrateProducts();setTimeout(migrateHolderRiders,1500);watchNeeds();S.profile=Object.assign(clone(DEF_PROFILE),prof||{});
       if(!snap.metadata.fromCache){clearTimeout(timer);setSync()}else if(!S.loaded)setSync("離線資料（連上網路後自動同步）");
       S.loaded=true;reportNeeds();if(!M)render();if(!S.tourChecked&&!snap.metadata.fromCache){S.tourChecked=true;maybeAutoTour(FB.auth.currentUser)}
     },err=>{clearTimeout(timer);setSync("⚠ 同步錯誤："+(err.code||""));S.loaded=true;render()});
@@ -1704,7 +1709,7 @@ function openScan(){
       try{const blobs=[];const direct=!!(window.StarkAI&&typeof getCfg==="function"&&getCfg());const textOnly=files.every(x=>x.pdf);for(const x of files){if(textOnly&&!direct)break;if(x.pdf){if(direct)blobs.push(x.f.type==="application/pdf"?x.f:new Blob([x.f],{type:"application/pdf"}));else for(const b of await pdfToImages(x.f))blobs.push(b)}else blobs.push(await shrink(x.f))}
         data=await tryTextParse(files);if(!data){if(textOnly&&!direct&&!blobs.length)for(const x of files)for(const b of await pdfToImages(x.f))blobs.push(b);data=await aiExtract(blobs)}syncMode=data.parser==="text";const moved=enforceOneMain(data);data._moved=moved;
         flat=[];(data.policies||[]).forEach(pp=>(pp.items||[]).forEach(it=>{flat.push(Object.assign({},it,{_i:flat.length,id:"tmp"+flat.length,policyNo:pp.policyNo||"",holder:pp.holder||"",payMethod:pp.payMethod||"",company:pp.company||data.company||"",freq:({"年":12,"年繳":12,"半年":6,"半年繳":6,"季":3,"季繳":3,"月":1,"月繳":1,"躉繳":0,"躉":0})[it.freq]??12,status:"有效"}))}));
-        flat.forEach((it,i)=>{const pp=(data.policies||[]).find(q=>(q.items||[]).length&&q.policyNo===it.policyNo)||{};it.insured=String(it.insured||pp.insured||data.insured||"").trim()});
+        flat.forEach((it,i)=>{const pp=(data.policies||[]).find(q=>(q.items||[]).length&&q.policyNo===it.policyNo)||{};it.insured=String(it.insured||pp.insured||data.insured||"").trim()});holderToMain(flat);
         const covs=Array.isArray(data.coverageByInsured)?data.coverageByInsured.slice():[];if(data.coverage&&typeof data.coverage==="object"&&Object.keys(data.coverage).length)covs.push({insured:data.insured||"",coverage:data.coverage});
         const gm={};groups=[];const addG=n=>{if(!gm[n]){gm[n]={name:n,items:[],cov:null};groups.push(gm[n])}return gm[n]};
         flat.forEach(it=>addG(it.insured).items.push(it));covs.forEach(cv=>{if(cv&&cv.coverage&&Object.keys(cv.coverage).length){const g=addG(String(cv.insured||"").trim());g.cov=Object.assign(g.cov||{},cv.coverage)}});
@@ -1763,7 +1768,7 @@ async function bulkImportOne(file,stat){
   if(!/保\s*單\s*號\s*碼/.test(txt)||!/投保日期/.test(txt))throw new Error("不是保單明細格式");
   const data=parsePolicyReportPages(pages);if(!data.policies.length)throw new Error("讀不到保單");enforceOneMain(data);
   const flat=[];data.policies.forEach(pp=>(pp.items||[]).forEach(it=>flat.push(Object.assign({},it,{policyNo:pp.policyNo||"",holder:pp.holder||"",payMethod:pp.payMethod||"",company:pp.company||data.company||"",insured:String(it.insured||pp.insured||data.insured||"").trim(),freq:({"年":12,"年繳":12,"半年":6,"半年繳":6,"季":3,"季繳":3,"月":1,"月繳":1,"躉繳":0,"躉":0})[it.freq]??12}))));
-  const groups={};flat.forEach(it=>{(groups[it.insured]=groups[it.insured]||{items:[],cov:null}).items.push(it)});
+  holderToMain(flat);const groups={};flat.forEach(it=>{(groups[it.insured]=groups[it.insured]||{items:[],cov:null}).items.push(it)});
   const covs=Array.isArray(data.coverageByInsured)?data.coverageByInsured.slice():[];if(data.coverage&&Object.keys(data.coverage).length)covs.push({insured:data.insured||"",coverage:data.coverage});
   covs.forEach(cv=>{if(cv&&cv.coverage&&Object.keys(cv.coverage).length){const n=String(cv.insured||"").trim();const g=groups[n]=groups[n]||{items:[],cov:null};g.cov=Object.assign(g.cov||{},cv.coverage)}});
   const names=Object.keys(groups).filter(Boolean);let head=bulkHeadName(file.name);if(!head)head=names[0]||"";if(!head)throw new Error("沒有姓名");
