@@ -1109,13 +1109,35 @@ function mFam(){
       <a class="fn" data-act="switchClient" data-id="${x.id}">${esc(x.name)}</a>
       <div class="fr"><span>${avatar(x)} ${esc(relName(x))}</span><b>${age(x.birthday)!==""?age(x.birthday)+"歲":""}</b></div>
       <div class="fs">保單 ${policyGroups((x.policies||[]).filter(active)).length} 張・年繳 ${fmt(annualSum(x))} 元</div>
-      <div class="fb"><button class="btn sm ghost" data-act="famMove" data-id="${x.id}">🔄 重新歸戶</button></div></div>`).join("")}
+      <div class="fb"><button class="btn sm ghost" data-act="famMerge" data-id="${x.id}">🔗 合併重複</button><button class="btn sm ghost" data-act="famMove" data-id="${x.id}">🔄 重新歸戶</button></div></div>`).join("")}
     <div class="famadd"><button class="btn" data-act="famJoinOther">＋ 加入現有客戶</button><button class="btn" data-act="famNew">＋ 新增客戶</button></div></div>`;
 }
 function famDialog(title,inner,onOk){const box=document.createElement("div");box.innerHTML=`<div class="mask"><div class="modal sm"><div class="mh"><b>${title}</b><button class="btn ghost x" data-x>✕</button></div><form class="mb" id="famForm">${inner}<div class="row" style="margin-top:14px;justify-content:flex-end"><button type="button" class="btn" data-x>取消</button><button class="btn p" type="submit">確定</button></div></form></div></div>`;
   document.getElementById("modalRoot").appendChild(box);box.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>box.remove());
   box.querySelector("#famForm").onsubmit=async ev=>{ev.preventDefault();const d=Object.fromEntries(new FormData(ev.target).entries());box.remove();await onOk(d)};return box}
 function relSelect(v){return `<label class="sub">在家中身分<select class="inp" name="relation">${REL_OPTS.filter(Boolean).map(o=>`<option ${o===(v==="本人/戶長"?"戶長":v)?"selected":""}>${o}</option>`).join("")}</select></label>`}
+/* 合併重複客戶：keep 保留，dup 的保單／紀錄／標籤併入後刪除（同保單號＋商品＋生效日的視為同一筆不重複加） */
+function nameSim(a,b){a=String(a||"");b=String(b||"");if(!a||!b)return 0;let n=0;for(let i=0;i<Math.min(a.length,b.length);i++)if(a[i]===b[i])n++;return n/Math.max(a.length,b.length)}
+function mergePlan(keepId,dupId,keepName){const k=clone(liveC(cById(keepId))),d=clone(liveC(cById(dupId)));if(!k||!d||k.id===d.id)return null;
+  const oldNames=[d.name,k.name].filter(Boolean);const nm=keepName||k.name;const fixN=p=>["insured","holder","beneficiary"].forEach(f=>{if(oldNames.includes(p[f]))p[f]=nm});
+  /* 只有「保單號碼有填」且 商品＋生效日＋被保人＋保額＋保費 全部一樣才視為同一筆；其餘一律保留，寧可多一筆也不丟資料 */
+  const pk=p=>{const no=String(p.policyNo||"").trim();if(!no)return null;return [no,stripCode(p.product||"").replace(/\s/g,""),p.start||"",p.insured||"",p.sumText||"",JSON.stringify(p.cov||{}),String(p.premium??""),p.rider?1:0].join("|")};
+  (k.policies||[]).forEach(fixN);const seen=new Set((k.policies||[]).map(pk).filter(Boolean));const added=[],skipped=[];
+  (d.policies||[]).forEach(p=>{p=clone(p);if(p.id&&(k.policies||[]).some(q=>q.id===p.id))p.id=uid();fixN(p);const key=pk(p);if(key&&seen.has(key)){skipped.push(p);return}if(key)seen.add(key);(k.policies=k.policies||[]).push(p);added.push(p)});
+  const conflicts=[];Object.keys(d).forEach(f=>{if(["id","name","policies","logs","services","tags","family","relation","updated","type","isNew"].includes(f))return;const v=k[f],w=d[f];
+    if(v==null||v===""||(Array.isArray(v)&&!v.length))k[f]=w;else if(w!=null&&w!==""&&typeof w!=="object"&&String(w)!==String(v))conflicts.push(f+"："+w)});
+  k.tags=[...new Set([...(k.tags||[]),...(d.tags||[])])];k.logs=[...(k.logs||[]),...(d.logs||[])];k.services=[...(k.services||[]),...(d.services||[])];
+  if(!k.family&&d.family){k.family=d.family;k.relation=d.relation}else if(k.family&&d.family===k.family&&isHead(d)&&!isHead(k))k.relation=d.relation;
+  k.name=nm;delete k.isNew;const _t=new Date(),_d=_t.getFullYear()+"-"+String(_t.getMonth()+1).padStart(2,"0")+"-"+String(_t.getDate()).padStart(2,"0");
+  k.logs.push({id:"l"+uid(),date:_d,type:"其他",content:"合併重複客戶「"+d.name+"」（併入 "+added.length+" 項保單"+(skipped.length?"，略過重複 "+skipped.length+" 項":"")+"）"+(conflicts.length?"；被合併那筆的不同資料："+conflicts.join("、"):"")});
+  const idK=String(liveC(cById(keepId)).idNo||"").trim().toUpperCase(),idD=String(d.idNo||"").trim().toUpperCase();const bK=liveC(cById(keepId)).birthday||"",bD=d.birthday||"";
+  const warn=[];if(idK&&idD&&idK!==idD)warn.push("身分證字號不同");if(bK&&bD&&bK!==bD)warn.push("生日不同");
+  return {k,d,added,skipped,conflicts,warn}}
+async function mergeClients(plan){const {k,d}=plan;k.type="client";k.updated=Date.now();fixPua(k);
+  const ex=(S.invExclude||[]).some(x=>x.endsWith("|"+d.id))?[...new Set(S.invExclude.map(x=>x.endsWith("|"+d.id)?x.slice(0,-d.id.length)+k.id:x))]:null;
+  if(S.mode==="cloud"){const b=FB.fs.batch();b.set(col().doc(k.id),clone(k));b.delete(col().doc(d.id));if(ex)b.set(col().doc("invExclude"),{type:"meta",keys:ex});
+    try{await b.commit()}catch(e){toast("合併失敗，資料未變動："+(e&&e.message||e));return false}}
+  const i=S.clients.findIndex(x=>x.id===k.id);if(i>=0)S.clients[i]=k;S.clients=S.clients.filter(x=>x.id!==d.id);if(ex)S.invExclude=ex;if(S.mode!=="cloud")lsSave();render();return true}
 async function saveMember(x){if(M&&M.c&&x.id===M.c.id){await commitM()}else{await saveClient(clone(x))}}
 async function setHeadIfNeeded(fam,newHead){if(!isHead(newHead))return;for(const o of famMembers(fam)){if(o.id!==newHead.id&&isHead(o)){o.relation="其他";await saveMember(o)}}}
 function mInfo(){
@@ -2109,6 +2131,14 @@ document.addEventListener("click",async e=>{
     case "famJoinOther":{const fam=M.c.family;const cand=S.clients.filter(x=>x.family!==fam&&x.id!==M.c.id).sort((a,b)=>(a.name||"").localeCompare(b.name||"","zh-Hant"));if(!cand.length){toast("沒有可加入的客戶");break}
       famDialog("加入現有客戶到「"+esc(fam)+"」",`<label class="sub">客戶<select class="inp" name="cid">${cand.map(x=>`<option value="${x.id}">${esc(x.name)}${x.family?"（目前在 "+esc(x.family)+"）":""}</option>`).join("")}</select></label>${relSelect("子女")}`,async d=>{const x=cById(d.cid);if(!x)return;const y=clone(x);y.family=fam;y.relation=d.relation;await setHeadIfNeeded(fam,y);await saveClient(y);drawModal();toast(y.name+" 已加入 "+fam)});break}
     case "famNew":{const fam=M.c.family;M={c:{id:uid(),name:"",stage:"已成交",tags:[],policies:[],logs:[],services:[],isNew:true,family:fam,relation:"子女",address:M.c.address||""},tab:"info",editPol:null,showId:false};drawModal();break}
+    case "famMerge":{const x=liveC(cById(el.dataset.id)||M.c);const cand=S.clients.filter(y=>y.id!==x.id).map(liveC).sort((a,b)=>((b.family===x.family)-(a.family===x.family))||(nameSim(b.name,x.name)-nameSim(a.name,x.name)));if(!cand.length){toast("沒有其他客戶可合併");break}
+      famDialog("合併重複客戶｜"+esc(x.name),`<div class="hint" style="margin-bottom:8px">同一個人建了兩筆時使用：兩邊的保單、服務紀錄、標籤會併成一筆，重複的保單只留一份，另一筆會刪除。</div><label class="sub">跟誰是同一人<select class="inp" name="other">${cand.map(y=>`<option value="${y.id}">${esc(y.name)}・保單 ${(y.policies||[]).length} 項${y.family?"（"+esc(y.family)+"）":""}</option>`).join("")}</select></label><label class="sub">合併後的正確姓名<input class="inp" name="nm" value="${esc(x.name)}" placeholder="輸入正確寫法"></label>`,
+        async d=>{const o=cById(d.other);if(!o)return;const nm=(d.nm||"").trim()||x.name;const keep=(o.policies||[]).length>(x.policies||[]).length?o:x;const dup=keep===x?o:x;
+          const pl=mergePlan(keep.id,dup.id,nm);if(!pl)return;const ls=a=>a.map(p=>"・"+stripCode(p.product||"(未命名)")+(p.policyNo?"（"+p.policyNo+"）":"")).join("\n");
+          if(pl.warn.length&&!confirm(`⚠️ 注意：兩筆的${pl.warn.join("、")}，可能不是同一個人！\n確定還要合併嗎？`))return;
+          const sim=nameSim(dup.name,keep.name);
+          if(!confirm(`確定把「${dup.name}」併入「${keep.name}」，合併後姓名為「${nm}」？${sim<0.5?"\n（兩個名字差很多，請再確認是同一人）":""}\n\n併入保單 ${pl.added.length} 項：\n${ls(pl.added)||"（無）"}${pl.skipped.length?`\n\n視為重複略過 ${pl.skipped.length} 項：\n${ls(pl.skipped)}`:""}${pl.conflicts.length?`\n\n資料不同、保留「${keep.name}」的：${pl.conflicts.join("、")}（會記在服務紀錄）`:""}\n\n合併後「${dup.name}」這筆會刪除。`))return;
+          if(!(await mergeClients(pl)))return;if(M&&M.c&&(M.c.id===dup.id||M.c.id===keep.id))M.c=clone(cById(keep.id));drawModal();toast(`已合併為「${nm}」，併入 ${pl.added.length} 項保單`)});break}
     case "famMove":{const x=liveC(cById(el.dataset.id)||M.c);const fams=[...new Set(S.clients.map(y=>y.family).filter(Boolean))];
       famDialog("重新歸戶｜"+esc(x.name),`<label class="sub">歸到哪個家庭<select class="inp" name="fam">${fams.map(f=>`<option ${f===x.family?"selected":""}>${esc(f)}</option>`).join("")}<option value="__new">＋ 以 ${esc(x.name)} 為戶長另立新家庭</option><option value="__none">移出家庭（獨立）</option></select></label>${relSelect(x.relation||"其他")}`,
         async d=>{if(d.fam==="__none"){x.family="";x.relation=""}else if(d.fam==="__new"){x.family=x.name+"家";x.relation="戶長"}else{x.family=d.fam;x.relation=d.relation;await setHeadIfNeeded(d.fam,x)}await saveMember(x);drawModal();toast(x.name+" 已更新歸戶")});break}
