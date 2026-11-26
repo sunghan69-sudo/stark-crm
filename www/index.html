@@ -1293,11 +1293,60 @@ function missingProducts(){const m={};S.clients.forEach(c=>(c.policies||[]).forE
   const ig=S.ignoredMissing||[];return Object.values(m).filter(x=>!ig.includes(x.co+"|"+(x.code||x.name))).sort((a,b)=>b.clients.size-a.clients.size)}
 function finfoSearchUrl(co,name,code){return "https://www.google.com/search?q="+encodeURIComponent(["site:finfo.tw",co==="未填公司"?"":co,name,code].filter(Boolean).join(" "))}
 function termsSearchUrl(co,name,code){return "https://www.google.com/search?q="+encodeURIComponent([co==="未填公司"?"":co,name,code,"條款"].filter(Boolean).join(" "))}
+/* ===== 條款統計：各家保險公司條款數量＋更新狀況（商品庫頁上方） ===== */
+function prodStats(){const by={},now=Date.now(),D7=7*864e5,today=new Date();today.setHours(0,0,0,0);
+  const g=k=>by[k]=by[k]||{co:k,all:0,act:0,ok:0,aiOk:0,draft:0,unsure:0,off:0,dup:0,ruled:0,miss:0,last:0,lastBy:"",n7:0,nToday:0};
+  S.products.forEach(x=>{const r=g(coKey(x.company)||"其他");const st=x.status||"草稿";r.all++;
+    if(st==="停用"){r.off++;if(x.dupOf)r.dup++}else{r.act++;if((x.rules||[]).some(q=>q.mode))r.ruled++;
+      if(st==="已核對"){r.ok++;if(x.aiVerify&&x.aiVerify.verdict&&x.aiVerify.verdict!=="unsure")r.aiOk++}else{r.draft++;if(x.aiVerify&&x.aiVerify.verdict==="unsure")r.unsure++}}
+    const u=+x.updated||0;if(u>r.last){r.last=u;r.lastBy=x.updatedBy||""}if(u>now-D7)r.n7++;if(u>=today.getTime())r.nToday++});
+  allMissing().forEach(x=>{if(!x.draft)g(x.co||"其他").miss++});
+  const rows=Object.values(by).sort((a,b)=>b.act-a.act||b.miss-a.miss);
+  const T=rows.reduce((t,r)=>{["all","act","ok","aiOk","draft","unsure","off","dup","ruled","miss","n7","nToday"].forEach(k=>t[k]+=r[k]);if(r.last>t.last){t.last=r.last;t.lastBy=r.lastBy}return t},{co:"合計",all:0,act:0,ok:0,aiOk:0,draft:0,unsure:0,off:0,dup:0,ruled:0,miss:0,n7:0,nToday:0,last:0,lastBy:""});
+  return {rows,T}}
+function agoTxt(t){if(!t)return "—";const s=(Date.now()-t)/1e3;if(s<90)return "剛剛";if(s<3600)return Math.round(s/60)+" 分鐘前";if(s<86400)return Math.round(s/3600)+" 小時前";if(s<86400*30)return Math.round(s/86400)+" 天前";return new Date(t).toLocaleDateString("zh-TW")}
+function vProdStats(){const {rows,T}=prodStats();const last=(()=>{try{return JSON.parse(lsGet("stark-tidy-last")||"null")}catch(e){return null}})();
+  const pct=r=>r.act?Math.round(r.ok/r.act*100):0;
+  const bar=r=>{const p=pct(r),pd=r.act?Math.round(r.draft/r.act*100):0;return `<div title="已核對 ${p}%・草稿 ${pd}%" style="display:flex;align-items:center;gap:6px;min-width:120px"><div style="flex:1;height:8px;background:#eef1f5;border-radius:5px;overflow:hidden;display:flex"><span style="width:${p}%;background:var(--ok)"></span><span style="width:${pd}%;background:#f0c55a"></span></div><b style="font-size:12px;width:34px;text-align:right">${p}%</b></div>`};
+  const tr=(r,tot)=>`<tr${tot?` style="font-weight:700;background:#f6f8fb"`:` class="click" data-act="prodCo" data-c="${esc(r.co)}"`}><td>${tot?"合計":coName(r.co)}</td><td><b>${r.act}</b></td><td style="color:#21794f">${r.ok}${r.aiOk?`<span class="sub">（Gemini ${r.aiOk}）</span>`:""}</td><td style="color:#b7791f">${r.draft}${r.unsure?`<span class="sub" style="color:#c0392b">（不確定 ${r.unsure}）</span>`:""}</td><td class="hide-m">${r.off}${r.dup?`<span class="sub">（重複 ${r.dup}）</span>`:""}</td><td>${r.miss?`<span class="tag r">${r.miss}</span>`:"0"}</td><td>${bar(r)}</td><td class="sub" style="white-space:nowrap">${agoTxt(r.last)}${r.lastBy?`<div style="font-size:11px">${esc(String(r.lastBy).replace(/@.*/,""))}</div>`:""}</td><td class="hide-m">${r.n7?`<span class="tag g">＋${r.n7}</span>`:"—"}</td></tr>`;
+  const k=(l,v,s,c)=>`<div class="card kpi" style="padding:12px 14px"><div class="l">${l}</div><div class="v" style="font-size:22px${c?";color:"+c:""}">${v}</div>${s?`<div class="s">${s}</div>`:""}</div>`;
+  return `<div class="card" style="margin-bottom:14px"><div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><h2 style="margin:0">📊 條款統計與更新狀況</h2>
+   ${S.isAdmin&&S.mode==="cloud"?`<button class="btn a" data-act="prodTidy" ${S.tidyBusy?"disabled":""}>${S.tidyBusy?"🤖 整理中…":"🤖 Gemini 整理資料庫"}</button>`:""}</div>
+   ${S.tidyBusy?`<div class="banner" style="margin-top:10px">🤖 ${esc(S.tidyBusy)}</div>`:""}
+   <div class="grid k4" style="margin:12px 0;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">${k("有效條款",T.act,`${rows.length} 家公司`)}${k("已核對",T.ok,`完成率 ${pct(T)}%`,"var(--ok)")}${k("草稿待核對",T.draft,T.unsure?`Gemini 不確定 ${T.unsure}`:"",T.draft?"#b7791f":"")}${k("待補（未建立）",T.miss,"客戶保單有、庫裡沒有",T.miss?"var(--bad)":"")}${k("最近更新",agoTxt(T.last),`今天 ${T.nToday} 筆・7 天 ${T.n7} 筆`)}</div>
+   <div style="overflow-x:auto"><table class="tbl"><thead><tr><th>保險公司</th><th>條款數</th><th>已核對</th><th>草稿</th><th class="hide-m">停用</th><th>待補</th><th>核對進度</th><th>最近更新</th><th class="hide-m">7 天異動</th></tr></thead><tbody>${rows.map(r=>tr(r)).join("")}${rows.length>1?tr(T,1):""}</tbody></table></div>
+   <div class="hint" style="margin-top:8px">點公司可篩選下方清單。條款數不含停用；綠色＝已核對、黃色＝草稿。${last?`上次 Gemini 整理：${esc(agoTxt(last.at))}，合併重複 ${last.dup||0} 筆、修正公司名 ${last.co||0} 筆${last.ai!=null?`（其中 Gemini 判定 ${last.ai} 筆）`:""}。`:""}</div></div>`}
+/* Gemini 整理資料庫：①公司名稱統一 ②同代碼＋同版本日＋同名稱的重複條款合併 ③請 Gemini 找出名稱寫法不同的重複（程式再驗證代碼／版本日一致才合併）。重複的只改「停用」並記錄保留哪一筆，可隨時改回。 */
+async function tidyProducts(){if(S.tidyBusy)return;const step=t=>{S.tidyBusy=t;render()};const res={co:0,dup:0,ai:0,at:Date.now()};
+  const touch=x=>{x.updated=Date.now();x.updatedBy="Gemini 整理資料庫";writeProd(x.id,clone(x))};
+  const best=arr=>arr.slice().sort((a,b)=>((b.status==="已核對")-(a.status==="已核對"))||((b.rules||[]).length-(a.rules||[]).length)||((b.updated||0)-(a.updated||0)))[0];
+  const retire=(keep,arr,why)=>{let n=0;arr.forEach(x=>{if(x===keep||x.status==="停用")return;if(x.status==="已核對"&&keep.status==="已核對"&&JSON.stringify(x.rules)!==JSON.stringify(keep.rules))return;
+    keep.aliases=[...new Set([...(keep.aliases||[]),x.name,...(x.aliases||[])].filter(a=>a&&a!==keep.name))];x.status="停用";x.dupOf=keep.id;x.dupNote=why+"，保留 "+(keep.code||"")+" "+keep.name;touch(x);n++});if(n)touch(keep);return n};
+  try{step("① 統一保險公司名稱…");S.products.forEach(x=>{const k=coKey(x.company);if(k&&k!=="其他"&&k!==x.company){x.company=k;touch(x);res.co++}});
+    step("② 合併完全重複的條款…");const norm=s=>String(s||"").replace(/[\s()（）「」]|國泰人壽|全球人壽|安聯人壽|新光人壽|富邦人壽|南山人壽|台灣人壽|凱基人壽|保險公司/g,"");
+    const g={};S.products.filter(x=>x.status!=="停用"&&(x.code||x.name)).forEach(x=>{const key=coKey(x.company)+"|"+String(x.code||"").toUpperCase()+"|"+(x.effective||"")+"|"+norm(x.name);(g[key]=g[key]||[]).push(x)});
+    Object.values(g).forEach(arr=>{if(arr.length>1)res.dup+=retire(best(arr),arr,"重複條款")});
+    if(window.StarkAI&&getCfg()){const cos=[...new Set(S.products.filter(x=>x.status!=="停用").map(x=>coKey(x.company)||"其他"))];
+      for(const co of cos){const act=S.products.filter(x=>x.status!=="停用"&&(coKey(x.company)||"其他")===co);if(act.length<2)continue;
+        for(let i=0;i<act.length;i+=250){const chunk=act.slice(i,i+250);step(`③ Gemini 檢查 ${co} 名稱不同的重複條款（${Math.min(i+250,act.length)}/${act.length}）…`);
+          const list=chunk.map((x,j)=>({i:j,code:x.code||"",name:x.name||"",eff:x.effective||"",st:x.status||"草稿",n:(x.rules||[]).length}));
+          let d;try{d=await aiExtract([],`你是保險商品資料庫整理員。下面是「${co}」商品庫的條款清單 JSON（i=序號、code=商品代碼、name=名稱、eff=版本日期、st=狀態、n=規則數）。
+找出「其實是同一個商品同一個版本」卻重複建立的條目（例如名稱多了公司名、全形半形括號不同、簡稱與全名、代碼一筆有一筆空白）。
+不同商品、或同名但版本日期不同的，不算重複。沒把握就不要列。只回傳 JSON：{"groups":[[i,i,...],...]}
+
+`+JSON.stringify(list))}catch(e){console.warn("tidy ai",e);toast(scanErr(e));break}
+          (d&&d.groups||[]).forEach(gr=>{const arr=[...new Set((gr||[]).map(Number))].map(j=>chunk[j]).filter(x=>x&&x.status!=="停用");if(arr.length<2)return;
+            const codes=new Set(arr.map(x=>String(x.code||"").toUpperCase()).filter(Boolean)),effs=new Set(arr.map(x=>x.effective).filter(Boolean));if(codes.size>1||effs.size>1)return;
+            const n=retire(best(arr),arr,"Gemini 判定重複");res.dup+=n;res.ai+=n})}}}
+    lsSet("stark-tidy-last",JSON.stringify(res));PV++;_um=null;_mc=null;
+    toast(`整理完成：合併重複 ${res.dup} 筆、修正公司名 ${res.co} 筆`)}
+  catch(e){toast("整理失敗："+(e&&e.message||e))}finally{S.tidyBusy="";render()}}
 function vProducts(){
   const co=S.prodCo;const missAll=allMissing().filter(x=>!co||x.co===co);const mf=S.missF||"";const nDraft=missAll.filter(x=>x.draft).length,nNew=missAll.length-nDraft;const RT=new Set(S.remindTerms||[]);const rk=x=>x.co+"|"+(x.code||x.name);const nRemind=missAll.filter(x=>RT.has(rk(x))).length;const nReq=missAll.filter(x=>x.reqBy&&x.reqBy.length).length;const miss=missAll.filter(x=>mf==="remind"?RT.has(rk(x)):mf==="req"?(x.reqBy&&x.reqBy.length):(!mf||(mf==="new"?!x.draft:!!x.draft)));const list=S.products.filter(x=>!co||coKey(x.company)===co).sort((a,b)=>(a.company||"").localeCompare(b.company||"")||(a.code||"").localeCompare(b.code||""));
   const mkey=x=>x.co+"|"+(x.code||x.name);const sel=(S.missSel||[]).filter(k=>miss.some(x=>mkey(x)===k));
   return `<div class="top"><div><h1>商品明細庫</h1><div class="sub">每個商品設定一次給付規則，所有持有該商品的客戶自動算出保障明細</div></div><div class="row">${STARTER_PRODUCTS.some(x=>!S.products.some(y=>y.id===x.id))?`<button class="btn" data-act="prodStarter">📥 載入預建商品草稿（${STARTER_PRODUCTS.filter(x=>!S.products.some(y=>y.id===x.id)).length}）</button>`:""}<button class="btn a" data-act="prodImport">📄 上傳條款建立商品</button><button class="btn" data-act="prodNew">＋ 手動新增</button><button class="btn" data-act="rematch">🔄 重新比對保單</button></div></div>
   <div class="chips"><button class="chip ${!co?"on":""}" data-act="prodCo" data-c="">全部</button>${cosList().map(c=>`<button class="chip ${co===c?"on":""}" data-act="prodCo" data-c="${c}">${c}</button>`).join("")}</div>
+  ${vProdStats()}
   <div class="card" style="margin-bottom:14px"><h2>⏳ 待補商品 <span class="sub">（客戶保單裡有、但商品庫還沒有已核對規則的）</span></h2>
    <div class="chips" style="margin:-4px 0 10px"><button class="chip ${!mf?"on":""}" data-act="missF" data-f="">全部 ${missAll.length}</button><button class="chip ${mf==="draft"?"on":""}" data-act="missF" data-f="draft">草稿待核對 ${nDraft}</button><button class="chip ${mf==="new"?"on":""}" data-act="missF" data-f="new">未建立 ${nNew}</button>${nReq?`<button class="chip ${mf==="req"?"on":""}" data-act="missF" data-f="req" style="border-color:#e8590c;background:${mf==="req"?"":"#fff0e6"};font-weight:600">🔔 業務請求建條款 ${nReq}</button>`:""}${nRemind?`<button class="chip ${mf==="remind"?"on":""}" data-act="missF" data-f="remind" style="border-color:#f0b429;font-weight:600">🔔 待更新條款 ${nRemind}</button>`:""}</div>
    ${miss.length?`<div class="row" style="gap:8px;margin:0 0 8px;flex-wrap:wrap;align-items:center"><button class="btn sm ghost" data-act="missSelAll">☑ 全選</button><button class="btn sm ghost" data-act="missSelNone">清除</button><span class="sub">已選 ${sel.length} / ${miss.length}</span><button class="btn sm" data-act="missDelSel"${sel.length?` style="color:#c0392b;border-color:#e3b7b0"`:` disabled style="opacity:.5"`}>🗑 刪除所選${sel.length?`（${sel.length}）`:""}</button></div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th style="width:36px"></th><th>公司</th><th>代碼</th><th>商品名稱</th><th>客戶數</th><th>狀態</th><th></th></tr></thead><tbody>
@@ -2059,6 +2108,7 @@ document.addEventListener("click",async e=>{
     case "missF":{S.missF=el.dataset.f||"";render();break}
     case "prodStarter":{const add=STARTER_PRODUCTS.filter(x=>!S.products.some(y=>y.id===x.id));for(const x of add)await saveProduct(clone(x));toast("已載入 "+add.length+" 個商品草稿，請逐一核對後啟用");break}
     case "prodCo":S.prodCo=el.dataset.c;PSHOW=80;render();break;
+    case "prodTidy":if(confirm("讓 Gemini 整理商品庫？\n① 統一保險公司名稱\n② 重複的條款合併（多的改「停用」，可改回）\n③ Gemini 找名稱寫法不同的重複"))tidyProducts();break;
     case "prodNew":openProductEditor({company:S.prodCo||"國泰人壽",status:"草稿",rules:[]},true);break;
     case "prodEdit":{const x=S.products.find(y=>y.id===el.dataset.id);if(x)openProductEditor(x,false);break}
     case "prodDel":{const x=S.products.find(y=>y.id===el.dataset.id);if(x)confirmBox("確定刪除商品庫裡的「"+coName(x.company)+" "+(x.code?x.code+" ":"")+(x.name||"")+"」？\n已套用這個商品的客戶會改回估算值。",async()=>{await delProduct(x.id);toast("已刪除商品")});break}
