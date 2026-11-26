@@ -1,17 +1,17 @@
-# Graph Report - stark-crm  (2026-11-24)
+# Graph Report - stark-crm  (2026-11-26)
 
 ## Corpus Check
-- 16 files · ~12,312 words
+- 16 files · ~12,906 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 4 file(s) not represented in the graph (top: (none) 2, .rules 1, .webmanifest 1)
 
 ## Summary
-- 174 nodes · 205 edges · 15 communities (9 shown, 6 thin omitted)
+- 175 nodes · 206 edges · 15 communities (9 shown, 6 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 3 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `7f5130f8`
+- Built from commit: `a3f8ebce`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -79,7 +79,7 @@ Cohesion: 0.11
 Nodes (18): VIDEOS, jobs, market, runs-on, steps, name, on, schedule (+10 more)
 
 ### Community 9 - "market.mjs"
-Cohesion: 0.15
+Cohesion: 0.14
 Nodes (11): CAT, catOf(), cnyes(), IDX, news(), out, TW, UA (+3 more)
 
 ### Community 12 - "史塔克客戶管理系統 Stark Insurance CRM"
