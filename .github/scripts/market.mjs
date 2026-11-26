@@ -12,18 +12,23 @@ async function yahoo(sym){
   }
   return null;
 }
-async function bot(){ // 台灣銀行牌告匯率 CSV
-  try{const r=await fetch("https://rate.bot.com.tw/xrt/flcsv/0/day",{headers:UA});const t=await r.text();
-    const line=t.split(/\r?\n/).find(l=>l.startsWith("USD"));if(!line)return null;const a=line.split(",").map(s=>s.trim());
-    // 幣別,匯率,現金,即期,遠期10天...,匯率,現金,即期...  (本行買入 … 本行賣出)
-    return {cashBuy:+a[2],spotBuy:+a[3],cashSell:+a[12],spotSell:+a[13]};
-  }catch(e){return null}
+async function bot(){ // 台灣銀行牌告匯率 CSV → {USD:{…},EUR:{…},JPY:{…},KRW:{…}}
+  try{const r=await fetch("https://rate.bot.com.tw/xrt/flcsv/0/day",{headers:UA});const t=await r.text();const o={};
+    // 幣別,本行買入,現金,即期,遠期10天…180天,本行賣出,現金,即期,…
+    const n=v=>{const x=+v;return x>0?x:null};
+    t.split(/\r?\n/).forEach(l=>{const a=l.split(",").map(s=>s.trim());if(/^[A-Z]{3}$/.test(a[0]))o[a[0]]={cashBuy:n(a[2]),spotBuy:n(a[3]),cashSell:n(a[12]),spotSell:n(a[13])}});
+    return o;
+  }catch(e){return {}}
 }
 const TW=[["2330.TW","台積電"],["2317.TW","鴻海"],["2454.TW","聯發科"],["2308.TW","台達電"],["2382.TW","廣達"]];
 const US=[["NVDA","輝達"],["AAPL","蘋果"],["MSFT","微軟"],["GOOGL","Alphabet"],["AMZN","亞馬遜"]];
 const IDX=[["^TWII","台股加權指數"],["^TWOII","櫃買指數"],["^DJI","道瓊工業"],["^IXIC","那斯達克"],["^GSPC","S&P 500"],["^SOX","費城半導體"]];
 const out={updated:new Date().toISOString(),fx:{},index:[],tw:[],us:[]};
-const fx=await yahoo("TWD=X");out.fx={market:fx?fx.price:null,chg:fx?fx.chg:null,date:fx?fx.date:null,bot:await bot()};
+const BOT=await bot();
+const fx=await yahoo("TWD=X");out.fx={market:fx?fx.price:null,chg:fx?fx.chg:null,date:fx?fx.date:null,bot:BOT.USD||null,others:[]};
+// 其他幣別：歐元、日幣、韓元（市場價取 Yahoo 交叉匯率，小數保留較多位）
+async function yahooFx(sym){for(const host of ["query1","query2"]){try{const r=await fetch(`https://${host}.finance.yahoo.com/v8/finance/chart/${sym}?range=10d&interval=1d`,{headers:UA});if(!r.ok)continue;const x=(await r.json()).chart.result[0];const c=x.indicators.quote[0].close.filter(v=>v!=null);if(c.length<2)continue;const a=c[c.length-1],b=c[c.length-2];return {price:a,chg:a-b}}catch(e){}}return null}
+for(const [cur,name,dp] of [["EUR","歐元",3],["JPY","日幣",4],["KRW","韓元",5]]){const q=await yahooFx(cur+"TWD=X");out.fx.others.push({cur,name,dp,market:q?+q.price.toFixed(dp):null,chg:q?+q.chg.toFixed(dp):null,bot:BOT[cur]||null})}
 for(const [s,n] of IDX){const q=await yahoo(s);if(q)out.index.push({...q,name:n})}
 for(const [s,n] of TW){const q=await yahoo(s);if(q)out.tw.push({...q,name:n,code:s.replace(".TW","")})}
 for(const [s,n] of US){const q=await yahoo(s);if(q)out.us.push({...q,name:n,code:s})}

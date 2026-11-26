@@ -857,8 +857,9 @@ function vMarket(){loadMarket();loadTwRt();loadUsRt();twrtTick();const m=MKT;let
   const rows=(arr,showCode)=>`<table class="mtb">${arr.map(q=>`<tr><td><b>${esc(q.name)}</b>${showCode?`<small>${esc(q.code||"")}</small>`:""}</td><td class="mp">${mktPrice(q.price)}</td><td class="mc">${mktChg(q)}</td></tr>`).join("")}</table>`;
   return `<details class="card mkt fold" ${open?"open":""} ontoggle="try{localStorage.setItem('stark-fold-mkt',this.open?'1':'0')}catch(e){}">${head}
   <div class="mkg">
-    <div class="mkc"><div class="mkt1">💵 今日美金匯率</div><div class="mkbig">${mktPrice(fx.market)}<small> TWD</small></div><div>${mktChg({chg:fx.chg})}<span class="sub"> 市場價</span></div>
-      ${b.spotBuy?`<table class="mtb fxt"><tr><th></th><th>買入</th><th>賣出</th></tr><tr><td>台銀即期</td><td>${b.spotBuy}</td><td>${b.spotSell}</td></tr><tr><td>台銀現金</td><td>${b.cashBuy}</td><td>${b.cashSell}</td></tr></table>`:""}</div>
+    <div class="mkc"><div class="mkt1">💵 今日匯率（美金）</div><div class="mkbig">${mktPrice(fx.market)}<small> TWD</small></div><div>${mktChg({chg:fx.chg})}<span class="sub"> 市場價</span></div>
+      ${b.spotBuy?`<table class="mtb fxt"><tr><th></th><th>買入</th><th>賣出</th></tr><tr><td>台銀即期</td><td>${b.spotBuy}</td><td>${b.spotSell}</td></tr><tr><td>台銀現金</td><td>${b.cashBuy}</td><td>${b.cashSell}</td></tr></table>`:""}
+      ${(fx.others||[]).length?`<table class="mtb fxt" style="margin-top:8px"><tr><th>幣別</th><th>市場價</th><th>台銀賣出</th></tr>${fx.others.map(o=>{const bb=o.bot||{};const sell=bb.spotSell||bb.cashSell;const f=v=>v==null?"—":(+v).toLocaleString("en-US",{maximumFractionDigits:o.dp||4});return `<tr><td><b>${esc(o.name)}</b> <small>${esc(o.cur)}</small></td><td>${f(o.market)}${o.chg?` <span style="font-size:11px;color:${o.chg>0?"#d0493f":"#2f9e6b"}">${o.chg>0?"▲":"▼"}</span>`:""}</td><td>${sell?f(sell)+(bb.spotSell?"":`<small>現金</small>`):"—"}</td></tr>`}).join("")}</table>`:""}</div>
     ${twrtHtml()}
     ${usrtHtml()||`<div class="mkc"><div class="mkt1">📊 美股昨日收盤</div>${rows((m.index||[]).filter(q=>!/^\^TW/.test(q.sym||"")))}</div><div class="mkc"><div class="mkt1">🇺🇸 美股科技前五大</div>${rows(m.us||[],true)}</div>`}
     ${posHtml()}
