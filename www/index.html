@@ -427,7 +427,7 @@ details.fold{align-self:start}details.fold>summary{list-style:none;cursor:pointe
 .dgap .x{grid-column:auto!important;text-align:right!important;white-space:nowrap}
 .aact .btn.line,.aact a.btn{text-decoration:none}.dtb .dq{justify-content:center}
 @media (max-width:800px){.dgap{grid-template-columns:104px 1fr 44px!important;gap:10px}}
-.kpis{grid-template-columns:repeat(3,1fr)}
+.kpis{grid-template-columns:repeat(3,1fr)}.kpi small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vone .vcard{display:grid;grid-template-columns:minmax(0,1fr);gap:0}.vmore{margin-top:10px}.vmore>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:1px solid var(--line);border-radius:10px;font-size:13.5px;color:var(--pri);font-weight:600;user-select:none}.vmore>summary::-webkit-details-marker{display:none}.vmore>summary .fchev{transition:transform .2s;color:var(--muted)}.vmore[open]>summary .fchev{transform:rotate(180deg)}
 @media (max-width:800px){.kpis{grid-template-columns:repeat(3,1fr)}.kpi{padding:10px}.kpi>b{font-size:19px}.kpi small{font-size:11px}}
 .dch .sub a,.top .sub a{color:var(--pri2);font-weight:600;text-decoration:none}
@@ -954,7 +954,7 @@ function vDash(){
   const mx=Math.max(1,...gaps.map(g=>g.v));
   /* 總覽只放「人」的關懷：生日、增齡、近期行程；繳費／期滿／追蹤放在「保單提醒」頁，不重複 */
   const dd=d=>Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate())-t0)/864e5);
-  const _td=ds(t);const sched=[];cs.forEach(c=>(c.logs||[]).forEach(l=>{if(l&&l.time&&l.date&&l.date>=_td)sched.push({c,date:l.date,time:l.time,type:l.type||"",content:l.content||"",d:pd(l.date)||t0})}));
+  const _td=ds(t);const sched=[];cs.forEach(c=>(c.logs||[]).forEach(l=>{if(l&&l.time&&l.date&&l.date>=_td&&l.date<=ds(lim))sched.push({c,date:l.date,time:l.time,type:l.type||"",content:l.content||"",d:pd(l.date)||t0})}));
   sched.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   /* 增齡、生日（同名同生日視為同一人） */
   const seen={up:new Set(),bd:new Set()};const up=[],bd=[];
@@ -979,8 +979,8 @@ function vDash(){
     <div class="aact"><button class="btn sm" data-act="dCopy" data-id="${esc(o.c.id)}" data-key="${esc(key)}" data-msg="${esc(o.msg)}">複製訊息</button><a class="btn sm line" data-act="dLine" data-id="${esc(o.c.id)}" data-key="${esc(key)}" href="${lineUrl(o.msg)}" target="_blank" rel="noopener">LINE</a><button class="ack ${sent?"on":""}" data-act="dSent" data-id="${esc(o.c.id)}" data-key="${esc(key)}" title="${sent?"取消已處理":"標記已處理"}" aria-label="${sent?"取消已處理":"標記已處理"}">✓</button></div></div>`};
   const crow=s=>{const n=dd(s.d);return `<div class="arow ${n<=1?"hot":""}"><div class="awhen"><b>${n===0?"今天":n===1?"明天":esc(s.date.slice(5).replace("-","/"))}</b><span>${esc(s.time)}</span></div>
     <div class="abody" data-act="openClient" data-id="${esc(s.c.id)}" data-tab="log"><div class="at">${esc(s.c.name)}${s.type?`<small>${esc(s.type)}</small>`:""}</div><div class="ad">${esc(s.content)||"（未填內容）"}</div></div>
-    <div class="aact"><a class="btn sm" href="${gcalUrl(s.c.name+"｜"+s.content,s.date,s.time,"方式："+s.type)}" target="_blank" rel="noopener">📅 加到 Google 日曆</a></div></div>`};
-  const emptyTxt={up:"近 30 天沒有客戶保險年齡增齡",bd:"近 30 天沒有客戶生日",cal:"還沒有排定的行程（在客戶的服務紀錄填上日期＋時間就會出現在這裡）"}[cur[0]];
+    <div class="aact"><a class="btn sm" href="${esc(gcalUrl(s.c.name+"｜"+s.content,s.date,s.time,"方式："+s.type))}" target="_blank" rel="noopener">📅 加到 Google 日曆</a></div></div>`};
+  const emptyTxt={up:"近 30 天沒有客戶保險年齡增齡",bd:"近 30 天沒有客戶生日",cal:"近 30 天沒有排定的行程（在客戶的服務紀錄填上日期＋時間就會出現在這裡）"}[cur[0]];
   const h=new Date().getHours();const greet=h<11?"早安":h<18?"午安":"晚安";
   const kpi=(lab,val,sub,attrs,cls)=>`<a class="kpi ${cls||""}" ${attrs}><span>${lab}</span><b>${val}</b><small>${sub}</small></a>`;
   const premTxt=prem>=1e8?(prem/1e8).toFixed(2)+"<em>億</em>":prem>=1e4?Math.round(prem/1e4).toLocaleString()+"<em>萬</em>":fmt(prem);
@@ -1063,15 +1063,11 @@ function vRem(){
   const hide=remHideSet();
   const rs=reminders(S.remDays).filter(r=>r.kind!=="birthday"&&!hide.has(r.kind));const groups={};rs.forEach(r=>(groups[r.kind]=groups[r.kind]||[]).push(r));
   const kinds=Object.keys(KIND).filter(k=>k!=="birthday"&&!hide.has(k));
-  const showCal=false;/* 行程、生日已整合到總覽「客戶關懷」 */
-  const _td=ds(today());const sched=[];S.clients.forEach(c=>(c.logs||[]).forEach(l=>{if(l&&l.time&&l.date&&l.date>=_td)sched.push({date:l.date,time:l.time,name:c.name,cid:c.id,type:l.type,content:l.content})}));
-  sched.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));const upcoming=sched.slice(0,50);
+  /* 生日、增齡、行程已整合到總覽「客戶關懷」，這頁只放保單相關提醒 */
   const hideItems=[["payment","繳費"],["paidup","期滿"],["follow","追蹤"]];
   const openAttr=(()=>{try{return localStorage.getItem("stark-rhide-open")==="1"?"open":""}catch(e){return""}})();
   return `<div class="top"><div><h1>保單提醒</h1><div class="sub">繳費提醒・繳費期滿・追蹤約訪，一鍵複製 LINE 訊息（生日、增齡、行程在 <a href="#dashboard">總覽</a>）</div></div>
    <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">${[7,30,60,90].map(d=>`<button class="chip ${S.remDays===d?"on":""}" data-act="remDays" data-d="${d}">${d} 天內</button>`).join("")}${S.isAdmin?`<details class="rhide" ${openAttr} ontoggle="try{localStorage.setItem('stark-rhide-open',this.open?'1':'0')}catch(e){}"><summary class="btn sm">⚙ 顯示設定 ▾</summary><div class="rhidebox"><div class="sub" style="font-size:12px;margin-bottom:2px">勾選＝顯示，取消＝隱藏</div>${hideItems.map(([k,n])=>`<label><input type="checkbox" data-act="remHideTog" data-k="${k}" ${hide.has(k)?"":"checked"}>${n}</label>`).join("")}</div></details>`:""}</div></div>
-   ${showCal?`<div class="card"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px"><h2 style="margin:0">📅 我的近期行程</h2><span class="sub">來自各客戶服務紀錄裡填了「時間」的約訪</span></div>
-    ${upcoming.length?upcoming.map(s=>`<div class="li"><div class="when"><b style="font-size:14px">${esc(s.date.slice(5).replace("-","/"))}</b><span>${esc(s.time)}</span></div><div class="body"><div><b class="click" data-act="openClient" data-id="${esc(s.cid)}" data-tab="log" style="cursor:pointer;color:var(--pri)">${esc(s.name)}</b>${s.type?` <span class="tag">${esc(s.type)}</span>`:""} ${esc(s.content)}</div></div><a class="btn sm ghost" href="${gcalUrl(s.name+"｜"+s.content,s.date,s.time,"方式："+s.type)}" target="_blank" rel="noopener" title="加到 Google 日曆">📅</a></div>`).join(""):`<div class="empty" style="padding:18px">近期沒有排定的約訪<br><span class="sub">到客戶的「服務紀錄」填上日期＋時間，就會列在這裡</span></div>`}</div>`:""}
    <div class="grid k4" style="margin-bottom:14px;grid-template-columns:repeat(${Math.max(1,kinds.length)},minmax(0,1fr))">${kinds.length?kinds.map(k=>`<div class="card kpi"><div class="l"><span class="dot" style="background:${KIND[k].c}"></span>${KIND[k].n}</div><div class="v">${(groups[k]||[]).length}</div>${(groups[k]||[]).length?`<button class="btn sm" style="margin-top:6px" data-act="bulkKind" data-k="${k}">全部複製</button>`:""}</div>`).join(""):`<div class="sub" style="padding:8px">提醒類別已全部隱藏，點右上「⚙ 顯示設定」可開回。</div>`}</div>
    <div class="card">${rs.length?rs.map(remItem).join(""):`<div class="empty"><b>這段期間沒有提醒</b>${hide.size?"（部分類別已隱藏）":"客戶填上生日、保單生效日與繳別後，系統就會自動排出提醒。"}</div>`}</div>`;
 }
