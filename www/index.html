@@ -1157,25 +1157,40 @@ function vRem(){
    <div class="rsum">${kinds.length?kinds.map(k=>{const n=(groups[k]||[]).length;return `<div class="rsi"><span class="dot" style="background:${KIND[k].c}"></span><span class="rsn">${KIND[k].n}</span><b>${n}</b>${n?`<button class="btn sm ghost" data-act="bulkKind" data-k="${k}" title="把這類訊息全部複製">全部複製</button>`:""}</div>`}).join(""):`<div class="sub" style="padding:8px">提醒類別已全部隱藏，點右上「⚙ 顯示設定」可開回。</div>`}</div>
    <div class="card ralist">${rs.length?rs.map(remItem).join(""):`<div class="empty"><b>這段期間沒有提醒</b>${hide.size?"（部分類別已隱藏）":"客戶填上生日、保單生效日與繳別後，系統就會自動排出提醒。"}</div>`}</div>`;
 }
+/* 骨折日數表：壽險公會傷害保險示範條款「骨折別所定日數表」 */
+const FRAC_BONES=[["鼻骨、眶骨（含顴骨）",14],["掌骨、指骨",14],["蹠骨、趾骨",14],["下顎（齒槽醫療除外）",20],["肋骨",20],["鎖骨",28],["橈骨或尺骨",28],["膝蓋骨",28],["肩胛骨",34],["椎骨（胸椎、腰椎、尾骨）",40],["骨盤（腸骨、恥骨、坐骨、薦骨）",40],["臂骨（上臂）",40],["橈骨與尺骨",40],["腕骨（一手或雙手）",40],["脛骨或腓骨",40],["踝骨（一足或雙足）",40],["頭蓋骨",50],["股骨（大腿骨）",50],["脛骨及腓骨",50],["大腿骨頸",60]];
+const FRAC_DEG=[["full","完全骨折",1],["part","不完全骨折",0.5],["crack","骨裂（龜裂）",0.25]];
 function vClaims(){
   const cs=S.clients;if(!cs.length)return `<div class="top"><h1>怎麼賠</h1></div><div class="card empty"><b>先新增客戶與保單</b>系統會依保單上的保障額度，模擬各種情境的理賠金額。</div>`;
   if(!cById(S.claimCid))S.claimCid=cs[0].id;
   const c=cById(S.claimCid);const v=cov(c);
-  const days=S.cDays||10,cost=S.cCost!=null?S.cCost:30,months=S.cMonths||12;
+  const days=S.cDays!=null?S.cDays:10,cost=S.cCost!=null?S.cCost:30,months=S.cMonths||12;
+  const yuanOf=k=>{const r=parseRange(covParts(c,k).num);return r?r.min:0};
+  const bi=Math.min(FRAC_BONES.length-1,Math.max(0,S.fBone!=null?+S.fBone:12)),bone=FRAC_BONES[bi];
+  const dg=FRAC_DEG.find(d=>d[0]===S.fDeg)||FRAC_DEG[0];
+  const fDays=bone[1]*dg[2],aHosp=yuanOf("a_hosp"),rInj=yuanOf("r_inj")/10000,aFrac=yuanOf("a_frac")/10000;
+  const unHosp=Math.max(0,fDays-days);
+  const fracItems=[...(days>0?[["意外住院日額 × "+days+" 天",aHosp*days/10000]]:[]),["骨折未住院（"+bone[1]+" 天 × "+(dg[2]===1?"1":dg[2]===0.5?"1/2":"1/4")+(days?" − 住院 "+days+" 天":"")+"，日額 × 1/2）",aHosp/2*unHosp/10000],["實支實付（醫療費 "+cost+" 萬）",Math.min(cost,v.med)]];
+  if(rInj>0)fracItems.push(["傷害醫療實支（醫療費 "+cost+" 萬）",Math.min(cost,rInj)]);
+  if(aFrac>0)fracItems.push(["意外骨折保險金（最高，依部位比例核定）",aFrac,"cap"]);
   const SC={
     cancer:{n:"罹患癌症",items:[["重大傷病/重疾",v.ci],["癌症一次金",v.cancer],["住院日額 × "+days+" 天",v.hosp*days/10000],["實支實付（醫療費 "+cost+" 萬）",Math.min(cost,v.med)]]},
     accident:{n:"嚴重車禍 / 意外住院",items:[["住院日額 × "+days+" 天",v.hosp*days/10000],["實支實付（醫療費 "+cost+" 萬）",Math.min(cost,v.med)],["意外失能（以 1 級失能計）",v.acc]]},
     stroke:{n:"中風 / 心肌梗塞",items:[["重大傷病/重疾",v.ci],["住院日額 × "+days+" 天",v.hosp*days/10000],["實支實付（醫療費 "+cost+" 萬）",Math.min(cost,v.med)],["長照月給付 × "+months+" 月",v.ltc*months],["失能扶助 × "+months+" 月",v.dis*months]]},
     death:{n:"疾病身故",items:[["壽險身故",v.life]]},
     accdeath:{n:"意外身故",items:[["壽險身故",v.life],["意外身故",v.acc]]},
-    ltc:{n:"失能 / 需長期照顧",items:[["長照月給付 × "+months+" 月",v.ltc*months],["失能扶助 × "+months+" 月",v.dis*months]]}
+    ltc:{n:"失能 / 需長期照顧",items:[["長照月給付 × "+months+" 月",v.ltc*months],["失能扶助 × "+months+" 月",v.dis*months]]},
+    frac:{n:"骨折",items:fracItems}
   };
-  const sc=SC[S.claimSc]||SC.cancer;const tot=sc.items.reduce((a,i)=>a+i[1],0);
+  const sc=SC[S.claimSc]||SC.cancer;const tot=sc.items.reduce((a,i)=>a+(i[2]==='cap'?0:i[1]),0);
   return `<div class="top ptop"><div><h1>怎麼賠</h1><div class="sub">依客戶有效保單試算理賠金額，僅供說明參考，實際以條款與保險公司核定為準</div></div></div>
   <div class="grid g2">
     <div class="card"><h2>1. 選客戶與情境</h2>
       <label class="sub">客戶</label><select class="inp" id="claimCid">${cs.map(x=>`<option value="${x.id}" ${x.id===c.id?"selected":""}>${esc(x.name)}${x.family?"（"+esc(x.family)+"）":""}</option>`).join("")}</select>
       <div class="chips">${Object.keys(SC).map(k=>`<button class="chip ${S.claimSc===k?"on":""}" data-act="claimSc" data-k="${k}">${SC[k].n}</button>`).join("")}</div>
+      ${S.claimSc==="frac"?`<div class="fracbox"><label class="sub">骨折部位</label><select class="inp" id="fBone">${FRAC_BONES.map((b,i)=>`<option value="${i}" ${i===bi?"selected":""}>${b[0]}（完全骨折 ${b[1]} 天）</option>`).join("")}</select>
+        <label class="sub" style="display:block;margin-top:10px">骨折程度</label><div class="seg fdeg">${FRAC_DEG.map(d=>`<button class="btn sm ${d===dg?"on":""}" data-act="fDeg" data-k="${d[0]}">${d[1]}</button>`).join("")}</div>
+        <div class="hint" style="margin-top:6px">依公會示範條款：不完全骨折按 1/2、骨裂按 1/4 計日數；多處骨折只賠最高一項。住院天數填 0 ＝ 完全沒住院。</div></div>`:""}
       <div class="form" style="grid-template-columns:1fr 1fr 1fr">
         <label>住院天數<input class="inp" type="number" min="0" id="cDays" value="${days}"></label>
         <label>醫療費用（萬）<input class="inp" type="number" min="0" id="cCost" value="${cost}"></label>
@@ -1186,7 +1201,7 @@ function vClaims(){
     </div>
     <div class="card"><h2>2. 「${sc.n}」可能理賠</h2>
       <table class="tbl claimtbl"><thead><tr><th>給付項目</th><th>金額（萬元）</th></tr></thead><tbody>
-      ${sc.items.map(i=>`<tr><td>${i[0]}</td><td><b>${i[1]>0?i[1].toFixed(i[1]%1?1:0):`<span style="color:var(--bad)">0（無此保障）</span>`}</b></td></tr>`).join("")}
+      ${sc.items.map(i=>`<tr><td>${i[0]}</td><td><b>${i[2]==="cap"?"最高 "+i[1].toFixed(i[1]%1?1:0)+"（另計）":i[1]>0?i[1].toFixed(i[1]%1?1:0):`<span style="color:var(--bad)">0（無此保障）</span>`}</b></td></tr>`).join("")}
       </tbody></table>
       <div class="row" style="margin-top:16px;justify-content:space-between"><span>合計約</span><span class="total">${tot.toFixed(tot%1?1:0)} 萬元</span></div>
       ${sc.items.some(i=>i[1]<=0)?`<div class="banner" style="margin-top:14px">⚠ 有項目為 0，代表這個情境下有保障缺口，是很好的溝通切入點。</div>`:""}
@@ -1197,7 +1212,7 @@ function vClaims(){
 }
 function claimText(){
   const el=document.querySelector(".claimtbl");if(!el)return "";
-  const c=cById(S.claimCid);const sc=document.querySelector("[data-act=claimSc].on").textContent;
+  const c=cById(S.claimCid);let sc=document.querySelector("[data-act=claimSc].on").textContent;if(S.claimSc==="frac"){const b=FRAC_BONES[S.fBone!=null?+S.fBone:12],d=FRAC_DEG.find(x=>x[0]===S.fDeg)||FRAC_DEG[0];sc+="："+b[0].replace(/（.*$/,"")+" "+d[1]}
   const rows=[...el.querySelectorAll("tbody tr")].map(tr=>"・"+tr.cells[0].textContent+"："+tr.cells[1].textContent);
   return `${c.name}您好，幫您整理「${sc}」情境下，現有保單大約可以理賠：\n${rows.join("\n")}\n合計約 ${document.querySelector(".total").textContent}\n（試算僅供參考，實際以保單條款為準）\n— ${agentName()}`;
 }
@@ -2370,7 +2385,8 @@ document.addEventListener("click",async e=>{
     case "copyMsg":copy(el.dataset.msg);break;
     case "bulkKind":{const rs=reminders(S.remDays).filter(r=>r.kind===el.dataset.k);openText(KIND[el.dataset.k].n+"訊息（"+rs.length+" 則）",rs.map(r=>"【"+r.c.name+(r.c.phone?" "+r.c.phone:"")+"】\n"+r.msg).join("\n\n"));break}
     case "bulkMsg":{const l=filtered();openText("群發關懷訊息（"+l.length+" 位，可先修改再複製）",l.map(c=>"【"+c.name+(c.phone?" "+c.phone:"")+"】\n"+fill(tpl("care"),{name:c.name,agent:agentName()})).join("\n\n"));break}
-    case "claimSc":S.claimSc=el.dataset.k;render();break;
+    case "claimSc":S.claimSc=el.dataset.k;if(el.dataset.k==="frac"&&S.cDays==null)S.cDays=0;render();break;
+    case "fDeg":S.fDeg=el.dataset.k;render();break;
     case "copyClaim":copy(claimText());break;
     case "copyCard":copy(cardText());break;
     case "copyMyCardLink":copy(MY_ECARD.liff);break;
@@ -2480,6 +2496,7 @@ document.addEventListener("click",async e=>{
 document.addEventListener("change",async e=>{
   const t=e.target;
   if(t.id==="claimCid"){S.claimCid=t.value;render()}
+  if(t.id==="fBone"){S.fBone=+t.value;render()}
   if(t.dataset.act==="svcStatus"){const s=M.c.services.find(x=>x.id===t.dataset.sid);s.status=t.value;await commitM();toast("狀態已更新")}
   if(["cDays","cCost","cMonths"].includes(t.id)){S[t.id]=num(t.value);render()}
 });
