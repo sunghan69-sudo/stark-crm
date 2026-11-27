@@ -816,19 +816,26 @@ function reminders(days){
     if(b&&b<=lim)out.push({kind:"birthday",d:b,c,t:"🎂 "+c.name+" 生日（"+(age(c.birthday)+1)+" 歲）",sub:"送上祝福，順便關心近況",msg:fill(tpl("birthday"),{name:c.name,agent:agentName()})});
     const f=pd(c.nextFollow);
     if(f&&f<=lim)out.push({kind:"follow",d:f,c,overdue:f<t,t:"📞 追蹤 "+c.name,sub:(f<t?"已逾期 "+daysBetween(f,t)+" 天｜":"")+(c.followNote||"約訪 / 回覆"),msg:fill(tpl("follow"),{name:c.name,agent:agentName()})});
-    /* 同一張保單（同保單號碼）的主約＋附約，同一天繳費／期滿合併成一筆，金額加總 */
-    const pay={},pu={};const dk=d=>d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate();
-    (c.policies||[]).forEach(p=>{const no=String(p.policyNo||"").trim().toUpperCase()||("_"+p.id);
+    /* 同一張保單（同保單號碼）合併成一筆、金額加總；以繳費年期最長（通常 10 年以上）的主約為代表命名。
+       保費 0 元的項目（已繳清的主約、0 元豁免附約）不用繳錢，不列入；主約已繳清只剩附約時標示「主約已繳清」。 */
+    const pnoOf=p=>String(p.policyNo||"").trim().toUpperCase()||("_"+p.id);
+    const mainOf={};(c.policies||[]).forEach(p=>{if(p.rider)return;const k=pnoOf(p);const m=mainOf[k];if(!m||num(p.payYears)>num(m.payYears))mainOf[k]=p});
+    const pay={},pu={};
+    (c.policies||[]).forEach(p0=>{const k=pnoOf(p0);const p=p0;
       const n=nextDue(p);
-      if(n&&n<=lim){const k=no+"|"+dk(n);(pay[k]=pay[k]||{d:n,items:[]}).items.push(p)}
+      if(n&&n<=lim&&num(p.premium)>0){const g=(pay[k]=pay[k]||{k,items:[],ds:[]});g.items.push(p0);g.ds.push(n)}
       const e=paidUpDate(p);
-      if(e&&e>=t&&e<=lim&&active(p)){const k=no+"|"+dk(e);(pu[k]=pu[k]||{d:e,items:[]}).items.push(p)}
+      if(e&&e>=t&&e<=lim&&active(p)){const g=(pu[k]=pu[k]||{k,items:[],ds:[]});g.items.push(p0);g.ds.push(e)}
     });
-    const head=g=>{g.items.sort((a,b)=>(!!a.rider-!!b.rider));const m=g.items[0];const nm=m.product||m.type||"";const extra=g.items.length>1?(m.rider?`（共 ${g.items.length} 項）`:`（含附約共 ${g.items.length} 項）`):"";return {m,nm,extra}};
-    Object.values(pay).forEach(g=>{const {m,nm,extra}=head(g);const sum=g.items.reduce((a,p)=>a+num(p.premium),0);
-      out.push({kind:"payment",d:g.d,c,t:"💳 "+c.name+"｜"+nm+extra+" 繳費",sub:(FREQ[fq(m)]||"")+(g.items.length>1?" 合計 ":" ")+fmt(sum)+" 元"+(m.payMethod?"｜"+m.payMethod:""),items:g.items,msg:fill(tpl("payment"),{name:c.name,agent:agentName(),product:nm+(g.items.length>1?" 等 "+g.items.length+" 項":""),amount:fmt(sum),date:md(g.d)})})});
-    Object.values(pu).forEach(g=>{const {nm,extra}=head(g);
-      out.push({kind:"paidup",d:g.d,c,t:"🎉 "+c.name+"｜"+nm+extra+" 繳費期滿",sub:"好時機：重新檢視保障",items:g.items,msg:fill(tpl("paidup"),{name:c.name,agent:agentName(),product:nm+(g.items.length>1?" 等 "+g.items.length+" 項":""),date:md(g.d)})})});
+    const head=g=>{const m=mainOf[g.k];const mainIn=m&&g.items.includes(m);const nm=(m||g.items.find(x=>!x.rider)||g.items[0]).product||g.items[0].type||"";
+      const nR=g.items.filter(x=>x!==m).length;
+      const extra=m&&!mainIn&&!g.items.some(x=>!x.rider)?`（主約已繳清・附約 ${g.items.length} 項）`:g.items.length>1?`（含附約共 ${g.items.length} 項）`:"";
+      const d=mainIn?g.ds[g.items.indexOf(m)]:new Date(Math.min(...g.ds));
+      const ref=mainIn?m:(g.items.find(x=>x.payMethod)||g.items[0]);return {m:ref,nm,extra,d,nR}};
+    Object.values(pay).forEach(g=>{const sum=g.items.reduce((a,p)=>a+num(p.premium),0);if(sum<=0)return;const {m,nm,extra,d}=head(g);
+      out.push({kind:"payment",d,c,t:"💳 "+c.name+"｜"+nm+extra+" 繳費",sub:(FREQ[fq(m)]||"")+(g.items.length>1?" 合計 ":" ")+fmt(sum)+" 元"+(m.payMethod?"｜"+m.payMethod:""),items:g.items,msg:fill(tpl("payment"),{name:c.name,agent:agentName(),product:nm+(g.items.length>1?" 等 "+g.items.length+" 項":""),amount:fmt(sum),date:md(d)})})});
+    Object.values(pu).forEach(g=>{const {nm,extra,d}=head(g);
+      out.push({kind:"paidup",d,c,t:"🎉 "+c.name+"｜"+nm+extra+" 繳費期滿",sub:"好時機：重新檢視保障",items:g.items,msg:fill(tpl("paidup"),{name:c.name,agent:agentName(),product:nm+(g.items.length>1?" 等 "+g.items.length+" 項":""),date:md(d)})})});
   });
   return out.sort((a,b)=>a.d-b.d);
 }
