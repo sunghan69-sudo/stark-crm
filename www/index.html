@@ -1456,7 +1456,7 @@ function matchProduct0(p,mc){const code=prodCode(p.product),co=coKey(polCo(p)),b
 function policyBase(p){const t=String(p.sumText||"").replace(/,/g,"");const all=[...t.matchAll(/([\d.]+)\s*(萬|元|美元)/g)];if(all.length){const m=all[all.length-1];const n=parseFloat(m[1]);return m[2]==="萬"?n*10000:n}
   const n=parseFloat(t);return isFinite(n)&&n>0?n:null}
 function computeFromProduct(p,pr){const base=policyBase(p);const t=String(p.sumText||"");const rules=(pr.rules||[]);
-  const planned=rules.filter(r=>r.plan&&t.includes(r.plan));const use=rules.filter(r=>!r.plan||planned.includes(r));const out={};
+  let planned=rules.filter(r=>r.plan&&t.includes(r.plan));if(!planned.length){const pn=String(p.product||"").replace(/\s/g,"");planned=rules.filter(r=>r.plan&&pn.includes(String(r.plan).replace(/\s/g,"")))}const use=rules.filter(r=>!r.plan||planned.includes(r));const out={};
   use.forEach(r=>{if(!r.key||!r.mode)return;let v="";
     if(r.mode==="mult"&&base!=null&&num(r.a))v=fmtAmt(base*num(r.a));
     else if(r.mode==="range"&&base!=null&&num(r.b))v=fmtAmt(base*num(r.a))+"~"+fmtAmt(base*num(r.b));
