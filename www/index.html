@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>史塔克客戶管理系統</title>
 <meta name="theme-color" content="#14365c">
 <link rel="manifest" href="manifest.webmanifest">
@@ -1480,8 +1480,12 @@ function baseName(name){return String(name||"").replace(/[（(][^()（）]*[)）
 /* 商品比對快取：商品庫變動（PV）或陣列更換時重建索引，避免大量商品時畫面卡住 */
 let PV=0,_mc=null;function mcache(){if(!_mc||_mc.ref!==S.products||_mc.pv!==PV||_mc.n!==S.products.length){const byCode={},byName={};S.products.forEach(x=>{if(x.status==="停用")return;if(x.code){const k=x.code.toUpperCase();(byCode[k]=byCode[k]||[]).push(x)}[x.name,...(x.aliases||[])].forEach(n=>{if(n)(byName[n]=byName[n]||new Set()).add(x)})});_mc={ref:S.products,pv:PV,n:S.products.length,byCode,byName,memo:new Map()}}return _mc}
 function matchProduct(p){if(!S.products.length)return null;const mc=mcache();const mk=(p.product||"")+"|"+(p.company||"")+"|"+(p.insurer||"")+"|"+(p.start||"");if(mc.memo.has(mk))return mc.memo.get(mk);const r=matchProduct0(p,mc);mc.memo.set(mk,r);return r}
-function matchProduct0(p,mc){const code=prodCode(p.product),co=coKey(polCo(p)),bn=baseName(p.product);
-  const cs=new Set();if(code)(mc.byCode[code]||[]).forEach(x=>cs.add(x));if(bn)(mc.byName[bn]||[]).forEach(x=>cs.add(x));if(p.product)(mc.byName[p.product]||[]).forEach(x=>{if((x.aliases||[]).includes(p.product))cs.add(x)});
+/* 匯入的商品名常帶雜字（先生／小姐、繳清、前公司名、身分證字號…），比對不到時去掉再試一次 */
+function cleanProdName(n){return String(n||"").replace(/[A-Z][12]\d{8}-?/g,"").replace(/[（(](繳清件滿期|繳清件|繳清|展期|減額繳清|減額|滿期|停效)[)）]/g,"").replace(/^[（(](國華|保德信|安泰|國寶|幸福|宏利|大都會|康健|紐約|中國人壽|全球|環球瑞泰|朝陽|ING)[)）]/,"").replace(/(先生|小姐|個人保單|個人)$/,"").replace(/\s+/g,"").trim()}
+function matchProduct0(p,mc){const r=matchCore(p,p.product,mc);if(r)return r;const c=cleanProdName(p.product);if(c&&c!==p.product){const r2=matchCore(p,c,mc);if(r2)return r2}
+  const code=prodCode(p.product);if(code&&/-\d+$/.test(code)){const r3=matchCore(p,c.replace(code,code.replace(/-\d+$/,"")),mc);if(r3)return r3}return null}
+function matchCore(p,name,mc){const code=prodCode(name),co=coKey(polCo(p)),bn=baseName(name);
+  const cs=new Set();if(code)(mc.byCode[code]||[]).forEach(x=>cs.add(x));if(bn)(mc.byName[bn]||[]).forEach(x=>cs.add(x));if(name)(mc.byName[name]||[]).forEach(x=>{if((x.aliases||[]).includes(name))cs.add(x)});
   let cand=[...cs];
   if(co&&co!=="其他"){const same=cand.filter(x=>coKey(x.company)===co);if(same.length)cand=same;else cand=cand.filter(x=>!x.company||x.company==="其他")}
   if(!cand.length)return null;if(code){const exact=cand.filter(x=>x.code&&x.code.toUpperCase()===code);if(exact.length)cand=exact}
@@ -2432,7 +2436,7 @@ document.addEventListener("click",async e=>{
     case "rstCancel":lsSet("stark-reset",null);S.rst=null;S.authErr="";render();break;
     case "logout":await FB.auth.signOut();location.hash="dashboard";break;
     case "rstApprove":{const r=(S.resets||[]).find(x=>x.id===el.dataset.id);if(!r)break;const code=genCode();
-      try{await FB.fs.collection("resetRequests").doc(r.id).update({status:"approved",codeHash:sha256(code+"|"+r.id),approvedAt:new Date().toISOString()});S.rcodes=S.rcodes||{};S.rcodes[r.id]=code;
+      try{await FB.fs.collection("resetCodes").doc(r.id).set({code,at:new Date().toISOString()});await FB.fs.collection("resetRequests").doc(r.id).update({status:"approved",approvedAt:new Date().toISOString()});S.rcodes=S.rcodes||{};S.rcodes[r.id]=code;
         openText("重設密碼確認碼",`${r.name||""} 您好，您的「史塔克客戶管理系統」重設密碼申請已核准。\n請在 App 的「忘記密碼」畫面輸入確認碼：${code}\n輸入後系統會寄重設密碼信到 ${r.email}，請點信中連結設定新密碼。`,false)}catch(err){toast("操作失敗："+(err.code||err.message))}break}
     case "rstReject":try{await FB.fs.collection("resetRequests").doc(el.dataset.id).update({status:"rejected"});toast("已設為不通過")}catch(err){toast("操作失敗："+(err.code||err.message))}break;
     case "admApprove":case "admCopy":case "admReject":case "admDisable":case "admEnable":try{await admAction(a,el.dataset.uid)}catch(err){toast("操作失敗："+(err.code||err.message))}break;
@@ -2447,25 +2451,26 @@ document.addEventListener("change",async e=>{
 });
 document.addEventListener("change",e=>{if(e.target.id==="invFile"&&e.target.files&&e.target.files[0]){invImport(e.target.files[0]);e.target.value=""}});
 document.addEventListener("change",e=>{if(e.target.id==="polFile"&&e.target.files&&e.target.files[0]){polImport(e.target.files[0]);e.target.value=""}});
-document.addEventListener("input",e=>{if(e.target.id==="invQ"){invQ=e.target.value;const pos=e.target.selectionStart;render();const el=document.getElementById("invQ");if(el){el.focus();try{el.setSelectionRange(pos,pos)}catch(_){}}}});
+document.addEventListener("input",e=>{if(e.target.id==="invQ"){invQ=e.target.value;debRender("invQ")}});
 document.addEventListener("change",e=>{if(e.target.id==="mktgAmt"){const v=Math.max(1,num(e.target.value)||100);mktgAmt=v*10000;render()}});
 document.addEventListener("change",e=>{if(e.target.id==="maskNm"){MASK=e.target.checked;try{localStorage.setItem("stark-mask",MASK?"1":"0")}catch(_){}render()}});
-function onSearchInput(e){if(e.target.id==="fq"){FQ=e.target.value}else if(e.target.id==="q"){S.q=e.target.value;CSHOW=60}else return;const id=e.target.id,pos=e.target.selectionStart;render();const q=document.getElementById(id);if(q){q.focus();try{q.setSelectionRange(pos,pos)}catch(_){}}}
+/* 搜尋框：值即時更新，畫面等停止輸入 180ms 才重繪一次，手機打字不卡、鍵盤不閃 */
+let _debT=null;function debRender(id){clearTimeout(_debT);_debT=setTimeout(()=>{const el0=document.getElementById(id);const pos=el0&&document.activeElement===el0?el0.selectionStart:null;render();const q=document.getElementById(id);if(q&&pos!=null){q.focus();try{q.setSelectionRange(pos,pos)}catch(_){}}},180)}
+function onSearchInput(e){if(e.target.id==="fq"){FQ=e.target.value}else if(e.target.id==="q"){S.q=e.target.value;CSHOW=60}else return;debRender(e.target.id)}
 document.addEventListener("compositionend",e=>{if(e.target.id==="q"||e.target.id==="fq")onSearchInput(e)});
 document.addEventListener("input",e=>{if((e.target.id==="q"||e.target.id==="fq")&&(e.isComposing||e.inputType==="insertCompositionText"))return;
-  if(e.target.id==="fq"){FQ=e.target.value;const pos=e.target.selectionStart;render();const q=document.getElementById("fq");q.focus();try{q.setSelectionRange(pos,pos)}catch(_){}return}
-  if(e.target.id==="q"){S.q=e.target.value;CSHOW=60;const pos=e.target.selectionStart;render();const q=document.getElementById("q");q.focus();try{q.setSelectionRange(pos,pos)}catch(_){}}});
+  if(e.target.id==="fq"){FQ=e.target.value;debRender("fq");return}
+  if(e.target.id==="q"){S.q=e.target.value;CSHOW=60;debRender("q")}});
 document.addEventListener("submit",async e=>{
   e.preventDefault();const f=e.target;const fd=Object.fromEntries(new FormData(f).entries());
   if(f.id==="rstForm"){S.authErr="";const btn=f.querySelector("button");btn.disabled=true;
     try{const ref=FB.fs.collection("resetRequests").doc();await ref.set({email:fd.email.trim().toLowerCase(),name:fd.name.trim(),phone:fd.phone.trim(),status:"pending",createdAt:new Date().toISOString()});
       lsSet("stark-reset",JSON.stringify({id:ref.id,email:fd.email.trim().toLowerCase()}));render()}catch(err){S.authErr="送出失敗："+(err.code||err.message);render()}return}
   if(f.id==="rstCodeForm"){S.authErr="";const r=rstLoad();if(!r){render();return}const code=String(fd.code||"").trim().toUpperCase();const btn=f.querySelector("button");btn.disabled=true;
-    try{const d=await FB.fs.collection("resetRequests").doc(r.id).get();const v=d.exists?d.data():null;
-      if(!v)throw new Error("找不到這筆申請，請重新申請");if(v.status==="rejected")throw new Error("管理員未核准這次申請");if(v.status==="used")throw new Error("這組確認碼已經使用過，請重新申請");
-      if(v.status!=="approved"||!v.codeHash)throw new Error("管理員還沒核准，請稍後再試");
-      if(sha256(code+"|"+r.id)!==v.codeHash)throw new Error("確認碼不正確");
-      await FB.auth.sendPasswordResetEmail(r.email);await FB.fs.collection("resetRequests").doc(r.id).update({status:"used",usedAt:new Date().toISOString()}).catch(()=>{});
+    try{/* 不再讀取申請內容（含個資）：直接用確認碼把申請改成「已使用」，由資料庫規則比對確認碼，對了才放行 */
+      try{await FB.fs.collection("resetRequests").doc(r.id).update({status:"used",usedAt:new Date().toISOString(),code})}
+      catch(e2){if(/permission|PERMISSION/.test(String(e2&&(e2.code||e2.message))))throw new Error("確認碼不正確，或管理員還沒核准（若已用過請重新申請）");throw e2}
+      await FB.auth.sendPasswordResetEmail(r.email);
       lsSet("stark-reset",null);S.rst={done:r.email};render()}catch(err){S.authErr=AUTH_ERR[err.code]||err.message||String(err);render()}return}
   if(f.id==="applyForm"){S.gateErr="";try{await FB.fs.collection("applications").doc(S.uid).set({email:S.email,name:fd.name.trim(),phone:fd.phone.trim(),company:(fd.company||"").trim(),note:(fd.note||"").trim(),status:"pending",createdAt:new Date().toISOString()})}catch(err){S.gateErr="送出失敗："+(err.code||err.message);render()}return}
   if(f.id==="codeForm"){S.gateErr="";const code=String(fd.code||"").trim().toUpperCase();const btn=f.querySelector("button");btn.disabled=true;

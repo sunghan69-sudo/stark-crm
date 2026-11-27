@@ -11,8 +11,29 @@ permissions:
   id-token: write
 
 jobs:
+  changes:
+    name: 判斷是否需要重編 APK
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.f.outputs.app }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: f
+        name: 只有程式／介面有改才編 APK（每日正能量、行銷資料、建議書檔案等不編）
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "app=true" >> $GITHUB_OUTPUT; exit 0; fi
+          BEFORE="${{ github.event.before }}"
+          if [ -z "$BEFORE" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then BEFORE="HEAD~1"; fi
+          FILES=$(git diff --name-only "$BEFORE" HEAD || true)
+          echo "$FILES"
+          if echo "$FILES" | grep -Eq '^(www/index\.html|www/sw\.js|www/app-update\.js|www/firebase-config\.js|www/manifest\.webmanifest|www/bridge\.html|www/vendor/|www/calc/|www/icons/|www/media/|assets/|capacitor\.config\.json|package\.json|keystore/|\.github/workflows/build\.yml)'; then echo "app=true" >> $GITHUB_OUTPUT; else echo "app=false" >> $GITHUB_OUTPUT; fi
+
   android:
     name: 編譯 APK
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

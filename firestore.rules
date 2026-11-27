@@ -47,18 +47,25 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // 忘記密碼申請：未登入也能送出；只有管理員能看清單與核准
+    // 忘記密碼申請：未登入也能送出；申請內容（姓名／email／電話）只有管理員看得到
     match /resetRequests/{id} {
       allow create: if request.resource.data.keys().hasOnly(['email','name','phone','status','createdAt'])
         && request.resource.data.status == 'pending'
         && request.resource.data.email is string && request.resource.data.email.size() <= 120
         && request.resource.data.name is string && request.resource.data.name.size() <= 50
-        && request.resource.data.phone is string && request.resource.data.phone.size() <= 30;
-      allow get: if true;
-      allow list, delete: if isAdmin();
+        && request.resource.data.phone is string && request.resource.data.phone.size() <= 30
+        && request.resource.data.createdAt is string && request.resource.data.createdAt.size() <= 40;
+      allow get, list, delete: if isAdmin();
+      // 申請人用確認碼把「已核准」改成「已使用」：確認碼必須和管理員存在 resetCodes 的一致
       allow update: if isAdmin()
         || (resource.data.status == 'approved' && request.resource.data.status == 'used'
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','usedAt']));
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','usedAt','code'])
+            && exists(/databases/$(database)/documents/resetCodes/$(id))
+            && request.resource.data.code == get(/databases/$(database)/documents/resetCodes/$(id)).data.code);
+    }
+    // 重設密碼確認碼：只有管理員能讀寫
+    match /resetCodes/{id} {
+      allow read, write: if isAdmin();
     }
 
     // 開通紀錄：本人輸入的確認碼必須和管理員產生的一致
