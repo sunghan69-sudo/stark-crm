@@ -1173,10 +1173,11 @@ function vClaims(){
   const {bi,bone,dg}=fracSel();
   const fDays=bone[1]*dg[2],aHosp=yuanOf("a_hosp"),rInj=yuanOf("r_inj")/10000,aFrac=yuanOf("a_frac")/10000;
   const unHosp=Math.max(0,fDays-days);
+  const coNm=p=>stripCode(p.product||"").replace(/^[\u4e00-\u9fff]{2,4}人壽/,"");
   const isFracIns=p=>/骨力|骨折|筋骨/.test(p.product||"")&&!/未住院/.test(p.product||"");
   const dayTxt=bone[1]+" 天 × "+(dg[2]===1?"1":dg[2]===0.5?"1/2":"1/4")+(days?" − 住院 "+days+" 天":"");
   const unPols=(c.policies||[]).filter(active).filter(p=>!isFracIns(p)&&!/交通/.test(p.product||"")&&/傷害|意外/.test(p.product||"")).map(p=>{const r=parseRange(policyCovd(p).a_hosp);return {p,a:r?r.min*(isUSD(p)?usdRate():1):0}}).filter(x=>x.a>0);
-  const unRows=unPols.length?unPols.map(x=>[stripCode(x.p.product||"").replace(/^國泰人壽/,"")+" 骨折未住院（日額 "+fmt(x.a)+" 元 × 1/2 × "+dayTxt+"）",x.a/2*unHosp/10000]):[["骨折未住院（意外日額型保單）",0]];
+  const unRows=unPols.length?unPols.map(x=>[coNm(x.p)+" 骨折未住院（日額 "+fmt(x.a)+" 元 × 1/2 × "+dayTxt+(/擇優/.test(x.p.product||"")?"；擇優型，與實支擇高給付":"")+"）",x.a/2*unHosp/10000]):[["骨折未住院（意外日額型保單）",0]];
   const fracItems=[...(days>0?[["意外住院日額 × "+days+" 天",aHosp*days/10000]]:[]),...unRows,(days>0?["疾病實支（醫療費 "+cost+" 萬）",Math.min(cost,v.med)]:["疾病實支（未住院，住院實支不啟動）",0,"na"])];
   fracItems.push(["意外實支（醫療費 "+cost+" 萬）",Math.min(cost,rInj)]);
   if(S.fSurg){const oOpd=yuanOf("o_opd")/10000,rOpd=yuanOf("r_opd")/10000;
@@ -1186,7 +1187,7 @@ function vClaims(){
   const dgTxt=dg[2]===1?"":dg[2]===0.5?" × 1/2":" × 1/4";
   const fracRaw=p=>{let b=policyBase(p);if(b!=null&&b<10000&&!/萬|元|美元|USD/i.test(String(p.sumText||"")))b*=10000;return b||0};
   const fracBase=p=>{const b=fracRaw(p);return b?b*(isUSD(p)?usdRate():1):0};
-  const fracNm=p=>stripCode(p.product||"骨折險").replace(/^國泰人壽/,"");
+  const fracNm=p=>coNm(p)||"骨折險";
   const fracSum=fracPols.reduce((a,p)=>a+fracBase(p),0);
   fracPols.forEach(p=>{const b=fracRaw(p);const nm=fracNm(p);const std=/骨力/.test(p.product||"");
     if(!b){fracItems.push([nm+"（保單未填保額，無法換算）",0]);return}
@@ -1210,7 +1211,7 @@ function vClaims(){
       <div class="chips">${Object.keys(SC).map(k=>`<button class="chip ${S.claimSc===k?"on":""}" data-act="claimSc" data-k="${k}">${SC[k].n}</button>`).join("")}</div>
       ${S.claimSc==="frac"?`<div class="fracbox"><label class="sub">骨折部位</label><select class="inp" id="fBone">${FRAC_BONES.map((b,i)=>`<option value="${i}" ${i===bi?"selected":""}>${b[0]}（${b[1]} 天／骨折險 ${b[2]}%）</option>`).join("")}</select>
         <label class="sub" style="display:block;margin-top:10px">骨折程度</label><div class="seg fdeg">${FRAC_DEG.map(d=>`<button class="btn sm ${d===dg?"on":""}" data-act="fDeg" data-k="${d[0]}">${d[1]}</button>`).join("")}</div>
-        <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" id="fSurg" ${S.fSurg?"checked":""}> 有門診／急診手術（如創傷縫合、打鋼釘）</label>
+        <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" id="fSurg" ${S.fSurg?"checked":""}> 有門診／急診手術（如創傷縫合、打鋼釘）</label>${S.fSurg?`<div class="hint">日額型醫療險（如全心住院日額）的門診手術多按日額倍數給付，保單明細沒填「門診手術」的不會列入，請另看條款。</div>`:""}
         <div class="hint" style="margin-top:6px">日數依公會示範條款、骨折險比例依國泰真好骨力「骨折別表」；不完全骨折 1/2、骨裂 1/4。住院天數填 0 ＝ 完全沒住院。客戶名下有「骨力／骨折」保單會自動帶入保額換算。</div></div>`:""}
       <div class="form" style="grid-template-columns:1fr 1fr 1fr">
         <label>住院天數<input class="inp" type="number" min="0" id="cDays" value="${days}"></label>
