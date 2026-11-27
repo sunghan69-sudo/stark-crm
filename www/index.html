@@ -1189,7 +1189,7 @@ function vClaims(){
   const fracBase=p=>{const b=fracRaw(p);return b?b*(isUSD(p)?usdRate():1):0};
   const fracNm=p=>coNm(p)||"骨折險";
   /* 骨折給付有年齡上限的商品：N65 意萬平安，保險年齡未滿 16 歲才給付意外骨折 */
-  const FRAC_AGE=[{re:/意萬平安|\(N65\)/,max:16}];
+  const FRAC_AGE=[{re:/意萬平安|[(（]N65[)）]/,max:16}];
   const insAge=(()=>{const b=pd(c.birthday);if(!b)return null;const t=today();let m=(t.getFullYear()-b.getFullYear())*12+t.getMonth()-b.getMonth();if(t.getDate()<b.getDate())m--;return Math.floor(m/12)+(m%12>=6?1:0)})();
   const fracOver=p=>{const r=FRAC_AGE.find(x=>x.re.test(p.product||""));return r&&insAge!=null&&insAge>=r.max?r.max:0};
   const fracSum=fracPols.reduce((a,p)=>a+(fracOver(p)?0:fracBase(p)),0);
