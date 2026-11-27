@@ -1110,12 +1110,13 @@ function vFamGrid(){const q=FQ.trim().toLowerCase();let hs=households();
   if(q)hs=hs.filter(h=>h.fam.toLowerCase().includes(q)||h.members.some(m=>(m.name||"").toLowerCase().includes(q)||String(m.phone||"").replace(/\D/g,"").includes(q.replace(/\D/g,"")||"\u0000")));
   const cards=hs.map(h=>{const c=h.head;const a=age(c.birthday);const g=c.gender==="女"?"f":c.gender==="男"?"m":"";const pol=h.members.reduce((n,m)=>n+(m.policies||[]).filter(active).length,0);const prem=h.members.reduce((n,m)=>n+annualSum(m),0);
     const hit=q&&!((c.name||"").toLowerCase().includes(q))?h.members.find(m=>(m.name||"").toLowerCase().includes(q)):null;
-    return `<div class="hhc" data-act="openClient" data-id="${c.id}" data-tab="${h.fam?"fam":"pol"}"><div class="hha ${g}">${esc((c.name||"?").slice(0,1))}</div><div class="hhb"><div class="hhn">${esc(maskNm(c.name))}${a!==""?`<span class="hhage">${a} 歲</span>`:""}</div>
+    return `<div class="hhc" data-act="openClient" data-id="${esc(c.id)}" data-tab="${h.fam?"fam":"pol"}"><div class="hha ${g}">${esc((c.name||"?").slice(0,1))}</div><div class="hhb"><div class="hhn">${esc(maskNm(c.name))}${a!==""?`<span class="hhage">${a} 歲</span>`:""}</div>
       <div class="hhm">${h.members.length>1?`👪 ${h.members.length} 人`:"個人"}｜保單 ${pol} 張${prem?`｜年繳 ${fmt(prem)}`:""}</div>${hit?`<div class="hhhit">符合：${esc(maskNm(hit.name))}（${esc(relName(hit))}）</div>`:""}</div></div>`}).join("");
   return `<div class="top ptop"><div><h1>家庭</h1><div class="sub">共 ${hs.length} 戶・點一下查看或做建議</div></div>
    <div class="row pact"><div class="seg"><button class="btn sm" data-act="cview" data-v="list">☰ 列表</button><button class="btn sm on" data-act="cview" data-v="fam">🏠 家庭</button></div><label class="sub maskt"><input type="checkbox" id="maskNm" ${MASK?"checked":""}>隱藏姓名</label><button class="btn p hide-m" data-act="newClient">＋ 新增客戶</button></div></div>
    <div class="sbar"><span class="sbi">🔍</span><input class="inp search" id="fq" placeholder="搜尋戶長、家人姓名或電話…" value="${esc(FQ)}" autocomplete="off"></div>
-   ${hs.length?`<div class="hhgrid">${cards}</div>`:`<div class="card empty"><b>找不到符合的家庭</b>換個關鍵字試試</div>`}`}
+   ${hs.length?`<div class="hhgrid">${cards}</div>`:`<div class="card empty"><b>找不到符合的家庭</b>換個關鍵字試試</div>`}
+   <button class="dfab" data-act="newClient" aria-label="新增客戶" title="新增客戶">＋</button>`}
 function vClients(){if(CVIEW==="fam")return vFamGrid();
   const list=filtered();const tags=[...new Set(S.clients.flatMap(c=>c.tags||[]))];
   let lastFam=null;
@@ -2483,7 +2484,7 @@ document.addEventListener("change",async e=>{
   if(["cDays","cCost","cMonths"].includes(t.id)){S[t.id]=num(t.value);render()}
 });
 document.addEventListener("change",e=>{if(e.target.id==="invFile"&&e.target.files&&e.target.files[0]){invImport(e.target.files[0]);e.target.value=""}});
-document.addEventListener("click",e=>{document.querySelectorAll("details.pmore[open]").forEach(d=>{if(!d.contains(e.target)||e.target.closest(".pmi:not(label)"))d.removeAttribute("open")})},true);
+document.addEventListener("click",e=>{document.querySelectorAll("details.pmore[open],details.rhide[open]").forEach(d=>{if(!d.contains(e.target)||e.target.closest(".pmi:not(label)"))d.removeAttribute("open")})},true);
 document.addEventListener("change",e=>{if(e.target.id==="polFile"&&e.target.files&&e.target.files[0]){polImport(e.target.files[0]);e.target.value=""}});
 document.addEventListener("input",e=>{if(e.target.id==="invQ"){invQ=e.target.value;debRender("invQ")}});
 document.addEventListener("change",e=>{if(e.target.id==="mktgAmt"){const v=Math.max(1,num(e.target.value)||100);mktgAmt=v*10000;render()}});
