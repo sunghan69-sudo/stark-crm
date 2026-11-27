@@ -1333,6 +1333,40 @@ function polForm(p){
     <label class="w3">備註<textarea class="inp" name="note" rows="2">${esc(p.note)}</textarea></label>
   </div><div class="row" style="margin-top:16px">${p._new?"":`<button type="button" class="btn d" data-act="delPol" data-pid="${p.id}">刪除保單</button>`}<span class="sp"></span><button type="button" class="btn" data-act="cancelPol">返回</button><button class="btn p" type="submit">儲存保單</button></div></form>`;
 }
+/* ===== Finfo 對照（單一客戶）：Gemini 上網讀 Finfo 商品頁，比對報表算出的數字；保單沒變動就反灰 ===== */
+function finfoSig(c){const t=(c.policies||[]).filter(active).map(p=>[p.product||"",p.sumText||"",p.status||""].join("|")).sort().join("\n");let h=0;for(let i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))|0;return String(h)}
+function finfoWhen(at){const d=new Date(at);return ds(d)+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}
+function finfoBtn(c){const f=c.finfoCheck,busy=S.finfoBusy===c.id,done=!!(f&&f.sig===finfoSig(c));
+  return `<button class="btn" data-act="finfoCheck" ${busy||done||S.finfoBusy?"disabled":""} style="${done?"opacity:.55":""}" title="${done?"保單資料沒有變動，不需重新對照":"用 Gemini 到 Finfo 讀取這位客戶每張保單的理賠項目，與報表數字比對"}">${busy?"🔎 Finfo 對照中 "+esc(S.finfoProg||""):done?"✅ 已對照 Finfo":"🔎 Finfo 對照"}</button>`}
+function finfoBox(c){const f=c.finfoCheck;if(!f)return "";const changed=f.sig!==finfoSig(c);const it=f.items||[];const bad=it.filter(x=>!x.ok).length;
+  return `<div class="hint" style="margin-top:8px">🔎 上次 Finfo 對照：${finfoWhen(f.at)}・${it.length} 項，${bad?`<b style="color:var(--bad)">${bad} 項需確認</b>`:"全部一致"}${changed?`・<b>保單有變動，可重新對照</b>`:""}</div>
+  <details style="margin-top:4px"${bad?" open":""}><summary class="sub" style="cursor:pointer">對照明細</summary><table class="tbl" style="margin-top:6px"><tbody>${it.map(x=>`<tr><td style="width:24px">${x.ok?"✅":x.found?"⚠️":"❓"}</td><td class="nm">${esc(stripCode(x.product))}<div class="sub">${esc(x.sum||"")}${x.url?` ・<a href="${esc(x.url)}" target="_blank" rel="noopener">Finfo 頁面</a>`:""}</div></td><td>${x.ok?`<span class="sub">與 Finfo 一致</span>`:(x.diffs||[]).length?(x.diffs||[]).map(d=>`<div class="sub"><b>${esc(d.item)}</b>：報表 ${esc(d.ours||"—")} ／ Finfo ${esc(d.finfo||"—")}</div>`).join(""):`<span class="sub">${esc(x.note||"Finfo 查不到此商品")}</span>`}${x.ok||!x.note||!(x.diffs||[]).length?"":`<div class="sub">${esc(x.note)}</div>`}</td></tr>`).join("")}</tbody></table></details>`}
+function finfoPrompt(p,ours){const lab=k=>{for(const g of COVD)for(const i of g[1])if(i[0]===k)return g[0]+"／"+i[1];return k};
+  const o=Object.keys(ours).map(k=>`- ${lab(k)}：${ours[k]}`).join("\n")||"（報表目前沒有算出數字）";
+  return `你是台灣保險資料查核員。請用 Google 搜尋 Finfo（finfo.tw）上這張保單的商品頁，讀取「理賠項目」在下列保額／計畫下的給付金額。
+保險公司：${polCo(p)}
+商品名稱：${p.product}
+保額欄：${p.sumText||"（空白）"}
+我們報表依條款算出的數字：
+${o}
+請逐項比對 Finfo 的理賠項目：金額不同、或 Finfo 有而報表漏掉的主要給付，列進 diffs（文字註記類若意思相同視為一致）。若 Finfo 找不到這個商品（或版本），found=false。
+只回傳一個 JSON：{"found":true,"url":"Finfo 商品頁網址（實際看到的才填）","ok":true,"diffs":[{"item":"項目","ours":"報表數字","finfo":"Finfo 數字"}],"note":"需人判斷之處（40字內）"}`}
+async function runFinfoCheck(c0){if(S.finfoBusy)return;if(!(window.StarkAI&&window.StarkAI.search&&getCfg())){toast("Gemini 尚未設定（Firebase AI Logic），無法對照");return}
+  const c=liveC(cById(c0.id)||c0);const seen=new Set();const ps=(c.policies||[]).filter(active).filter(p=>{if(!p.product)return false;const k=p.product+"|"+(p.sumText||"");if(seen.has(k))return false;seen.add(k);return true});
+  if(!ps.length){toast("這位客戶沒有可對照的有效保單");return}
+  let models=["gemini-flash-latest","gemini-3.6-flash","gemini-3.5-flash","gemini-2.5-flash"];const custom=lsGet("stark-ai-model")||"";if(custom)models=[custom].concat(models);
+  const redraw=()=>{if(M&&M.c&&M.c.id===c.id&&M.tab==="cov")drawModal()};
+  S.finfoBusy=c.id;S.finfoProg="0/"+ps.length;redraw();const items=[];let i=0,stop=false;
+  const work=async()=>{while(i<ps.length&&!stop){const n=i,p=ps[i++];const pr=matchProduct(p);const ours=pr&&pr.status==="已核對"?computeFromProduct(p,pr):{};
+    try{const r=await window.StarkAI.search(getCfg(),models,finfoPrompt(p,ours));const t=String(r.text||"").replace(/```(json)?/g,"");const d=JSON.parse(t.slice(t.indexOf("{"),t.lastIndexOf("}")+1));
+      items.push({n,product:p.product,sum:p.sumText||"",url:tlSafe(d.url),found:!!d.found,ok:!!(d.found&&d.ok&&!(d.diffs||[]).length),diffs:(d.diffs||[]).slice(0,8).map(x=>({item:String(x.item||"").slice(0,30),ours:String(x.ours||"").slice(0,40),finfo:String(x.finfo||"").slice(0,60)})),note:String(d.note||"").slice(0,80)})}
+    catch(e){const m=String(e&&e.message||e);if(/prepay|credits|billing|quota|429|RESOURCE_EXHAUSTED|PERMISSION|api-not-enabled/i.test(m)){stop=true;toast(scanErr(e))}items.push({n,product:p.product,sum:p.sumText||"",found:false,ok:false,diffs:[],note:"查詢失敗，可稍後重試"})}
+    S.finfoProg=items.length+"/"+ps.length;redraw()}};
+  try{await Promise.all([work(),work(),work()])}finally{S.finfoBusy=null;S.finfoProg=""}
+  if(stop&&items.length<ps.length){redraw();toast("Gemini 額度不足或請求過多，Finfo 對照已中斷，未儲存結果");return}
+  const fc={at:Date.now(),sig:finfoSig(c),items:items.sort((a,b)=>(a.ok-b.ok)||(a.n-b.n)).map(({n,...x})=>x)};
+  const base=clone(cById(c.id)||c);base.finfoCheck=fc;await saveClient(base);if(M&&M.c&&M.c.id===c.id)M.c.finfoCheck=clone(fc);redraw();
+  const bad=items.filter(x=>!x.ok).length;toast(bad?`Finfo 對照完成：${bad} 項需確認`:"Finfo 對照完成：全部一致")}
 function mCov(){
   const c=M.c;const v=cov(c);
   const fam=c.family?S.clients.filter(x=>x.family===c.family):[c];
@@ -1342,7 +1376,7 @@ function mCov(){
   return `<div class="row"><h3 style="margin:0">保障總覽 vs 建議目標</h3><span class="sp"></span><span class="hint">目標可在「設定」調整</span></div>
   ${COV.map(x=>{const t=x.k==="life"?lifeTarget(c):target(x.k);const r=t?v[x.k]/t:1;const cls=r>=1?"ok":r>=.5?"mid":"low";
     return `<div class="covrow"><div class="n">${x.n}</div><div class="bar"><i class="${cls}" style="width:${Math.min(100,r*100)}%"></i></div><div class="x"><b style="color:var(--ink)">${fmt(v[x.k])}</b> / ${fmt(t)} ${x.u}${r<1?` <span style="color:var(--bad)">缺 ${fmt(t-v[x.k])}</span>`:" ✓"}</div></div>`}).join("")}
-  <div class="row" style="margin-top:12px"><button class="btn" data-act="copyCov">複製保障摘要給客戶</button><button class="btn" data-act="gotoClaim">→ 理賠情境試算</button><button class="btn a" data-act="report">📄 保單健檢報表</button></div>${famRows}${mCovDetail()}`;
+  <div class="row" style="margin-top:12px"><button class="btn" data-act="copyCov">複製保障摘要給客戶</button><button class="btn" data-act="gotoClaim">→ 理賠情境試算</button><button class="btn a" data-act="report">📄 保單健檢報表</button>${finfoBtn(c)}</div>${finfoBox(c)}${famRows}${mCovDetail()}`;
 }
 function gcalUrl(title,date,time,details){
   if(!date)return "";const d=date.replace(/-/g,"");
@@ -2303,6 +2337,7 @@ document.addEventListener("click",async e=>{
     case "copyCard":copy(cardText());break;
     case "copyMyCardLink":copy(MY_ECARD.liff);break;
     case "copyCov":copy(covSummary(M.c));break;
+    case "finfoCheck":runFinfoCheck(M.c);break;
     case "gotoClaim":S.claimCid=M.c.id;closeModal();location.hash="claims";break;
     case "editCo":{const base=M.c.policies.find(x=>x.id===el.dataset.pid);if(!base)break;const no=(base.policyNo||"").trim();
       const grp=M.c.policies.filter(x=>no?x.policyNo===no:x.id===base.id);const cur=polCo(base);
