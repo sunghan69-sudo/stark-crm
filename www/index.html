@@ -414,7 +414,7 @@ details.fold{align-self:start}details.fold>summary{list-style:none;cursor:pointe
 .mpills{display:flex;flex-wrap:wrap;gap:6px 14px;flex:1;min-width:0}.mpill{display:inline-flex;align-items:baseline;gap:5px;white-space:nowrap;font-size:13px}.mpill em{font-style:normal;color:var(--muted);font-size:12px}.mpill b{font-variant-numeric:tabular-nums}.mpill i{font-style:normal;font-size:12px;font-weight:700}.mpill small{font-size:11.5px;color:var(--muted)}
 .dcol .mkt{margin-bottom:0}.dcol .mkg{grid-template-columns:1fr}.dcol .vids{margin-top:0}.dcol .vgrid{grid-template-columns:1fr 1fr}
 .dfab{display:none;position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:58;width:54px;height:54px;border-radius:50%;border:0;background:var(--acc);color:#fff;font-size:28px;line-height:1;box-shadow:0 6px 18px rgba(232,131,58,.4);cursor:pointer;align-items:center;justify-content:center}
-.dfab:active{transform:scale(.94)}body.nav-open .dfab{opacity:0;pointer-events:none}
+.dfab:active{transform:scale(.94)}body:has(.modal) .dfab,body:has(.vov) .dfab{display:none!important}body.nav-open .dfab{opacity:0;pointer-events:none}
 @media (max-width:1000px){.dgrid{grid-template-columns:1fr}.dcol .mkg{grid-template-columns:1fr 1fr}}
 @media (max-width:800px){
   .dfab{display:flex}.dgrid{padding-bottom:72px}
@@ -437,6 +437,36 @@ details.fold{align-self:start}details.fold>summary{list-style:none;cursor:pointe
 @media (min-width:801px){.tk-f .dmq-t{animation:none}.tk-f .dmq-t>span+span{display:none}.tk-f .dmq-w{-webkit-mask-image:none;mask-image:none}}
 .tkg{font-size:11.5px;font-weight:700;color:#fff;background:var(--pri2);border-radius:9px;padding:1px 8px;margin-right:14px;vertical-align:1px}
 @media (max-width:800px){.tkwrap{margin:-4px 0 12px;gap:5px}.tkwrap .dmq{padding:6px 12px}.tki{font-size:13.5px;margin-right:20px}.dmq.tk .dmq-l{min-width:54px}}
+/* ===== 各頁共用（2026-11 第二波） ===== */
+.show-m{display:none}
+.mb .empty{white-space:normal;overflow-wrap:anywhere}
+.ptop{margin-bottom:12px}.ptop h1{margin:0}.pact{gap:8px;align-items:center;flex-wrap:wrap}
+.pact .seg .btn.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+.pmore{position:relative}.pmore>summary{list-style:none;cursor:pointer;user-select:none}.pmore>summary::-webkit-details-marker{display:none}
+.pmenu{position:absolute;right:0;top:calc(100% + 6px);z-index:40;min-width:220px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(15,23,42,.14);padding:6px;display:flex;flex-direction:column}
+.pmi{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;background:transparent;padding:10px 12px;border-radius:8px;font-size:14px;color:var(--ink);cursor:pointer;font-family:inherit}.pmi:hover{background:var(--soft)}
+.sbar{position:relative;margin:0 0 4px}.sbar .sbi{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:15px;opacity:.55;pointer-events:none}
+.sbar .inp.search{width:100%;max-width:none;padding-left:40px;height:44px;border-radius:12px;font-size:15px}
+.chips.hs{margin:10px 0}.tagrow{margin-top:-2px}
+.maskt{display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:13px}
+.mline{font-size:12px;color:var(--muted);margin-top:3px}.mline i{font-style:normal;color:var(--bad);background:#fdecec;border-radius:6px;padding:0 5px;margin-left:4px;font-size:11.5px}
+.rsum{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.rsi{flex:1 1 0;min-width:150px;display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px}
+.rsi .rsn{font-size:13.5px;color:var(--muted)}.rsi b{font-size:22px;color:var(--pri);margin-right:auto;font-variant-numeric:tabular-nums}
+.ralist{padding:4px 16px}.rrow .awhen b{font-size:15px}.rrow .abody .at.rmt{white-space:normal;overflow:visible;line-height:1.4;display:block}.rrow .abody .ad{white-space:normal}
+.rrow{border-left:3px solid transparent}.rrow .awhen{border-right-color:var(--line)}
+@media (max-width:800px){
+  .show-m{display:block}
+  .ptop{flex-wrap:nowrap;align-items:flex-start}.ptop .sub{font-size:12.5px}.pact{flex-wrap:nowrap}.pact .seg .btn{padding-left:10px;padding-right:10px}
+  .chips.hs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin:10px -14px;padding:0 14px}.chips.hs::-webkit-scrollbar{display:none}.chips.hs .chip{flex:0 0 auto}
+  .rsum{gap:6px;flex-wrap:nowrap}.rsi{min-width:0;padding:8px 10px;flex-wrap:wrap;gap:4px 6px}.rsi b{font-size:19px}.rsi .btn{width:100%;justify-content:center;padding:4px 0}
+  .ralist{padding:2px 12px}
+  .top h1{font-size:22px}.top .sub{font-size:12.5px;line-height:1.5}.top{margin-bottom:12px;gap:8px}
+  .ptop.stackm{flex-wrap:wrap}.ptop.stackm>.pact{width:100%}.ptop.stackm .seg{display:flex;width:100%}.ptop.stackm .seg .btn{flex:1;justify-content:center}
+  .tbl .tag{white-space:nowrap}.mline i{white-space:nowrap;display:inline-block;margin-top:2px}
+  .ptop+.sbar+.chips.hs+.chips.hs+.card .tbl thead,.ptop+.sbar+.chips.hs+.card .tbl thead{display:none}
+  .pmenu{right:-4px}
+}
 @media (max-width:380px){.dtabs button{font-size:13px;padding:8px 2px}.dgap{grid-template-columns:96px 1fr 46px!important}}
 </style>
 </head>
@@ -1065,9 +1095,9 @@ function vDash(){
 }
 function remItem(r){
   const t=today();const dd=daysBetween(t,r.d);const k=KIND[r.kind];
-  return `<div class="li"><div class="when"><b>${md(r.d)}</b><span>${dd<0?"逾期":dd===0?"今天":dd+" 天後"}</span></div>
-  <div class="body"><div class="t"><span class="dot" style="background:${k.c}"></span>${esc(r.t)}</div><div class="d">${esc(r.sub)}</div></div>
-  <div class="row"><button class="btn sm" data-act="copyMsg" data-msg="${esc(r.msg)}">複製</button><a class="btn sm line" href="${lineUrl(r.msg)}" target="_blank" rel="noopener">LINE</a><button class="btn sm ghost hide-m" data-act="openClient" data-id="${r.c.id}">開啟</button></div></div>`;
+  return `<div class="arow rrow ${dd<0?"over":dd<=1?"hot":""}" style="--kc:${k.c}"><div class="awhen"><b>${md(r.d)}</b><span>${dd<0?"逾期 "+(-dd)+" 天":dd===0?"今天":dd===1?"明天":dd+" 天後"}</span></div>
+  <div class="abody" data-act="openClient" data-id="${esc(r.c.id)}"><div class="at rmt">${esc(r.t)}</div><div class="ad">${esc(r.sub)}</div></div>
+  <div class="aact"><button class="btn sm" data-act="copyMsg" data-msg="${esc(r.msg)}">複製訊息</button><a class="btn sm line" href="${lineUrl(r.msg)}" target="_blank" rel="noopener">LINE</a></div></div>`;
 }
 let CVIEW=(()=>{try{return localStorage.getItem("stark-cview")||"list"}catch(e){return "list"}})(),FQ="",MASK=(()=>{try{return localStorage.getItem("stark-mask")==="1"}catch(e){return false}})();
 let CSHOW=60,PSHOW=80;
@@ -1082,9 +1112,9 @@ function vFamGrid(){const q=FQ.trim().toLowerCase();let hs=households();
     const hit=q&&!((c.name||"").toLowerCase().includes(q))?h.members.find(m=>(m.name||"").toLowerCase().includes(q)):null;
     return `<div class="hhc" data-act="openClient" data-id="${c.id}" data-tab="${h.fam?"fam":"pol"}"><div class="hha ${g}">${esc((c.name||"?").slice(0,1))}</div><div class="hhb"><div class="hhn">${esc(maskNm(c.name))}${a!==""?`<span class="hhage">${a} 歲</span>`:""}</div>
       <div class="hhm">${h.members.length>1?`👪 ${h.members.length} 人`:"個人"}｜保單 ${pol} 張${prem?`｜年繳 ${fmt(prem)}`:""}</div>${hit?`<div class="hhhit">符合：${esc(maskNm(hit.name))}（${esc(relName(hit))}）</div>`:""}</div></div>`}).join("");
-  return `<div class="top"><div><h1>戶長列表</h1><div class="sub">請選擇要查看或做建議的家庭｜共 ${hs.length} 戶</div></div>
-   <div class="row"><div class="seg"><button class="btn sm" data-act="cview" data-v="list">☰ 客戶列表</button><button class="btn sm on" data-act="cview" data-v="fam">🏠 戶長列表</button></div>
-   <input class="inp search" id="fq" placeholder="搜尋戶長、家人姓名或電話…" value="${esc(FQ)}"><label class="sub" style="display:flex;align-items:center;gap:6px;white-space:nowrap"><input type="checkbox" id="maskNm" ${MASK?"checked":""}>隱藏姓名</label><button class="btn p" data-act="newClient">＋ 新增客戶</button></div></div>
+  return `<div class="top ptop"><div><h1>家庭</h1><div class="sub">共 ${hs.length} 戶・點一下查看或做建議</div></div>
+   <div class="row pact"><div class="seg"><button class="btn sm" data-act="cview" data-v="list">☰ 列表</button><button class="btn sm on" data-act="cview" data-v="fam">🏠 家庭</button></div><label class="sub maskt"><input type="checkbox" id="maskNm" ${MASK?"checked":""}>隱藏姓名</label><button class="btn p hide-m" data-act="newClient">＋ 新增客戶</button></div></div>
+   <div class="sbar"><span class="sbi">🔍</span><input class="inp search" id="fq" placeholder="搜尋戶長、家人姓名或電話…" value="${esc(FQ)}" autocomplete="off"></div>
    ${hs.length?`<div class="hhgrid">${cards}</div>`:`<div class="card empty"><b>找不到符合的家庭</b>換個關鍵字試試</div>`}`}
 function vClients(){if(CVIEW==="fam")return vFamGrid();
   const list=filtered();const tags=[...new Set(S.clients.flatMap(c=>c.tags||[]))];
@@ -1094,7 +1124,7 @@ function vClients(){if(CVIEW==="fam")return vFamGrid();
     const cv=cov(c);const miss=["ci","med","acc"].filter(k=>cv[k]<=0).map(k=>({ci:"重疾",med:"實支",acc:"意外"}[k]));
     const lc=lastContactDays(c);
     return `<tr class="click" data-act="openClient" data-id="${c.id}">
-      <td><div class="who"><span class="av">${esc((c.name||"?").slice(-2))}</span><div><div class="nm">${esc(c.name)}</div><div class="sub">${c.birthday?age(c.birthday)+" 歲":""}${c.gender?"・"+esc(c.gender):""}${c.job?"・"+esc(c.job):""}</div></div></div></td>
+      <td><div class="who"><span class="av">${esc((c.name||"?").slice(-2))}</span><div><div class="nm">${esc(c.name)}</div><div class="sub">${c.birthday?age(c.birthday)+" 歲":""}${c.gender?"・"+esc(c.gender):""}${c.job?"・"+esc(c.job):""}</div><div class="mline show-m">${(c.policies||[]).filter(active).length} 張・${fmt(annualSum(c))} 元/年${miss.length?" ・"+miss.map(m=>`<i>缺${m}</i>`).join(""):""}</div></div></div></td>
       <td class="hide-m">${c.family?`<span class="tag">🏠 ${esc(c.family)}</span>${c.relation?`<span class="sub">${esc(c.relation)}</span>`:""}`:"<span class='sub'>—</span>"}</td>
       <td><span class="tag ${STAGE_TAG[c.stage||"潛在"]}">${esc(c.stage||"潛在")}</span></td>
       <td class="hide-m">${(c.policies||[]).filter(active).length} 張<div class="sub">${fmt(annualSum(c))} 元/年</div></td>
@@ -1102,14 +1132,17 @@ function vClients(){if(CVIEW==="fam")return vFamGrid();
       <td class="hide-m sub">${lc>=9999?"—":lc===0?"今天":lc+" 天前"}</td>
       <td class="hide-m">${(c.tags||[]).map(t=>`<span class="tag o">${esc(t)}</span>`).join("")}</td></tr>`;
   }).join("");
-  return `<div class="top"><div><h1>客戶管理</h1><div class="sub">共 ${S.clients.length} 位，顯示 ${list.length} 位</div></div>
-   <div class="row"><input class="inp search" id="q" placeholder="搜尋姓名、電話、地址、標籤、家庭…" value="${esc(S.q)}"><div class="seg"><button class="btn sm on" data-act="cview" data-v="list">☰ 客戶列表</button><button class="btn sm" data-act="cview" data-v="fam">🏠 戶長列表</button></div><button class="btn" data-act="bulkPdf">📂 批次匯入保單PDF</button>${S.isAdmin?`<label class="btn" style="cursor:pointer">📥 匯入永旭保單<input type="file" id="polFile" accept=".json,application/json" style="display:none"></label><button class="btn" data-act="polAudit">🩺 保單健檢</button>`:""}<button class="btn p" data-act="newClient">＋ 新增客戶</button></div></div>
-   <div class="chips">${FILTERS.map(f=>`<button class="chip ${S.filter===f.id?"on":""}" data-act="filter" data-f="${f.id}">${f.n}</button>`).join("")}${String(S.filter||"").startsWith("st:")?`<button class="chip on" data-act="filter" data-f="all">階段：${esc(S.filter.slice(3))} ✕</button>`:""}</div>
-   ${tags.length?`<div class="chips" style="margin-top:-4px"><span class="sub" style="padding:5px 0">標籤：</span>${tags.map(t=>`<button class="chip ${S.tag===t?"on":""}" data-act="tagf" data-t="${esc(t)}">#${esc(t)}</button>`).join("")}</div>`:""}
+  return `<div class="top ptop"><div><h1>客戶</h1><div class="sub">共 ${S.clients.length} 位${list.length!==S.clients.length?`・符合 ${list.length} 位`:""}</div></div>
+   <div class="row pact"><div class="seg"><button class="btn sm on" data-act="cview" data-v="list">☰ 列表</button><button class="btn sm" data-act="cview" data-v="fam">🏠 家庭</button></div>${pMore(`<button class="pmi" data-act="bulkPdf">📂 批次匯入保單 PDF</button>${S.isAdmin?`<label class="pmi">📥 匯入永旭保單<input type="file" id="polFile" accept=".json,application/json" style="display:none"></label><button class="pmi" data-act="polAudit">🩺 保單健檢</button>`:""}${list.length&&S.filter!=="all"?`<button class="pmi" data-act="bulkMsg">📣 對這 ${list.length} 位群發關懷訊息</button>`:""}`)}<button class="btn p hide-m" data-act="newClient">＋ 新增客戶</button></div></div>
+   <div class="sbar"><span class="sbi">🔍</span><input class="inp search" id="q" placeholder="搜尋姓名、電話、地址、標籤、家庭…" value="${esc(S.q)}" autocomplete="off"></div>
+   <div class="chips hs">${FILTERS.map(f=>`<button class="chip ${S.filter===f.id?"on":""}" data-act="filter" data-f="${f.id}">${f.n}</button>`).join("")}${String(S.filter||"").startsWith("st:")?`<button class="chip on" data-act="filter" data-f="all">階段：${esc(S.filter.slice(3))} ✕</button>`:""}</div>
+   ${tags.length?`<div class="chips hs tagrow"><span class="sub" style="padding:5px 0;flex:0 0 auto">標籤</span>${tags.map(t=>`<button class="chip ${S.tag===t?"on":""}" data-act="tagf" data-t="${esc(t)}">#${esc(t)}</button>`).join("")}</div>`:""}
    <div class="card" style="padding:6px 8px;overflow-x:auto">${list.length?`<table class="tbl"><thead><tr><th>客戶</th><th class="hide-m">家庭</th><th>階段</th><th class="hide-m">保單</th><th class="hide-m">保障缺口</th><th class="hide-m">上次聯絡</th><th class="hide-m">標籤</th></tr></thead><tbody>${rows}</tbody></table>`:`<div class="empty"><b>沒有符合的客戶</b>${S.clients.length?"換個篩選條件試試":"按右上角「新增客戶」開始"}</div>`}</div>
    ${list.length>CSHOW?`<div class="row" style="margin-top:10px;justify-content:center"><button class="btn" data-act="moreC">顯示更多（已顯示 ${shown.length} / ${list.length}）</button></div>`:""}
-   ${list.length&&S.filter!=="all"?`<div class="row" style="margin-top:12px"><button class="btn" data-act="bulkMsg">📣 對這 ${list.length} 位群發關懷訊息</button></div>`:""}`;
+   ${list.length&&S.filter!=="all"?`<div class="row hide-m" style="margin-top:12px"><button class="btn" data-act="bulkMsg">📣 對這 ${list.length} 位群發關懷訊息</button></div>`:""}
+   <button class="dfab" data-act="newClient" aria-label="新增客戶" title="新增客戶">＋</button>`;
 }
+function pMore(inner){if(!String(inner).trim())return "";return `<details class="pmore"><summary class="btn" title="更多功能">⋯<span class="hide-m"> 更多</span></summary><div class="pmenu">${inner}</div></details>`}
 function remHideSet(){try{return new Set(JSON.parse(localStorage.getItem("stark-rem-hide")||"[]"))}catch(e){return new Set()}}
 function vRem(){
   const hide=remHideSet();
@@ -1118,10 +1151,10 @@ function vRem(){
   /* 生日、增齡、行程已整合到總覽「客戶關懷」，這頁只放保單相關提醒 */
   const hideItems=[["payment","繳費"],["paidup","期滿"],["follow","追蹤"]];
   const openAttr=(()=>{try{return localStorage.getItem("stark-rhide-open")==="1"?"open":""}catch(e){return""}})();
-  return `<div class="top"><div><h1>保單提醒</h1><div class="sub">繳費提醒・繳費期滿・追蹤約訪，一鍵複製 LINE 訊息（生日、增齡、行程在 <a href="#dashboard">總覽</a>）</div></div>
-   <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">${[7,30,60,90].map(d=>`<button class="chip ${S.remDays===d?"on":""}" data-act="remDays" data-d="${d}">${d} 天內</button>`).join("")}${S.isAdmin?`<details class="rhide" ${openAttr} ontoggle="try{localStorage.setItem('stark-rhide-open',this.open?'1':'0')}catch(e){}"><summary class="btn sm">⚙ 顯示設定 ▾</summary><div class="rhidebox"><div class="sub" style="font-size:12px;margin-bottom:2px">勾選＝顯示，取消＝隱藏</div>${hideItems.map(([k,n])=>`<label><input type="checkbox" data-act="remHideTog" data-k="${k}" ${hide.has(k)?"":"checked"}>${n}</label>`).join("")}</div></details>`:""}</div></div>
-   <div class="grid k4" style="margin-bottom:14px;grid-template-columns:repeat(${Math.max(1,kinds.length)},minmax(0,1fr))">${kinds.length?kinds.map(k=>`<div class="card kpi"><div class="l"><span class="dot" style="background:${KIND[k].c}"></span>${KIND[k].n}</div><div class="v">${(groups[k]||[]).length}</div>${(groups[k]||[]).length?`<button class="btn sm" style="margin-top:6px" data-act="bulkKind" data-k="${k}">全部複製</button>`:""}</div>`).join(""):`<div class="sub" style="padding:8px">提醒類別已全部隱藏，點右上「⚙ 顯示設定」可開回。</div>`}</div>
-   <div class="card">${rs.length?rs.map(remItem).join(""):`<div class="empty"><b>這段期間沒有提醒</b>${hide.size?"（部分類別已隱藏）":"客戶填上生日、保單生效日與繳別後，系統就會自動排出提醒。"}</div>`}</div>`;
+  return `<div class="top ptop stackm"><div><h1>保單提醒</h1><div class="sub">繳費・期滿・追蹤｜生日、增齡、行程在 <a href="#dashboard">總覽</a></div></div>
+   <div class="row pact"><div class="seg">${[7,30,60,90].map(d=>`<button class="btn sm ${S.remDays===d?"on":""}" data-act="remDays" data-d="${d}">${d} 天</button>`).join("")}</div>${S.isAdmin?`<details class="rhide" ${openAttr} ontoggle="try{localStorage.setItem('stark-rhide-open',this.open?'1':'0')}catch(e){}"><summary class="btn sm">⚙ 顯示設定 ▾</summary><div class="rhidebox"><div class="sub" style="font-size:12px;margin-bottom:2px">勾選＝顯示，取消＝隱藏</div>${hideItems.map(([k,n])=>`<label><input type="checkbox" data-act="remHideTog" data-k="${k}" ${hide.has(k)?"":"checked"}>${n}</label>`).join("")}</div></details>`:""}</div></div>
+   <div class="rsum">${kinds.length?kinds.map(k=>{const n=(groups[k]||[]).length;return `<div class="rsi"><span class="dot" style="background:${KIND[k].c}"></span><span class="rsn">${KIND[k].n}</span><b>${n}</b>${n?`<button class="btn sm ghost" data-act="bulkKind" data-k="${k}" title="把這類訊息全部複製">全部複製</button>`:""}</div>`}).join(""):`<div class="sub" style="padding:8px">提醒類別已全部隱藏，點右上「⚙ 顯示設定」可開回。</div>`}</div>
+   <div class="card ralist">${rs.length?rs.map(remItem).join(""):`<div class="empty"><b>這段期間沒有提醒</b>${hide.size?"（部分類別已隱藏）":"客戶填上生日、保單生效日與繳別後，系統就會自動排出提醒。"}</div>`}</div>`;
 }
 function vClaims(){
   const cs=S.clients;if(!cs.length)return `<div class="top"><h1>怎麼賠</h1></div><div class="card empty"><b>先新增客戶與保單</b>系統會依保單上的保障額度，模擬各種情境的理賠金額。</div>`;
@@ -1137,7 +1170,7 @@ function vClaims(){
     ltc:{n:"失能 / 需長期照顧",items:[["長照月給付 × "+months+" 月",v.ltc*months],["失能扶助 × "+months+" 月",v.dis*months]]}
   };
   const sc=SC[S.claimSc]||SC.cancer;const tot=sc.items.reduce((a,i)=>a+i[1],0);
-  return `<div class="top"><div><h1>怎麼賠：理賠情境試算</h1><div class="sub">依客戶「有效保單」的保障額度加總試算，金額僅供說明參考，實際以保單條款與保險公司核定為準</div></div></div>
+  return `<div class="top ptop"><div><h1>怎麼賠</h1><div class="sub">依客戶有效保單試算理賠金額，僅供說明參考，實際以條款與保險公司核定為準</div></div></div>
   <div class="grid g2">
     <div class="card"><h2>1. 選客戶與情境</h2>
       <label class="sub">客戶</label><select class="inp" id="claimCid">${cs.map(x=>`<option value="${x.id}" ${x.id===c.id?"selected":""}>${esc(x.name)}${x.family?"（"+esc(x.family)+"）":""}</option>`).join("")}</select>
@@ -1213,7 +1246,7 @@ function vCard(){
 function cardText(){if(isAdminUser())return myCardText();const p=S.profile;return [`【${p.agent||"你的名字"}｜${p.title||"保險顧問"}】`,p.company,p.slogan?"「"+p.slogan+"」":"",p.phone?"📱 "+p.phone:"",p.line?"💬 LINE："+p.line:"",p.email?"✉ "+p.email:"",p.area?"📍 服務區域："+p.area:"","保單健檢・理賠協助・家庭保障規劃，歡迎隨時聯絡我！"].filter(Boolean).join("\n")}
 function vSetup(){
   const p=S.profile;const f=(k,n,ph)=>`<label>${n}<input class="inp" name="${k}" value="${esc(p[k])}" placeholder="${esc(ph||"")}"></label>`;
-  return `<div class="top"><div><h1>設定</h1><div class="sub">個人資料、保障建議目標、訊息範本、備份</div></div></div>
+  return `<div class="top ptop"><div><h1>設定</h1><div class="sub">個人資料・保障目標・訊息範本・帳號與備份</div></div></div>
   <form class="card" id="profForm"><h2>個人資料（名片與訊息署名用）</h2><div class="form">
     ${f("agent","姓名","例：Justin")}${f("title","職稱","例：資深副總")}${f("company","公司","")}${f("phone","手機","")}${f("line","LINE ID","")}${f("email","Email","")}
     <label class="w2">一句話介紹<input class="inp" name="slogan" value="${esc(p.slogan)}" placeholder="用心規劃，做您一輩子的保險顧問"></label>${f("area","服務區域","例：雙北")}<label>美元匯率（換算台幣用）<input class="inp" type="number" step="0.01" name="usdRate" value="${esc(p.usdRate||"")}" placeholder="預設 32"></label>
@@ -1597,8 +1630,8 @@ async function tidyProducts(){if(S.tidyBusy)return;const step=t=>{S.tidyBusy=t;r
 function vProducts(){
   const co=S.prodCo;const missAll=allMissing().filter(x=>!co||x.co===co);const mf=S.missF||"";const nDraft=missAll.filter(x=>x.draft).length,nNew=missAll.length-nDraft;const RT=new Set(S.remindTerms||[]);const rk=x=>x.co+"|"+(x.code||x.name);const nRemind=missAll.filter(x=>RT.has(rk(x))).length;const nReq=missAll.filter(x=>x.reqBy&&x.reqBy.length).length;const miss=missAll.filter(x=>mf==="remind"?RT.has(rk(x)):mf==="req"?(x.reqBy&&x.reqBy.length):(!mf||(mf==="new"?!x.draft:!!x.draft)));const list=S.products.filter(x=>!co||coKey(x.company)===co).sort((a,b)=>(a.company||"").localeCompare(b.company||"")||(a.code||"").localeCompare(b.code||""));
   const mkey=x=>x.co+"|"+(x.code||x.name);const sel=(S.missSel||[]).filter(k=>miss.some(x=>mkey(x)===k));
-  return `<div class="top"><div><h1>商品明細庫</h1><div class="sub">每個商品設定一次給付規則，所有持有該商品的客戶自動算出保障明細</div></div><div class="row">${STARTER_PRODUCTS.some(x=>!S.products.some(y=>y.id===x.id))?`<button class="btn" data-act="prodStarter">📥 載入預建商品草稿（${STARTER_PRODUCTS.filter(x=>!S.products.some(y=>y.id===x.id)).length}）</button>`:""}<button class="btn a" data-act="prodImport">📄 上傳條款建立商品</button><button class="btn" data-act="prodNew">＋ 手動新增</button><button class="btn" data-act="rematch">🔄 重新比對保單</button></div></div>
-  <div class="chips"><button class="chip ${!co?"on":""}" data-act="prodCo" data-c="">全部</button>${cosList().map(c=>`<button class="chip ${co===c?"on":""}" data-act="prodCo" data-c="${c}">${c}</button>`).join("")}</div>
+  return `<div class="top ptop"><div><h1>商品明細庫</h1><div class="sub">設定一次給付規則，持有該商品的客戶自動算出保障</div></div><div class="row pact"><button class="btn a" data-act="prodImport">📄 上傳條款<span class="hide-m">建立商品</span></button>${pMore(`<button class="pmi" data-act="prodNew">＋ 手動新增商品</button><button class="pmi" data-act="rematch">🔄 重新比對保單</button>${STARTER_PRODUCTS.some(x=>!S.products.some(y=>y.id===x.id))?`<button class="pmi" data-act="prodStarter">📥 載入預建商品草稿（${STARTER_PRODUCTS.filter(x=>!S.products.some(y=>y.id===x.id)).length}）</button>`:""}`)}</div></div>
+  <div class="chips hs"><button class="chip ${!co?"on":""}" data-act="prodCo" data-c="">全部</button>${cosList().map(c=>`<button class="chip ${co===c?"on":""}" data-act="prodCo" data-c="${c}">${c}</button>`).join("")}</div>
   ${vProdStats()}
   <div class="card" style="margin-bottom:14px"><h2>⏳ 待補商品 <span class="sub">（客戶保單裡有、但商品庫還沒有已核對規則的）</span></h2>${(()=>{const P=Object.values(S.termLinks||{}).filter(L=>L.status==="待Claude審"),n=P.length,f=P.filter(L=>L.found).length;return S.isAdmin&&n?`<div class="banner" style="margin:-2px 0 10px;background:#fff7e6;border-color:#f0c55a;color:#8a5a00">🤖 Gemini 已搜尋 <b>${n}</b> 筆（找到連結 <b>${f}</b> 筆、沒找到 ${n-f} 筆），都在「待 Claude 審」。回到 Claude 說「<b>審條款連結</b>」，討論確認後才會上架到商品庫。</div>`:""})()}
    <div class="chips" style="margin:-4px 0 10px"><button class="chip ${!mf?"on":""}" data-act="missF" data-f="">全部 ${missAll.length}</button><button class="chip ${mf==="draft"?"on":""}" data-act="missF" data-f="draft">草稿待核對 ${nDraft}</button><button class="chip ${mf==="new"?"on":""}" data-act="missF" data-f="new">未建立 ${nNew}</button>${nReq?`<button class="chip ${mf==="req"?"on":""}" data-act="missF" data-f="req" style="border-color:#e8590c;background:${mf==="req"?"":"#fff0e6"};font-weight:600">🔔 業務請求建條款 ${nReq}</button>`:""}${nRemind?`<button class="chip ${mf==="remind"?"on":""}" data-act="missF" data-f="remind" style="border-color:#f0b429;font-weight:600">🔔 待更新條款 ${nRemind}</button>`:""}</div>
@@ -2450,6 +2483,7 @@ document.addEventListener("change",async e=>{
   if(["cDays","cCost","cMonths"].includes(t.id)){S[t.id]=num(t.value);render()}
 });
 document.addEventListener("change",e=>{if(e.target.id==="invFile"&&e.target.files&&e.target.files[0]){invImport(e.target.files[0]);e.target.value=""}});
+document.addEventListener("click",e=>{document.querySelectorAll("details.pmore[open]").forEach(d=>{if(!d.contains(e.target)||e.target.closest(".pmi:not(label)"))d.removeAttribute("open")})},true);
 document.addEventListener("change",e=>{if(e.target.id==="polFile"&&e.target.files&&e.target.files[0]){polImport(e.target.files[0]);e.target.value=""}});
 document.addEventListener("input",e=>{if(e.target.id==="invQ"){invQ=e.target.value;debRender("invQ")}});
 document.addEventListener("change",e=>{if(e.target.id==="mktgAmt"){const v=Math.max(1,num(e.target.value)||100);mktgAmt=v*10000;render()}});
