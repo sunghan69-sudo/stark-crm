@@ -1188,8 +1188,13 @@ function vClaims(){
   const fracRaw=p=>{let b=policyBase(p);if(b!=null&&b<10000&&!/萬|元|美元|USD/i.test(String(p.sumText||"")))b*=10000;return b||0};
   const fracBase=p=>{const b=fracRaw(p);return b?b*(isUSD(p)?usdRate():1):0};
   const fracNm=p=>coNm(p)||"骨折險";
-  const fracSum=fracPols.reduce((a,p)=>a+fracBase(p),0);
-  fracPols.forEach(p=>{const b=fracRaw(p);const nm=fracNm(p);const std=/骨力/.test(p.product||"");
+  /* 骨折給付有年齡上限的商品：N65 意萬平安，保險年齡未滿 16 歲才給付意外骨折 */
+  const FRAC_AGE=[{re:/意萬平安|\(N65\)/,max:16}];
+  const insAge=(()=>{const b=pd(c.birthday);if(!b)return null;const t=today();let m=(t.getFullYear()-b.getFullYear())*12+t.getMonth()-b.getMonth();if(t.getDate()<b.getDate())m--;return Math.floor(m/12)+(m%12>=6?1:0)})();
+  const fracOver=p=>{const r=FRAC_AGE.find(x=>x.re.test(p.product||""));return r&&insAge!=null&&insAge>=r.max?r.max:0};
+  const fracSum=fracPols.reduce((a,p)=>a+(fracOver(p)?0:fracBase(p)),0);
+  fracPols.forEach(p=>{const b=fracRaw(p);const nm=fracNm(p);const std=/骨力|意萬平安/.test(p.product||"");
+    const ov=fracOver(p);if(ov){fracItems.push([nm+"（保險年齡 "+insAge+" 歲，滿 "+ov+" 歲後不給付骨折）",0,"na"]);return}
     if(!b){fracItems.push([nm+"（保單未填保額，無法換算）",0]);return}
     const amt=b*(isUSD(p)?usdRate():1)*bone[2]/100*dg[2]/10000;
     fracItems.push([nm+"（保額 "+wfix(b/10000)+" 萬 × "+bone[2]+"%"+dgTxt+(std?"":"，比例暫用國泰骨折別表，請以條款核對")+"）",amt])});
@@ -1221,7 +1226,7 @@ function vClaims(){
       <h3 style="margin-top:18px">${esc(c.name)} 目前保障</h3>
       ${COV.map(x=>`<div class="row" style="justify-content:space-between;font-size:13.5px;padding:3px 0;border-bottom:1px dashed var(--line)"><span>${x.k==="med"?"疾病實支":x.n}</span><b>${fmt(v[x.k])} ${x.u}</b></div>`+(x.k==="med"?`<div class="row" style="justify-content:space-between;font-size:13.5px;padding:3px 0;border-bottom:1px dashed var(--line)"><span>意外實支</span><b>${wfix(rInj)} 萬/次</b></div>`:"")).join("")}
       <div class="row" style="justify-content:space-between;font-size:13.5px;padding:3px 0;border-bottom:1px dashed var(--line)"><span>骨折險（定額）${fracPols.length>1?`<span class="sub">・${fracPols.length} 張</span>`:""}</span><b>${wfix(fracSum/10000)} 萬</b></div>
-      ${fracPols.map(p=>{const b=fracBase(p);return `<div class="row" style="justify-content:space-between;font-size:12.5px;padding:2px 0 2px 14px;color:var(--muted)"><span>└ ${esc(fracNm(p))}</span><span>${b?wfix(b/10000)+" 萬":`<span style="color:var(--bad)">未填保額</span>`}</span></div>`}).join("")}
+      ${fracPols.map(p=>{const b=fracBase(p);const ov=fracOver(p);return `<div class="row" style="justify-content:space-between;font-size:12.5px;padding:2px 0 2px 14px;color:var(--muted)"><span>└ ${esc(fracNm(p))}</span><span>${ov?`<s>${wfix(b/10000)} 萬</s> 滿 ${ov} 歲不保骨折`:b?wfix(b/10000)+" 萬":`<span style="color:var(--bad)">未填保額</span>`}</span></div>`}).join("")}
     </div>
     <div class="card"><h2>2. 「${sc.n}」可能理賠</h2>
       <table class="tbl claimtbl"><thead><tr><th>給付項目</th><th>金額（萬元）</th></tr></thead><tbody>
