@@ -1173,8 +1173,8 @@ function vClaims(){
   const {bi,bone,dg}=fracSel();
   const fDays=bone[1]*dg[2],aHosp=yuanOf("a_hosp"),rInj=yuanOf("r_inj")/10000,aFrac=yuanOf("a_frac")/10000;
   const unHosp=Math.max(0,fDays-days);
-  const fracItems=[...(days>0?[["意外住院日額 × "+days+" 天",aHosp*days/10000]]:[]),["骨折未住院（"+bone[1]+" 天 × "+(dg[2]===1?"1":dg[2]===0.5?"1/2":"1/4")+(days?" − 住院 "+days+" 天":"")+"，日額 × 1/2）",aHosp/2*unHosp/10000],["實支實付（醫療費 "+cost+" 萬）",Math.min(cost,v.med)]];
-  if(rInj>0)fracItems.push(["傷害醫療實支（醫療費 "+cost+" 萬）",Math.min(cost,rInj)]);
+  const fracItems=[...(days>0?[["意外住院日額 × "+days+" 天",aHosp*days/10000]]:[]),["骨折未住院（"+bone[1]+" 天 × "+(dg[2]===1?"1":dg[2]===0.5?"1/2":"1/4")+(days?" − 住院 "+days+" 天":"")+"，日額 × 1/2）",aHosp/2*unHosp/10000],["疾病實支（醫療費 "+cost+" 萬）",Math.min(cost,v.med)]];
+  fracItems.push(["意外實支（醫療費 "+cost+" 萬）",Math.min(cost,rInj)]);
   const fracPols=(c.policies||[]).filter(active).filter(p=>/骨力|骨折|筋骨/.test(p.product||"")&&!/未住院/.test(p.product||""));
   const dgTxt=dg[2]===1?"":dg[2]===0.5?" × 1/2":" × 1/4";
   const fracRaw=p=>{let b=policyBase(p);if(b!=null&&b<10000&&!/萬|元|美元|USD/i.test(String(p.sumText||"")))b*=10000;return b||0};
@@ -1187,9 +1187,9 @@ function vClaims(){
     fracItems.push([nm+"（保額 "+wfix(b/10000)+" 萬 × "+bone[2]+"%"+dgTxt+(std?"":"，比例暫用國泰骨折別表，請以條款核對")+"）",amt])});
   if(!fracPols.length){if(aFrac>0)fracItems.push(["意外骨折保險金（最高，依部位比例核定）",aFrac,"cap"]);else fracItems.push(["骨折險（定額給付，如真好骨力）",0])}
   const SC={
-    cancer:{n:"罹患癌症",items:[["重大傷病/重疾",v.ci],["癌症一次金",v.cancer],["住院日額 × "+days+" 天",v.hosp*days/10000],["實支實付（醫療費 "+cost+" 萬）",Math.min(cost,v.med)]]},
-    accident:{n:"嚴重車禍 / 意外住院",items:[["住院日額 × "+days+" 天",v.hosp*days/10000],["實支實付（醫療費 "+cost+" 萬）",Math.min(cost,v.med)],["意外失能（以 1 級失能計）",v.acc]]},
-    stroke:{n:"中風 / 心肌梗塞",items:[["重大傷病/重疾",v.ci],["住院日額 × "+days+" 天",v.hosp*days/10000],["實支實付（醫療費 "+cost+" 萬）",Math.min(cost,v.med)],["長照月給付 × "+months+" 月",v.ltc*months],["失能扶助 × "+months+" 月",v.dis*months]]},
+    cancer:{n:"罹患癌症",items:[["重大傷病/重疾",v.ci],["癌症一次金",v.cancer],["住院日額 × "+days+" 天",v.hosp*days/10000],["疾病實支（醫療費 "+cost+" 萬）",Math.min(cost,v.med)]]},
+    accident:{n:"嚴重車禍 / 意外住院",items:[["住院日額 × "+days+" 天",v.hosp*days/10000],["疾病實支（醫療費 "+cost+" 萬）",Math.min(cost,v.med)],["意外實支（醫療費 "+cost+" 萬）",Math.min(cost,rInj)],["意外失能（以 1 級失能計）",v.acc]]},
+    stroke:{n:"中風 / 心肌梗塞",items:[["重大傷病/重疾",v.ci],["住院日額 × "+days+" 天",v.hosp*days/10000],["疾病實支（醫療費 "+cost+" 萬）",Math.min(cost,v.med)],["長照月給付 × "+months+" 月",v.ltc*months],["失能扶助 × "+months+" 月",v.dis*months]]},
     death:{n:"疾病身故",items:[["壽險身故",v.life]]},
     accdeath:{n:"意外身故",items:[["壽險身故",v.life],["意外身故",v.acc]]},
     ltc:{n:"失能 / 需長期照顧",items:[["長照月給付 × "+months+" 月",v.ltc*months],["失能扶助 × "+months+" 月",v.dis*months]]},
@@ -1210,7 +1210,7 @@ function vClaims(){
         <label>照護月數<input class="inp" type="number" min="0" id="cMonths" value="${months}"></label>
       </div>
       <h3 style="margin-top:18px">${esc(c.name)} 目前保障</h3>
-      ${COV.map(x=>`<div class="row" style="justify-content:space-between;font-size:13.5px;padding:3px 0;border-bottom:1px dashed var(--line)"><span>${x.n}</span><b>${fmt(v[x.k])} ${x.u}</b></div>`).join("")}
+      ${COV.map(x=>`<div class="row" style="justify-content:space-between;font-size:13.5px;padding:3px 0;border-bottom:1px dashed var(--line)"><span>${x.k==="med"?"疾病實支":x.n}</span><b>${fmt(v[x.k])} ${x.u}</b></div>`+(x.k==="med"?`<div class="row" style="justify-content:space-between;font-size:13.5px;padding:3px 0;border-bottom:1px dashed var(--line)"><span>意外實支</span><b>${wfix(rInj)} 萬/次</b></div>`:"")).join("")}
       <div class="row" style="justify-content:space-between;font-size:13.5px;padding:3px 0;border-bottom:1px dashed var(--line)"><span>骨折險（定額）${fracPols.length>1?`<span class="sub">・${fracPols.length} 張</span>`:""}</span><b>${wfix(fracSum/10000)} 萬</b></div>
       ${fracPols.map(p=>{const b=fracBase(p);return `<div class="row" style="justify-content:space-between;font-size:12.5px;padding:2px 0 2px 14px;color:var(--muted)"><span>└ ${esc(fracNm(p))}</span><span>${b?wfix(b/10000)+" 萬":`<span style="color:var(--bad)">未填保額</span>`}</span></div>`}).join("")}
     </div>
