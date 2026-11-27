@@ -1161,7 +1161,7 @@ function vRem(){
 /* [部位, 公會骨折未住院日數, 國泰真好骨力「骨折別表」完全骨折給付比例%] */
 const FRAC_BONES=[["指骨",14,3],["趾骨",14,3],["鼻骨、眶骨（含顴骨）",14,12],["掌骨",14,12],["蹠骨",14,12],["下顎（齒槽醫療除外）",20,20],["肋骨",20,20],["鎖骨",28,30],["橈骨或尺骨",28,30],["膝蓋骨",28,30],["肩胛骨",34,35],["椎骨（胸椎、腰椎、尾骨）",40,40],["骨盤（腸骨、恥骨、坐骨、薦骨）",40,40],["臂骨（上臂）",40,40],["橈骨與尺骨",40,40],["腕骨（一手或雙手）",40,40],["脛骨或腓骨",40,40],["踝骨（一足或雙足）",40,40],["頭蓋骨",50,60],["股骨（大腿骨）",50,60],["脛骨及腓骨",50,60],["大腿骨頸",60,80]];
 const FRAC_DEF=14;
-function fracSel(){const bi=Math.min(FRAC_BONES.length-1,Math.max(0,Number.isFinite(+S.fBone)&&S.fBone!=null?Math.floor(+S.fBone):FRAC_DEF));return {bi,bone:FRAC_BONES[bi],dg:FRAC_DEG.find(d=>d[0]===S.fDeg)||FRAC_DEG[0]}}
+function fracSel(){const bi=Math.min(FRAC_BONES.length-1,Math.max(0,S.fBone!==""&&S.fBone!=null&&Number.isFinite(+S.fBone)?Math.floor(+S.fBone):FRAC_DEF));return {bi,bone:FRAC_BONES[bi],dg:FRAC_DEG.find(d=>d[0]===S.fDeg)||FRAC_DEG[0]}}
 const FRAC_DEG=[["full","完全骨折",1],["part","不完全骨折",0.5],["crack","骨裂（龜裂）",0.25]];
 function wfix(n){return (Math.round(n*100)/100).toString()}
 function vClaims(){
