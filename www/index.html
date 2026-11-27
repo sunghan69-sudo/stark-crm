@@ -1173,7 +1173,7 @@ function vClaims(){
   const {bi,bone,dg}=fracSel();
   const fDays=bone[1]*dg[2],aHosp=yuanOf("a_hosp"),rInj=yuanOf("r_inj")/10000,aFrac=yuanOf("a_frac")/10000;
   const unHosp=Math.max(0,fDays-days);
-  const fracItems=[...(days>0?[["意外住院日額 × "+days+" 天",aHosp*days/10000]]:[]),["骨折未住院（"+bone[1]+" 天 × "+(dg[2]===1?"1":dg[2]===0.5?"1/2":"1/4")+(days?" − 住院 "+days+" 天":"")+"，日額 × 1/2）",aHosp/2*unHosp/10000],["疾病實支（醫療費 "+cost+" 萬）",Math.min(cost,v.med)]];
+  const fracItems=[...(days>0?[["意外住院日額 × "+days+" 天",aHosp*days/10000]]:[]),["骨折未住院（"+bone[1]+" 天 × "+(dg[2]===1?"1":dg[2]===0.5?"1/2":"1/4")+(days?" − 住院 "+days+" 天":"")+"，日額 × 1/2）",aHosp/2*unHosp/10000],(days>0?["疾病實支（醫療費 "+cost+" 萬）",Math.min(cost,v.med)]:["疾病實支（未住院，住院實支不啟動）",0,"na"])];
   fracItems.push(["意外實支（醫療費 "+cost+" 萬）",Math.min(cost,rInj)]);
   const fracPols=(c.policies||[]).filter(active).filter(p=>/骨力|骨折|筋骨/.test(p.product||"")&&!/未住院/.test(p.product||""));
   const dgTxt=dg[2]===1?"":dg[2]===0.5?" × 1/2":" × 1/4";
@@ -1216,10 +1216,11 @@ function vClaims(){
     </div>
     <div class="card"><h2>2. 「${sc.n}」可能理賠</h2>
       <table class="tbl claimtbl"><thead><tr><th>給付項目</th><th>金額（萬元）</th></tr></thead><tbody>
-      ${sc.items.map(i=>`<tr><td>${i[0]}</td><td><b>${i[2]==="cap"?"最高 "+wfix(i[1])+"（另計）":i[1]>0?wfix(i[1]):`<span style="color:var(--bad)">0（無此保障）</span>`}</b></td></tr>`).join("")}
+      ${sc.items.map(i=>`<tr><td>${i[0]}</td><td><b>${i[2]==="na"?`<span style="color:var(--muted)">不給付</span>`:i[2]==="cap"?"最高 "+wfix(i[1])+"（另計）":i[1]>0?wfix(i[1]):`<span style="color:var(--bad)">0（無此保障）</span>`}</b></td></tr>`).join("")}
       </tbody></table>
       <div class="row" style="margin-top:16px;justify-content:space-between"><span>合計約</span><span class="total">${wfix(tot)} 萬元</span></div>
-      ${sc.items.some(i=>i[1]<=0)?`<div class="banner" style="margin-top:14px">⚠ 有項目為 0，代表這個情境下有保障缺口，是很好的溝通切入點。</div>`:""}
+      ${["frac","accident"].includes(S.claimSc)?`<div class="hint" style="margin-top:10px">疾病實支與意外實支各自在限額內試算（跨險種），實際以各家條款正副本規定為準。</div>`:""}
+      ${sc.items.some(i=>!i[2]&&i[1]<=0)?`<div class="banner" style="margin-top:14px">⚠ 有項目為 0，代表這個情境下有保障缺口，是很好的溝通切入點。</div>`:""}
       <button class="btn a" style="margin-top:8px" data-act="copyClaim">複製試算摘要給客戶</button>
     </div>
   </div>`;
