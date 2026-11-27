@@ -1211,7 +1211,7 @@ function vClaims(){
       <h3 style="margin-top:18px">${esc(c.name)} 目前保障</h3>
       ${COV.map(x=>`<div class="row" style="justify-content:space-between;font-size:13.5px;padding:3px 0;border-bottom:1px dashed var(--line)"><span>${x.n}</span><b>${fmt(v[x.k])} ${x.u}</b></div>`).join("")}
       <div class="row" style="justify-content:space-between;font-size:13.5px;padding:3px 0;border-bottom:1px dashed var(--line)"><span>骨折險（定額）${fracPols.length>1?`<span class="sub">・${fracPols.length} 張</span>`:""}</span><b>${wfix(fracSum/10000)} 萬</b></div>
-      ${fracPols.map(p=>{const b=fracBase(p);return `<div class="row" style="justify-content:space-between;font-size:12.5px;padding:2px 0 2px 14px;color:var(--mut,#667)"><span>└ ${esc(fracNm(p))}</span><span>${b?wfix(b/10000)+" 萬":`<span style="color:var(--bad)">未填保額</span>`}</span></div>`}).join("")}
+      ${fracPols.map(p=>{const b=fracBase(p);return `<div class="row" style="justify-content:space-between;font-size:12.5px;padding:2px 0 2px 14px;color:var(--muted)"><span>└ ${esc(fracNm(p))}</span><span>${b?wfix(b/10000)+" 萬":`<span style="color:var(--bad)">未填保額</span>`}</span></div>`}).join("")}
     </div>
     <div class="card"><h2>2. 「${sc.n}」可能理賠</h2>
       <table class="tbl claimtbl"><thead><tr><th>給付項目</th><th>金額（萬元）</th></tr></thead><tbody>
