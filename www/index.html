@@ -431,6 +431,12 @@ details.fold{align-self:start}details.fold>summary{list-style:none;cursor:pointe
 .vone .vcard{display:grid;grid-template-columns:minmax(0,1fr);gap:0}.vmore{margin-top:10px}.vmore>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:1px solid var(--line);border-radius:10px;font-size:13.5px;color:var(--pri);font-weight:600;user-select:none}.vmore>summary::-webkit-details-marker{display:none}.vmore>summary .fchev{transition:transform .2s;color:var(--muted)}.vmore[open]>summary .fchev{transform:rotate(180deg)}
 @media (max-width:800px){.kpis{grid-template-columns:repeat(3,1fr)}.kpi{padding:10px}.kpi>b{font-size:19px}.kpi small{font-size:11px}}
 .dch .sub a,.top .sub a{color:var(--pri2);font-weight:600;text-decoration:none}
+.tkwrap{display:grid;gap:6px;margin:-6px 0 14px}.tkwrap .dmq{margin:0;padding:7px 14px}
+.dmq.tk{background:var(--panel);border-color:var(--line);color:var(--ink);cursor:default}.dmq.tk .dmq-l{color:var(--pri);border-right-color:var(--line);min-width:64px}
+.tki{margin-right:26px;font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap}.tki b{font-weight:700;margin-right:2px}.tki i{font-style:normal;font-size:12.5px;font-weight:700}
+@media (min-width:801px){.tk-f .dmq-t{animation:none}.tk-f .dmq-t>span+span{display:none}.tk-f .dmq-w{-webkit-mask-image:none;mask-image:none}}
+.tkg{font-size:11.5px;font-weight:700;color:#fff;background:var(--pri2);border-radius:9px;padding:1px 8px;margin-right:14px;vertical-align:1px}
+@media (max-width:800px){.tkwrap{margin:-4px 0 12px;gap:5px}.tkwrap .dmq{padding:6px 12px}.tki{font-size:13.5px;margin-right:20px}.dmq.tk .dmq-l{min-width:54px}}
 @media (max-width:380px){.dtabs button{font-size:13px;padding:8px 2px}.dgap{grid-template-columns:96px 1fr 46px!important}}
 </style>
 </head>
@@ -883,7 +889,7 @@ async function loadTwRt(force){const gap=twOpenNow()?25000:10*60000;if(!force&&D
     const rows=TWRT_SYMS.map(([k,n])=>{const d=map[k];if(!d||d[6]==null)return null;return {key:k,name:n,code:String(d[200010]||""),price:d[6],chg:d[11],pct:d[56],high:d[12],low:d[13],vol:k.includes("STOCK")?d[200013]:null,t:d[200007]*1000}}).filter(Boolean);
     if(rows.length){TWRT={at:Date.now(),rows};try{localStorage.setItem("stark-twrt",JSON.stringify(TWRT))}catch(e){}
       const el=document.getElementById("twrtBox");if(el)el.outerHTML=twrtHtml()}}catch(e){}}
-function twrtTick(){if(twrtTimer)return;twrtTimer=setInterval(()=>{if(S.view==="dashboard"&&document.visibilityState!=="hidden"){loadTwRt();loadUsRt()}},30000)}
+function twrtTick(){if(twrtTimer)return;twrtTimer=setInterval(()=>{if(S.view==="dashboard"&&document.visibilityState!=="hidden"){loadTwRt();loadUsRt();loadTicker()}},30000)}
 function twrtHtml(){const t=TWRT;if(!t||!t.rows.length)return `<div class="mkc" id="twrtBox"><div class="mkt1">台股即時行情</div><div class="hint">讀取中…</div></div>`;
   const idx=t.rows.filter(r=>r.key.includes("INDEX")),stk=t.rows.filter(r=>r.key.includes("STOCK"));const main=idx[0];const open=twOpenNow();
   const tm=new Date(Math.max(...t.rows.map(r=>r.t||0)));const tms=`${tm.getMonth()+1}/${tm.getDate()} ${String(tm.getHours()).padStart(2,"0")}:${String(tm.getMinutes()).padStart(2,"0")}`;
@@ -950,6 +956,36 @@ function vMarquee(){loadPos();const p=POS;if(!p||!p.img)return "";const src=POS_
   const main=(p.quote&&p.quote.length)?p.quote.join(""):String(p.title||"").replace(/…$/,"");if(!main)return "";
   const txt=main+((p.body&&p.body.length)?"　—　"+p.body.join(""):"");const dur=Math.max(18,Math.round(txt.length*0.42));
   return `<a class="dmq" href="${esc(src)}" data-act="posView" data-src="${esc(src)}" ${p.video?`data-video="${esc(POS_URL+p.video)}"`:""} title="點一下看圖卡／動畫"><span class="dmq-l">🌅 每日正能量</span><span class="dmq-w"><span class="dmq-t" style="animation-duration:${dur}s"><span>${esc(txt)}</span><span aria-hidden="true">${esc(txt)}</span></span></span></a>`}
+/* ========== 行情／匯率跑馬燈（鉅亨網即時報價；白天台股、晚上美股；成交量前 5 從常見熱門股中即時排序） ========== */
+const TK_TW_IDX=[["TWS:TSE01:INDEX","加權指數"]];
+const TK_US_IDX=[["GI:DJI:INDEX","道瓊"],["GI:IXIC:INDEX","那斯達克"],["GI:INX:INDEX","S&P 500"],["GI:SOX:INDEX","費半"]];
+const TK_TW_POOL="2330,2317,2303,2454,2308,2382,3231,2356,2324,2353,2357,2409,3481,2344,2408,2337,2603,2609,2615,2618,2610,2002,1301,1303,2884,2892,2886,2891,2882,2881,2885,2880,2883,2887,2890,2801,3017,6669,2301,1802,2313,2368,3037,2449,3711,2412,2371,2328,2312,3260,8299,6770,2485,2399,1605,2027".split(",").map(c=>"TWS:"+c+":STOCK");
+const TK_US_POOL="NVDA,TSLA,AAPL,AMD,PLTR,SOFI,F,INTC,AMZN,BAC,MSFT,GOOGL,META,AAL,NIO,LCID,SMCI,MU,T,PFE,MARA,RIVN,CCL,WBD,SNAP,GRAB,HOOD,AVGO,UBER,BABA,TSM,SOUN,RGTI,IONQ,NU,VZ,WMT,XOM,CSCO,ORCL,NFLX,COIN,MSTR,RIOT,GME,OPEN,ITUB,VALE,ABEV,KVUE,QS,PLUG,CLSK,JBLU".split(",").map(c=>"USS:"+c+":STOCK");
+const TK_FX=[["FX:USDTWD:FOREX","美元",3],["FX:JPYTWD:FOREX","日圓",4],["FX:EURTWD:FOREX","歐元",3]];
+let TKR=(()=>{try{return JSON.parse(localStorage.getItem("stark-tkr")||"null")}catch(e){return null}})(),tkrAt=0,tkrBusy=false;
+function tkrMode(){const d=new Date(Date.now()+(new Date().getTimezoneOffset()+480)*60000);const h=d.getHours();return h>=7&&h<17?"tw":"us"}
+async function tkrQuote(syms){const r=await fetch("https://ws.api.cnyes.com/ws/api/v1/quote/quotes/"+syms.join(",")+"?column=G",{cache:"no-store"});if(!r.ok)throw new Error(r.status);return ((await r.json()).data)||[]}
+async function loadTicker(force){if(tkrBusy||(!force&&Date.now()-tkrAt<25000))return;tkrAt=Date.now();tkrBusy=true;
+  try{const mode=tkrMode();const idx=mode==="tw"?TK_TW_IDX:TK_US_IDX,pool=mode==="tw"?TK_TW_POOL:TK_US_POOL;
+    const [a,b,fx]=await Promise.all([tkrQuote(idx.map(x=>x[0])),tkrQuote(pool),tkrQuote(TK_FX.map(x=>x[0]))]);
+    const it=(d,n)=>d&&d[6]!=null?{n:n||d[200009]||"",p:+d[6],c:+d[11]||0,pct:d[56]!=null?+d[56]:null}:null;
+    const idxRows=idx.map(([k,n])=>it(a.find(d=>d[0]===k),n)).filter(Boolean);
+    const top=b.filter(d=>d[6]!=null).sort((x,y)=>(+y[200013]||0)-(+x[200013]||0)).slice(0,5).map(d=>it(d));
+    const fxRows=TK_FX.map(([k,n,dp])=>{const r=it(fx.find(d=>d[0]===k),n);if(r)r.dp=dp;return r}).filter(Boolean);
+    if(idxRows.length||top.length||fxRows.length){TKR={mode,at:Date.now(),idx:idxRows,top,fx:fxRows.length?fxRows:((TKR&&TKR.fx)||[])};try{localStorage.setItem("stark-tkr",JSON.stringify(TKR))}catch(e){}tkrPaint()}}
+  catch(e){}finally{tkrBusy=false}}
+function tkrItem(x,dp){const up=x.c>0,dn=x.c<0;const p=x.p.toLocaleString("en-US",{minimumFractionDigits:dp||0,maximumFractionDigits:dp!=null?dp:2});
+  return `<span class="tki"><b>${esc(x.n)}</b> ${p}${x.pct!=null?` <i class="${up?"mup":dn?"mdn":"mfl"}">${up?"▲":dn?"▼":""}${Math.abs(x.pct).toFixed(2)}%</i>`:""}</span>`}
+function tkrHtml(kind){const t=TKR;if(!t)return "";
+  if(kind==="s"){if(!(t.idx||[]).length&&!(t.top||[]).length)return "";return (t.idx||[]).map(x=>tkrItem(x)).join("")+((t.top||[]).length?`<span class="tkg">成交量前 5</span>`+t.top.map(x=>tkrItem(x)).join(""):"")}
+  return (t.fx||[]).map(x=>tkrItem(x,x.dp)).join("")}
+function tkrRow(kind){const inner=tkrHtml(kind);const t=TKR||{};const tw=(t.mode||tkrMode())==="tw";
+  const lab=kind==="s"?(tw?"📈 台股":"🇺🇸 美股"):"💱 匯率";const dur=kind==="s"?55:32;
+  return `<div class="dmq tk tk-${kind}" id="tk-${kind}"><span class="dmq-l">${lab}</span><span class="dmq-w"><span class="dmq-t" style="animation-duration:${dur}s"><span>${inner||"讀取中…"}</span><span aria-hidden="true">${inner||"讀取中…"}</span></span></span></div>`}
+function tkrPaint(){["s","f"].forEach(k=>{const el=document.getElementById("tk-"+k);if(!el)return;const inner=tkrHtml(k);if(!inner)return;
+  const lab=el.querySelector(".dmq-l");if(lab&&k==="s")lab.textContent=(TKR.mode==="tw"?"📈 台股":"🇺🇸 美股");
+  const sp=el.querySelectorAll(".dmq-t>span");if(sp.length===2&&sp[0].innerHTML!==inner){sp[0].innerHTML=inner;sp[1].innerHTML=inner}})}
+function vTicker(){loadTicker();twrtTick();return `<div class="tkwrap">${tkrRow("s")}${tkrRow("f")}</div>`}
 function vDash(){
   const cs=S.clients;const pols=cs.flatMap(c=>(c.policies||[]).filter(active));
   const prem=cs.reduce((a,c)=>a+annualSum(c),0);
@@ -991,7 +1027,7 @@ function vDash(){
   const h=new Date().getHours();const greet=h<11?"早安":h<18?"午安":"晚安";
   const kpi=(lab,val,sub,attrs,cls)=>`<a class="kpi ${cls||""}" ${attrs}><span>${lab}</span><b>${val}</b><small>${sub}</small></a>`;
   const premTxt=prem>=1e8?(prem/1e8).toFixed(2)+"<em>億</em>":prem>=1e4?Math.round(prem/1e4).toLocaleString()+"<em>萬</em>":fmt(prem);
-  return `${vMarquee()}
+  return `${vMarquee()}${vTicker()}
   <div class="top dtop"><div><h1>總覽</h1><div class="sub">${ds(t)}｜${greet}，${esc(agentName())}</div></div>
     <div class="row dtb"><button class="btn" data-act="dSearch" title="搜尋客戶">🔍<span class="hide-m"> 搜尋客戶</span></button><button class="btn dq" data-act="tour" title="操作說明影片" aria-label="操作說明影片">?</button><button class="btn p hide-m" data-act="newClient">＋ 新增客戶</button></div></div>
   <div class="kpis">
