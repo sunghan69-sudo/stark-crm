@@ -375,6 +375,59 @@ details.fold{align-self:start}details.fold>summary{list-style:none;cursor:pointe
 .mknews .nwi{display:flex;gap:9px;padding:7px 0;border-bottom:1px solid var(--line,#e5e7eb);color:inherit;text-decoration:none}.mknews .nwi:last-child{border-bottom:0}.mknews .nwi:hover b{color:var(--pri);text-decoration:underline}.nwn{flex:0 0 20px;height:20px;border-radius:50%;background:var(--pri);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:2px}.nwb{display:flex;flex-direction:column;gap:2px;min-width:0}.nwb b{font-size:14px;line-height:1.4;font-weight:600}.nwb small{font-size:11.5px;color:var(--muted)}.nwtag{font-style:normal;background:#e0f2f1;color:#0f7c8a;border-radius:4px;padding:0 5px;margin-right:5px}
 .vids{margin-top:14px}.vgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:10px}.vcard{display:block;color:inherit;text-decoration:none;cursor:pointer}.vth{position:relative;aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#0f172a}.vth img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s}.vcard:hover .vth img{transform:scale(1.04)}.vplay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:46px;height:46px;border-radius:50%;background:rgba(220,38,38,.9);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;padding-left:3px;box-shadow:0 2px 10px rgba(0,0,0,.4)}.vtag{position:absolute;left:8px;top:8px;background:#0f7c8a;}.vt-inv{background:#c2410c!important}.vt-biz{background:#1d4ed8!important}.vt-med{background:#15803d!important}.vt-ins{background:#7c3aed!important}.vtag{color:#fff;font-size:11px;border-radius:4px;padding:1px 6px}.vtt{font-size:13.5px;font-weight:600;line-height:1.4;margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.vmeta{font-size:11.5px;color:var(--muted);margin-top:3px}@media (max-width:1000px){.vgrid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}}.vov{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px}.vbox{width:min(960px,100%);background:#0f172a;border-radius:12px;overflow:hidden}.vhd{display:flex;gap:8px;align-items:center;padding:10px 12px;color:#fff}.vhd b{flex:1;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vfr{aspect-ratio:16/9}.vfr iframe{width:100%;height:100%;border:0;display:block}
 .mkpos{display:flex;flex-direction:column}.posimg{flex:1;display:flex;justify-content:center;align-items:flex-start;cursor:zoom-in}.posimg img{height:100%;max-height:440px;width:auto;max-width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.15)}.posbt{text-align:center;margin-top:8px}
+/* ===== 總覽（2026-11 改版） ===== */
+.dmq{display:flex;align-items:center;gap:12px;margin:0 0 14px;padding:9px 14px;background:linear-gradient(90deg,#fbf6ec,#f5ecdd);border:1px solid #ecdcc4;border-radius:12px;color:#4d3b2a;text-decoration:none;overflow:hidden;cursor:pointer}
+.dmq-l{flex:0 0 auto;font-size:12.5px;font-weight:700;color:#b06a3e;padding-right:12px;border-right:1px solid #e3cfb2;white-space:nowrap}
+.dmq-w{flex:1;min-width:0;overflow:hidden;white-space:nowrap;-webkit-mask-image:linear-gradient(90deg,transparent,#000 3%,#000 97%,transparent);mask-image:linear-gradient(90deg,transparent,#000 3%,#000 97%,transparent)}
+.dmq-t{display:inline-flex;font-size:14.5px;letter-spacing:.6px;animation:dmq 30s linear infinite;will-change:transform}.dmq-t>span{padding-right:4em}
+.dmq:hover .dmq-t,.dmq:active .dmq-t{animation-play-state:paused}
+@keyframes dmq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.dmq-t{animation:none}.dmq-t>span+span{display:none}}
+.dtop{margin-bottom:14px}.dtb{gap:8px}.dtb .dq{width:38px;padding-left:0;padding-right:0;font-weight:800;color:var(--muted)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 16px;color:inherit;text-decoration:none;cursor:pointer;display:flex;flex-direction:column;gap:1px;transition:border-color .15s,box-shadow .15s}
+.kpi:hover{border-color:var(--pri2);box-shadow:0 2px 10px rgba(20,54,92,.08)}
+.kpi>span{font-size:12.5px;color:var(--muted)}.kpi>b{font-size:24px;font-weight:800;color:var(--pri);line-height:1.25;font-variant-numeric:tabular-nums}.kpi>b em{font-style:normal;font-size:13px;margin-left:2px}.kpi small{font-size:12px;color:var(--muted)}.kpi .kbad{color:var(--bad);font-weight:700}
+.dgrid{display:grid;grid-template-columns:minmax(0,1.85fr) minmax(300px,1fr);gap:14px;align-items:start}
+.dcol{display:grid;gap:14px;align-content:start;min-width:0}.dcol>.card,.dcol>details.card{margin:0}
+.dch{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}.dch h2{margin:0;font-size:17px}.dch .sub{font-size:12.5px}
+.dtabs{display:flex;gap:4px;background:var(--soft);padding:4px;border-radius:12px;margin-bottom:6px}
+.dtabs button{flex:1;border:0;background:transparent;padding:9px 6px;border-radius:9px;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap;font-family:inherit}
+.dtabs button.on{background:#fff;color:var(--pri);box-shadow:0 1px 3px rgba(20,54,92,.12)}
+.dtabs .dn{font-variant-numeric:tabular-nums}.dtabs i{font-style:normal;font-size:11px;font-weight:700;background:var(--bad);color:#fff;border-radius:9px;padding:1px 6px;margin-left:4px;vertical-align:1px}
+.alist{display:flex;flex-direction:column}
+.arow{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 4px;border-bottom:1px solid var(--line)}.arow:last-child{border-bottom:0}
+.awhen{text-align:center;line-height:1.3;border-right:1px solid var(--line);padding-right:10px}.awhen b{display:block;font-size:14px;color:var(--pri)}.awhen span{font-size:11.5px;color:var(--muted)}
+.arow.over .awhen b{color:var(--bad)}.arow.hot .awhen b{color:#c2410c}
+.abody{min-width:0;cursor:pointer}.abody .at{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.abody .at small{margin-left:8px;font-size:12px;font-weight:400;color:var(--muted)}
+.abody .ad{font-size:12.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.abody:hover .at{color:var(--pri2)}
+.aact{display:flex;gap:6px;align-items:center}
+.ack{width:34px;height:34px;flex:0 0 34px;border-radius:50%;border:1.5px solid #cfd6df;background:#fff;color:#b8c0cb;font-weight:900;font-size:15px;cursor:pointer;transition:all .15s}
+.ack:hover{border-color:var(--ok);color:var(--ok)}.ack.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.arow.done .awhen,.arow.done .abody{opacity:.45}.arow.done .abody .at{text-decoration:line-through}
+.amore{width:100%;margin-top:8px;justify-content:center}
+.dgap{grid-template-columns:120px 1fr 52px!important;cursor:pointer;border-radius:8px}.dgap:hover{background:var(--soft)}
+.stgs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stg{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border-radius:10px;background:var(--soft);color:inherit;text-decoration:none;cursor:pointer;transition:background .15s}.stg:hover{background:#e1eaf4}
+.stg b{font-size:20px;font-weight:800;color:var(--pri);font-variant-numeric:tabular-nums}.stg span{font-size:12px;color:var(--muted);white-space:nowrap}
+.mkh2{display:flex;align-items:center;gap:10px}.mkh2>b{font-size:15px;white-space:nowrap}
+.mpills{display:flex;flex-wrap:wrap;gap:6px 14px;flex:1;min-width:0}.mpill{display:inline-flex;align-items:baseline;gap:5px;white-space:nowrap;font-size:13px}.mpill em{font-style:normal;color:var(--muted);font-size:12px}.mpill b{font-variant-numeric:tabular-nums}.mpill i{font-style:normal;font-size:12px;font-weight:700}.mpill small{font-size:11.5px;color:var(--muted)}
+.dcol .mkt{margin-bottom:0}.dcol .mkg{grid-template-columns:1fr}.dcol .vids{margin-top:0}.dcol .vgrid{grid-template-columns:1fr 1fr}
+.dfab{display:none;position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:58;width:54px;height:54px;border-radius:50%;border:0;background:var(--acc);color:#fff;font-size:28px;line-height:1;box-shadow:0 6px 18px rgba(232,131,58,.4);cursor:pointer;align-items:center;justify-content:center}
+.dfab:active{transform:scale(.94)}body.nav-open .dfab{opacity:0;pointer-events:none}
+@media (max-width:1000px){.dgrid{grid-template-columns:1fr}.dcol .mkg{grid-template-columns:1fr 1fr}}
+@media (max-width:800px){
+  .dfab{display:flex}.dgrid{padding-bottom:72px}
+  .kpis{grid-template-columns:repeat(2,1fr);gap:8px}.kpi{padding:10px 12px}.kpi>b{font-size:20px}
+  .arow{grid-template-columns:54px minmax(0,1fr);row-gap:8px;padding:12px 2px}.aact{grid-column:2}.aact .btn{flex:1;justify-content:center}
+  .dcol .mkg{grid-template-columns:1fr}
+  .dcol .vgrid{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;padding-bottom:4px}.dcol .vcard{flex:0 0 72%;scroll-snap-align:start}
+  .dmq{margin:0 0 12px;padding:8px 12px}.dmq-l{font-size:12px;padding-right:10px}.dmq-t{font-size:14px}
+}
+.dgap .x{grid-column:auto!important;text-align:right!important;white-space:nowrap}
+.aact .btn.line,.aact a.btn{text-decoration:none}.dtb .dq{justify-content:center}
+@media (max-width:800px){.dgap{grid-template-columns:104px 1fr 44px!important;gap:10px}}
+@media (max-width:380px){.dtabs button{font-size:13px;padding:8px 2px}.dgap{grid-template-columns:96px 1fr 46px!important}}
 </style>
 </head>
 <body>
@@ -437,6 +490,7 @@ const DEF_TPL={
   payment:"{name}您好，我是{agent}。提醒您「{product}」保費 {amount} 元將於 {date} 繳費／扣款，麻煩先確認帳戶或信用卡額度，有任何問題隨時跟我說🙏",
   paidup:"{name}您好，我是{agent}。恭喜您「{product}」即將於 {date} 繳費期滿🎉！之後保障持續，找時間幫您一起檢視整體保障是否需要調整。",
   follow:"{name}您好，我是{agent}，最近好嗎？上次聊到的保障規劃，想跟您約個時間再幫您整理一下，這週方便嗎？",
+  agein:"{name}您好，我是{agent}。提醒您 {date} 起保險年齡會增加一歲，同樣的保障保費會跟著調整。最近如果有想補強的保障，可以在這之前一起看看，有空跟我說一聲😊",
   care:"{name}您好，我是{agent}。天氣變化大，提醒您注意身體😊 若有就醫記得保留收據與診斷書，理賠我都可以協助您處理！"
 };
 const DEF_PROFILE={type:"profile",agent:"",title:"",company:"",phone:"",line:"",email:"",slogan:"",area:"",targets:{},tpl:{}};
@@ -776,7 +830,7 @@ const FILTERS=[
   {id:"lead",n:"潛在 / 洽談中",f:c=>c.stage==="潛在"||c.stage==="洽談中"}
 ];
 function filtered(){
-  const f=FILTERS.find(x=>x.id===S.filter)||FILTERS[0];const q=S.q.trim().toLowerCase();
+  const f=String(S.filter||"").startsWith("st:")?{f:c=>(c.stage||"潛在")===S.filter.slice(3)}:(FILTERS.find(x=>x.id===S.filter)||FILTERS[0]);const q=S.q.trim().toLowerCase();
   return S.clients.filter(c=>f.f(c)&&(!S.tag||(c.tags||[]).includes(S.tag))&&(!q||[c.name,c.idNo,c.phone,c.line,c.family,c.job,c.address,c.address2,(c.tags||[]).join(" "),c.notes].join(" ").toLowerCase().includes(q)))
     .sort((a,b)=>(a.family||"~").localeCompare(b.family||"~","zh-Hant")||(a.name||"").localeCompare(b.name||"","zh-Hant"));
 }
@@ -843,10 +897,10 @@ function usrtHtml(){const t=USRT;if(!t||!t.rows.length)return "";
   const tr=(q,code)=>`<tr><td><b>${esc(q.name)}</b>${code?`<small>${esc(q.code)}</small>`:""}</td><td class="mp">${mktPrice(q.price)}</td><td class="mc">${mktChg(q)}</td></tr>`;
   return `<div class="mkc mkrt" id="usrtBox"><div class="mkt1">🇺🇸 美股即時行情 <span class="rtb ${open?"on":""}">${open?"● 盤中即時":"已收盤"}</span><span class="rtt">台灣 ${tms}</span></div>
    <table class="mtb">${idx.map(q=>tr(q)).join("")}</table><div class="sub" style="margin:8px 0 2px">科技權值股</div><table class="mtb">${stk.map(q=>tr(q,true)).join("")}</table></div>`}
-function vVideos(){const m=MKT;const v=(m&&m.videos)||[];if(!v.length)return "";let open=true;try{open=localStorage.getItem("stark-fold-vid")!=="0"}catch(e){}
+function vVideos(){const m=MKT;const v=(m&&m.videos)||[];if(!v.length)return "";let open=false;try{open=localStorage.getItem("stark-fold-vid2")==="1"}catch(e){}
   const ago=t=>{const h=Math.max(0,Math.round((Date.now()-Date.parse(t))/36e5));return h<1?"剛剛":h<24?h+" 小時前":Math.round(h/24)+" 天前"};
   const vw=n=>n>=1e4?(n/1e4).toFixed(1)+" 萬":n.toLocaleString();
-  return `<details class="card fold vids" ${open?"open":""} ontoggle="try{localStorage.setItem('stark-fold-vid',this.open?'1':'0')}catch(e){}"><summary class="mkh"><b>🎬 今日重點影音</b><span class="sub">依觀看熱度挑 5 支・投資股市、商業、醫療、保險・每天早上 8 點更新</span><span class="fchev">▾</span></summary>
+  return `<details class="card fold vids" ${open?"open":""} ontoggle="try{localStorage.setItem('stark-fold-vid2',this.open?'1':'0')}catch(e){}"><summary class="mkh"><b>🎬 今日重點影音</b><span class="sub">${v.length} 支精選・每天 8 點更新</span><span class="fchev">▾</span></summary>
   <div class="vgrid">${v.map(x=>`<a class="vcard" data-act="playVid" data-id="${esc(x.id)}" data-t="${esc(x.title)}" href="https://www.youtube.com/watch?v=${esc(x.id)}" target="_blank" rel="noopener"><div class="vth"><img loading="lazy" src="https://i.ytimg.com/vi/${esc(x.id)}/hqdefault.jpg" alt=""><span class="vplay">▶</span><span class="vtag vt-${esc(x.cat||'inv')}">${({inv:'投資股市',biz:'商業',med:'醫療健康',ins:'保險'})[x.cat]||'財經'}</span></div><div class="vtt">${esc(x.title)}</div><div class="vmeta">${esc(x.ch)}・${vw(x.views)} 次觀看・${ago(x.pub)}</div></a>`).join("")}</div></details>`}
 function playVid(id,title){const ov=document.createElement("div");ov.className="vov";ov.innerHTML=`<div class="vbox"><div class="vhd"><b>${esc(title||"")}</b><a class="btn sm" href="https://www.youtube.com/watch?v=${esc(id)}" target="_blank" rel="noopener">在 YouTube 開啟</a><button class="btn sm" data-x="1">✕</button></div><div class="vfr"><iframe src="https://www.youtube-nocookie.com/embed/${esc(id)}?autoplay=1&rel=0" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div></div>`;
   const close=()=>{ov.remove();document.removeEventListener("keydown",k)};const k=e=>{if(e.key==="Escape")close()};document.addEventListener("keydown",k);ov.addEventListener("click",e=>{if(e.target===ov||e.target.closest("[data-x]"))close()});document.body.appendChild(ov)}
@@ -855,61 +909,100 @@ const POS_URL="https://sunghan69-sudo.github.io/stark-crm/mkt/";let POS=(()=>{tr
 async function loadPos(){if(Date.now()-posAt<10*60000)return;posAt=Date.now();try{const r=await fetch(POS_URL+"positive.json?t="+Math.floor(Date.now()/600000),{cache:"no-store"});if(!r.ok)return;const j=await r.json();const ch=!POS||POS.img!==j.img;POS=j;try{localStorage.setItem("stark-pos",JSON.stringify(j))}catch(e){}if(ch&&S.view==="dashboard"&&!M)render()}catch(e){}}
 function posHtml(){loadPos();const p=POS;if(!p)return "";const src=POS_URL+p.img;
   return `<div class="mkc mkpos"><div class="mkt1">🌅 每日正能量 <span class="rtt">${esc((p.date||"").replace(/-/g,"/").slice(5))}・${esc(p.cat||"")}</span></div><a class="posimg" href="${esc(src)}" target="_blank" rel="noopener" data-act="posView" data-src="${esc(src)}"><img src="${esc(src)}" alt="每日正能量" loading="lazy"></a><div class="posbt"><a class="btn sm" href="${esc(src)}" download="${esc((p.date||"")+"_每日正能量.jpg")}">⬇ 下載限動圖</a>${p.video?` <a class="btn sm" href="${esc(POS_URL+p.video)}" data-act="posView" data-src="${esc(src)}" data-video="${esc(POS_URL+p.video)}">▶ 動畫版</a>`:""}</div></div>`}
-function vMarket(){loadMarket();loadTwRt();loadUsRt();twrtTick();const m=MKT;let open=true;try{open=localStorage.getItem("stark-fold-mkt")!=="0"}catch(e){}
-  const head=`<summary class="mkh"><b>📈 市場快訊</b><span class="sub">${m?`資料日 ${esc((m.index[0]||m.tw[0]||{}).date||"")}・更新 ${esc(new Date(m.updated).toLocaleString("zh-TW",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}))}`:"載入中…"}</span><span class="fchev">▾</span></summary>`;
-  if(!m)return `<details class="card mkt fold" ${open?"open":""} ontoggle="try{localStorage.setItem('stark-fold-mkt',this.open?'1':'0')}catch(e){}">${head}<div class="hint" style="padding:8px 0">正在讀取行情資料…</div></details>`;
+function mktPctTag(q){if(!q||q.pct==null)return"";const up=q.chg>0,dn=q.chg<0;return `<i class="${up?"mup":dn?"mdn":"mfl"}">${up?"▲":dn?"▼":""}${Math.abs(q.pct).toFixed(2)}%</i>`}
+function vMarket(){loadMarket();loadTwRt();loadUsRt();twrtTick();const m=MKT;let open=false;try{open=localStorage.getItem("stark-fold-mkt2")==="1"}catch(e){}
+  const fx0=(m&&m.fx)||{},sell=(fx0.bot||{}).spotSell;
+  const tw=(TWRT&&TWRT.rows||[]).find(r=>r.key==="TWS:TSE01:INDEX")||((m&&m.tw)||[]).find(q=>/TWII|TSE01/.test(q.sym||""));
+  const nq=(USRT&&USRT.rows||[]).find(r=>r.key==="GI:IXIC:INDEX")||((m&&m.index)||[]).find(q=>/IXIC/.test(q.sym||""));
+  const pill=(n,v,tag)=>`<span class="mpill"><em>${n}</em><b>${v}</b>${tag||""}</span>`;
+  const head=`<summary class="mkh2"><b>📈 市場</b><span class="mpills">${fx0.market!=null?pill("美金",mktPrice(fx0.market),sell?`<small>台銀賣 ${sell}</small>`:""):""}${tw?pill("加權",mktPrice(tw.price),mktPctTag(tw)):""}${nq?pill("那斯達克",mktPrice(nq.price),mktPctTag(nq)):""}${!m&&!tw?`<span class="sub">載入中…</span>`:""}</span><span class="fchev">▾</span></summary>`;
+  if(!m)return `<details class="card mkt fold" ${open?"open":""} ontoggle="try{localStorage.setItem('stark-fold-mkt2',this.open?'1':'0')}catch(e){}">${head}<div class="hint" style="padding:8px 0">正在讀取行情資料…</div></details>`;
   const fx=m.fx||{},b=fx.bot||{};
   const rows=(arr,showCode)=>`<table class="mtb">${arr.map(q=>`<tr><td><b>${esc(q.name)}</b>${showCode?`<small>${esc(q.code||"")}</small>`:""}</td><td class="mp">${mktPrice(q.price)}</td><td class="mc">${mktChg(q)}</td></tr>`).join("")}</table>`;
-  return `<details class="card mkt fold" ${open?"open":""} ontoggle="try{localStorage.setItem('stark-fold-mkt',this.open?'1':'0')}catch(e){}">${head}
+  return `<details class="card mkt fold" ${open?"open":""} ontoggle="try{localStorage.setItem('stark-fold-mkt2',this.open?'1':'0')}catch(e){}">${head}
   <div class="mkg">
     <div class="mkc"><div class="mkt1">💵 今日匯率（美金）</div><div class="mkbig">${mktPrice(fx.market)}<small> TWD</small></div><div>${mktChg({chg:fx.chg})}<span class="sub"> 市場價</span></div>
       ${b.spotBuy?`<table class="mtb fxt"><tr><th></th><th>買入</th><th>賣出</th></tr><tr><td>台銀即期</td><td>${b.spotBuy}</td><td>${b.spotSell}</td></tr><tr><td>台銀現金</td><td>${b.cashBuy}</td><td>${b.cashSell}</td></tr></table>`:""}
       ${(fx.others||[]).length?`<table class="mtb fxt" style="margin-top:8px"><tr><th>幣別</th><th>市場價</th><th>台銀賣出</th></tr>${fx.others.map(o=>{const bb=o.bot||{};const sell=bb.spotSell||bb.cashSell;const f=v=>v==null?"—":(+v).toLocaleString("en-US",{maximumFractionDigits:o.dp||4});return `<tr><td><b>${esc(o.name)}</b> <small>${esc(o.cur)}</small></td><td>${f(o.market)}${o.chg?` <span style="font-size:11px;color:${o.chg>0?"#d0493f":"#2f9e6b"}">${o.chg>0?"▲":"▼"}</span>`:""}</td><td>${sell?f(sell)+(bb.spotSell?"":`<small>現金</small>`):"—"}</td></tr>`}).join("")}</table>`:""}</div>
     ${twrtHtml()}
     ${usrtHtml()||`<div class="mkc"><div class="mkt1">📊 美股昨日收盤</div>${rows((m.index||[]).filter(q=>!/^\^TW/.test(q.sym||"")))}</div><div class="mkc"><div class="mkt1">🇺🇸 美股科技前五大</div>${rows(m.us||[],true)}</div>`}
-    ${posHtml()}
-
   </div><div class="hint" style="margin-top:8px">台股、美股為即時報價（盤中每 30 秒更新，來源：鉅亨網；美股盤中為台灣時間晚上約 21:30／22:30 至清晨）；匯率每日更新（臺灣銀行）。僅供參考，紅漲綠跌。</div></details>`}
+/* ========== 總覽：今日行動為主，行情與影音收合在側欄 ========== */
+let DTAB=(()=>{try{return localStorage.getItem("stark-dtab")||"todo"}catch(e){return "todo"}})(),DMORE=false;
+function isoD(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function sentKey(k,d){return k+"-"+isoD(d)}
+function markSent(id,key,on){const c=S.clients.find(x=>x.id===id);if(!c||!key)return;const s=Object.assign({},c.sent||{});const lim=Date.now()-60*864e5;Object.keys(s).forEach(x=>{if(s[x]<lim)delete s[x]});
+  if(on===undefined)on=!s[key];if(on){if((c.sent||{})[key])return;s[key]=Date.now()}else{if(!(c.sent||{})[key])return;delete s[key]}
+  const n=clone(c);n.sent=s;saveClient(n)}
+function vMarquee(){loadPos();const p=POS;if(!p||!p.img)return "";const src=POS_URL+p.img;
+  const main=(p.quote&&p.quote.length)?p.quote.join(""):String(p.title||"").replace(/…$/,"");if(!main)return "";
+  const txt=main+((p.body&&p.body.length)?"　—　"+p.body.join(""):"");const dur=Math.max(18,Math.round(txt.length*0.42));
+  return `<a class="dmq" href="${esc(src)}" data-act="posView" data-src="${esc(src)}" ${p.video?`data-video="${esc(POS_URL+p.video)}"`:""} title="點一下看圖卡／動畫"><span class="dmq-l">🌅 每日正能量</span><span class="dmq-w"><span class="dmq-t" style="animation-duration:${dur}s"><span>${esc(txt)}</span><span aria-hidden="true">${esc(txt)}</span></span></span></a>`}
 function vDash(){
   const cs=S.clients;const pols=cs.flatMap(c=>(c.policies||[]).filter(active));
-  const prem=cs.reduce((a,c)=>a+annualSum(c),0);const rem30=reminders(30);const rem7=reminders(7);
+  const prem=cs.reduce((a,c)=>a+annualSum(c),0);
+  if(!cs.length)return `${vMarquee()}<div class="top"><h1>總覽</h1></div><div class="card empty"><b>還沒有客戶資料</b>先新增第一位客戶，或載入示範資料看看系統怎麼運作。<div class="row" style="justify-content:center;margin-top:16px"><button class="btn p" data-act="newClient">＋ 新增客戶</button><button class="btn" data-act="demo">載入示範資料</button><button class="btn" data-act="tour">🎬 操作說明影片</button></div></div>`;
+  const t=today();const t0=new Date(t.getFullYear(),t.getMonth(),t.getDate());const lim=new Date(t0);lim.setDate(lim.getDate()+30);
+  const fams=new Set(cs.map(c=>c.family).filter(Boolean)).size;
   const st=STAGES.map(s=>({s,n:cs.filter(c=>(c.stage||"潛在")===s).length}));
   const gaps=[["ci","缺重疾/重大傷病"],["med","缺實支實付"],["acc","缺意外"],["ltc","缺長照"],["life","缺壽險"]].map(([k,n])=>({k,n,v:cs.filter(c=>cov(c)[k]<=0).length}));
   const mx=Math.max(1,...gaps.map(g=>g.v));
-  if(!cs.length)return `<div class="top"><h1>總覽</h1></div><div class="card empty"><b>還沒有客戶資料</b>先新增第一位客戶，或載入示範資料看看系統怎麼運作。<div class="row" style="justify-content:center;margin-top:16px"><button class="btn p" data-act="newClient">＋ 新增客戶</button><button class="btn" data-act="demo">載入示範資料</button><button class="btn" data-act="tour">🎬 操作說明影片</button></div></div>`;
-  return `<div class="top"><div><h1>總覽</h1><div class="sub">${ds(today())}｜早安，${esc(agentName())}</div></div><div class="row"><button class="btn" data-act="tour">🎬 操作說明影片</button><button class="btn p" data-act="newClient">＋ 新增客戶</button></div></div>
-  ${vMarket()}
-  ${vVideos()}
-  ${(()=>{const t=today();const t0=new Date(t.getFullYear(),t.getMonth(),t.getDate());const lim=new Date(t0);lim.setDate(lim.getDate()+30);
-    const fams=new Set(cs.map(c=>c.family).filter(Boolean)).size;
-    const ev=new Map();const key=c=>(c.name||"")+"|"+(c.birthday||"");
-    const push=(c,o)=>{const k=key(c);if(!ev.has(k))ev.set(k,{c,ids:new Set(),items:[]});const e=ev.get(k);e.ids.add(c.id);if(!e.items.some(x=>x.type===o.type))e.items.push(o)};
-    cs.forEach(c=>{const d=pd(c.birthday);if(!d)return;
-      let b=new Date(t0.getFullYear(),d.getMonth(),d.getDate());if(b<t0)b=new Date(t0.getFullYear()+1,d.getMonth(),d.getDate());
-      if(b<=lim)push(c,{type:"bd",d:b,txt:`🎂 ${b.getMonth()+1}/${b.getDate()} 生日・滿 ${b.getFullYear()-d.getFullYear()} 歲`});
-      let n=new Date(t0.getFullYear(),d.getMonth()+6,d.getDate());if(n<t0)n=new Date(t0.getFullYear()+1,d.getMonth()+6,d.getDate());
-      if(n<=lim){const ia=n.getFullYear()-d.getFullYear()-(new Date(n.getFullYear(),d.getMonth(),d.getDate())>n?1:0)+1;push(c,{type:"up",d:n,txt:`⏫ ${n.getMonth()+1}/${n.getDate()} 起保險年齡 ${ia} 歲`})}});
-    const list=[...ev.values()].map(e=>{e.items.sort((x,y)=>x.d-y.d);e.d=e.items[0].d;e.days=Math.round((e.d-t0)/864e5);return e}).sort((x,y)=>x.d-y.d||String(x.c.name).localeCompare(String(y.c.name),"zh-Hant"));
-    const nUp=list.filter(e=>e.items.some(x=>x.type==="up")).length,nBd=list.filter(e=>e.items.some(x=>x.type==="bd")).length;
-    const f=CARE_F;const shown=list.filter(e=>f==="all"||e.items.some(x=>x.type===f));
-    const row=e=>`<a class="care ${e.days<=7?"soon":""}" data-act="openClient" data-id="${e.c.id}"><div class="cd"><b>${e.days===0?"今天":e.days+" 天"}</b></div><div class="cn"><b>${esc(e.c.name)}</b>${e.ids.size>1?`<span class="dup" title="有 ${e.ids.size} 筆同名同生日的客戶資料">重複 ${e.ids.size} 筆</span>`:""}${e.c.family?`<small>${esc(e.c.family)}</small>`:""}<div class="ci">${e.items.map(x=>`<span class="${x.type}">${x.txt}</span>`).join("")}</div></div></a>`;
-    return `<div class="dash2">
-    <div class="dleft"><div class="card kst"><div class="kgrid">
-      <div><span>客戶數</span><b>${cs.length}</b><small>家庭 ${fams} 組</small></div>
-      <div><span>有效保單</span><b>${pols.length}</b><small>平均每人 ${(pols.length/Math.max(1,cs.length)).toFixed(1)} 張</small></div>
-      <div><span>年化保費</span><b>${prem>=1e8?(prem/1e8).toFixed(2)+"<em>億</em>":prem>=1e4?Math.round(prem/1e4).toLocaleString()+"<em>萬</em>":fmt(prem)}</b><small>全部有效保單</small></div>
-      <div><span>30 天待辦</span><b>${rem30.length}</b><small>本週 ${rem7.length} 件</small></div>
-    </div></div>
-    <div class="card"><h2>客戶階段</h2><div class="funnel">${st.map(x=>`<div><b>${x.n}</b><span>${x.s}</span></div>`).join("")}</div></div>
-      <div class="card"><h2>保障缺口商機</h2><div class="hint" style="margin-bottom:8px">點一下直接列出名單</div>
-        ${gaps.map(g=>`<div class="covrow" style="grid-template-columns:120px 1fr 50px;cursor:pointer" data-act="gapgo" data-k="${g.k}"><div class="n">${g.n}</div><div class="bar"><i class="low" style="width:${g.v/mx*100}%"></i></div><div class="x"><b>${g.v}</b> 人</div></div>`).join("")}
+  /* 待辦：繳費、追蹤（含逾期）、期滿；生日改放在「生日」分頁 */
+  const dd=d=>Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate())-t0)/864e5);
+  const todo=reminders(30).filter(r=>r.kind!=="birthday").map(r=>({c:r.c,k:r.kind,d:r.d,dd:dd(r.d),title:r.t,sub:r.sub,msg:r.msg}));
+  /* 增齡、生日（同名同生日視為同一人） */
+  const seen={up:new Set(),bd:new Set()};const up=[],bd=[];
+  cs.forEach(c=>{const d=pd(c.birthday);if(!d)return;const key=(c.name||"")+"|"+(c.birthday||"");
+    let b=new Date(t0.getFullYear(),d.getMonth(),d.getDate());if(b<t0)b=new Date(t0.getFullYear()+1,d.getMonth(),d.getDate());
+    if(b<=lim&&!seen.bd.has(key)){seen.bd.add(key);bd.push({c,k:"birthday",d:b,dd:dd(b),title:"🎂 "+c.name,sub:`${b.getMonth()+1}/${b.getDate()} 生日・滿 ${b.getFullYear()-d.getFullYear()} 歲`,msg:fill(tpl("birthday"),{name:c.name,agent:agentName()})})}
+    let n=new Date(t0.getFullYear(),d.getMonth()+6,d.getDate());if(n<t0)n=new Date(t0.getFullYear()+1,d.getMonth()+6,d.getDate());
+    if(n<=lim&&!seen.up.has(key)){seen.up.add(key);const ia=n.getFullYear()-d.getFullYear()-(new Date(n.getFullYear(),d.getMonth(),d.getDate())>n?1:0)+1;
+      up.push({c,k:"agein",d:n,dd:dd(n),title:"⏫ "+c.name,sub:`${n.getMonth()+1}/${n.getDate()} 起保險年齡 ${ia} 歲・之後投保保費會調整`,msg:fill(tpl("agein"),{name:c.name,agent:agentName(),date:md(n)})})}});
+  const byD=(x,y)=>x.d-y.d||String(x.c.name).localeCompare(String(y.c.name),"zh-Hant");up.sort(byD);bd.sort(byD);
+  const sentOf=o=>!!(o.c.sent||{})[sentKey(o.k,o.d)];
+  const left=a=>a.filter(o=>!sentOf(o)).length;
+  const over=todo.filter(o=>o.dd<0&&!sentOf(o)).length,wk=todo.filter(o=>o.dd>=0&&o.dd<=7).length;
+  const tabs=[["todo","待辦",todo],["up","⏫ 增齡",up],["bd","🎂 生日",bd]];
+  const cur=tabs.find(x=>x[0]===DTAB)||tabs[0];
+  /* 未處理的排前面，已處理的沉到下面 */
+  const list=cur[2].slice().sort((x,y)=>(sentOf(x)-sentOf(y))||(x.d-y.d));
+  const N=6;const shown=DMORE?list:list.slice(0,N);
+  const when=o=>o.dd<0?[`逾期`,`${-o.dd} 天`]:o.dd===0?["今天",md(o.d)]:o.dd===1?["明天",md(o.d)]:[md(o.d),`${o.dd} 天後`];
+  const arow=o=>{const sent=sentOf(o),key=sentKey(o.k,o.d),[w1,w2]=when(o);
+    return `<div class="arow ${sent?"done":o.dd<0?"over":o.dd<=1?"hot":""}"><div class="awhen"><b>${w1}</b><span>${w2}</span></div>
+    <div class="abody" data-act="openClient" data-id="${o.c.id}"><div class="at">${esc(o.title)}${o.c.family?`<small>${esc(o.c.family)}</small>`:""}</div><div class="ad">${esc(o.sub)}</div></div>
+    <div class="aact"><button class="btn sm" data-act="dCopy" data-id="${o.c.id}" data-key="${key}" data-msg="${esc(o.msg)}">複製訊息</button><a class="btn sm line" data-act="dLine" data-id="${o.c.id}" data-key="${key}" href="${lineUrl(o.msg)}" target="_blank" rel="noopener">LINE</a><button class="ack ${sent?"on":""}" data-act="dSent" data-id="${o.c.id}" data-key="${key}" title="${sent?"取消已處理":"標記已處理"}" aria-label="${sent?"取消已處理":"標記已處理"}">✓</button></div></div>`};
+  const emptyTxt={todo:"近 30 天沒有繳費、追蹤或期滿待辦 👍",up:"近 30 天沒有客戶保險年齡增齡",bd:"近 30 天沒有客戶生日"}[cur[0]];
+  const h=new Date().getHours();const greet=h<11?"早安":h<18?"午安":"晚安";
+  const kpi=(lab,val,sub,attrs,cls)=>`<a class="kpi ${cls||""}" ${attrs}><span>${lab}</span><b>${val}</b><small>${sub}</small></a>`;
+  const premTxt=prem>=1e8?(prem/1e8).toFixed(2)+"<em>億</em>":prem>=1e4?Math.round(prem/1e4).toLocaleString()+"<em>萬</em>":fmt(prem);
+  return `${vMarquee()}
+  <div class="top dtop"><div><h1>總覽</h1><div class="sub">${ds(t)}｜${greet}，${esc(agentName())}</div></div>
+    <div class="row dtb"><button class="btn" data-act="dSearch" title="搜尋客戶">🔍<span class="hide-m"> 搜尋客戶</span></button><button class="btn dq" data-act="tour" title="操作說明影片" aria-label="操作說明影片">?</button><button class="btn p hide-m" data-act="newClient">＋ 新增客戶</button></div></div>
+  <div class="kpis">
+    ${kpi("客戶數",cs.length,`家庭 ${fams} 組`,`data-act="dGo" data-v="clients" data-f="all"`)}
+    ${kpi("有效保單",pols.length,`平均每人 ${(pols.length/Math.max(1,cs.length)).toFixed(1)} 張`,`data-act="dGo" data-v="clients" data-f="all"`)}
+    ${kpi("年化保費",premTxt,"全部有效保單",`data-act="dGo" data-v="clients" data-f="all"`)}
+    ${kpi("30 天待辦",todo.length+bd.length,over?`<b class="kbad">逾期 ${over} 件</b>・本週 ${wk}`:`本週 ${wk} 件`,`href="#reminders"`)}
+  </div>
+  <div class="dgrid">
+    <div class="dcol">
+      <div class="card dact"><div class="dch"><h2>今日行動</h2><span class="sub">複製訊息或按 LINE 會自動打勾，避免重複傳</span></div>
+        <div class="dtabs" role="tablist">${tabs.map(([id,n,a])=>{const l=left(a);return `<button role="tab" class="${cur[0]===id?"on":""}" data-act="dTab" data-v="${id}">${n} <span class="dn">${l}</span>${id==="todo"&&over?`<i>${over} 逾期</i>`:""}</button>`}).join("")}</div>
+        ${list.length?`<div class="alist">${shown.map(arow).join("")}</div>${list.length>N?`<button class="btn sm amore" data-act="dMore">${DMORE?"收合 ▴":`顯示全部 ${list.length} 筆 ▾`}</button>`:""}`:`<div class="empty" style="padding:22px">${emptyTxt}</div>`}
+      </div>
+      <div class="card"><div class="dch"><h2>保障缺口商機</h2><span class="sub">點一下直接列出名單</span></div>
+        ${gaps.map(g=>`<div class="covrow dgap" data-act="gapgo" data-k="${g.k}"><div class="n">${g.n}</div><div class="bar"><i class="low" style="width:${g.v/mx*100}%"></i></div><div class="x"><b>${g.v}</b> 人</div></div>`).join("")}
       </div>
     </div>
-    <div class="card carec"><div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px"><h2 style="margin:0">近 30 天關懷名單</h2><span class="sub">生日祝福・保險年齡增齡前提醒客戶投保</span><span class="sp"></span>
-      <div class="seg"><button class="btn sm ${f==="all"?"on":""}" data-act="careF" data-v="all">全部 ${list.length}</button><button class="btn sm ${f==="up"?"on":""}" data-act="careF" data-v="up">⏫ 增齡 ${nUp}</button><button class="btn sm ${f==="bd"?"on":""}" data-act="careF" data-v="bd">🎂 生日 ${nBd}</button></div></div>
-      ${shown.length?`<div class="carelist">${shown.map(row).join("")}</div>`:`<div class="empty" style="padding:20px">近 30 天沒有需要關懷的客戶</div>`}</div>
-  </div>`})()}
-`;
+    <div class="dcol">
+      <div class="card"><div class="dch"><h2>客戶階段</h2><span class="sub">點一下看名單</span></div>
+        <div class="stgs">${st.map(x=>`<a class="stg" data-act="dGo" data-v="clients" data-f="st:${esc(x.s)}"><b>${x.n}</b><span>${x.s}</span></a>`).join("")}</div></div>
+      ${vMarket()}
+      ${vVideos()}
+    </div>
+  </div>
+  <button class="dfab" data-act="newClient" aria-label="新增客戶" title="新增客戶">＋</button>`;
 }
 function remItem(r){
   const t=today();const dd=daysBetween(t,r.d);const k=KIND[r.kind];
@@ -952,7 +1045,7 @@ function vClients(){if(CVIEW==="fam")return vFamGrid();
   }).join("");
   return `<div class="top"><div><h1>客戶管理</h1><div class="sub">共 ${S.clients.length} 位，顯示 ${list.length} 位</div></div>
    <div class="row"><input class="inp search" id="q" placeholder="搜尋姓名、電話、地址、標籤、家庭…" value="${esc(S.q)}"><div class="seg"><button class="btn sm on" data-act="cview" data-v="list">☰ 客戶列表</button><button class="btn sm" data-act="cview" data-v="fam">🏠 戶長列表</button></div><button class="btn" data-act="bulkPdf">📂 批次匯入保單PDF</button>${S.isAdmin?`<label class="btn" style="cursor:pointer">📥 匯入永旭保單<input type="file" id="polFile" accept=".json,application/json" style="display:none"></label><button class="btn" data-act="polAudit">🩺 保單健檢</button>`:""}<button class="btn p" data-act="newClient">＋ 新增客戶</button></div></div>
-   <div class="chips">${FILTERS.map(f=>`<button class="chip ${S.filter===f.id?"on":""}" data-act="filter" data-f="${f.id}">${f.n}</button>`).join("")}</div>
+   <div class="chips">${FILTERS.map(f=>`<button class="chip ${S.filter===f.id?"on":""}" data-act="filter" data-f="${f.id}">${f.n}</button>`).join("")}${String(S.filter||"").startsWith("st:")?`<button class="chip on" data-act="filter" data-f="all">階段：${esc(S.filter.slice(3))} ✕</button>`:""}</div>
    ${tags.length?`<div class="chips" style="margin-top:-4px"><span class="sub" style="padding:5px 0">標籤：</span>${tags.map(t=>`<button class="chip ${S.tag===t?"on":""}" data-act="tagf" data-t="${esc(t)}">#${esc(t)}</button>`).join("")}</div>`:""}
    <div class="card" style="padding:6px 8px;overflow-x:auto">${list.length?`<table class="tbl"><thead><tr><th>客戶</th><th class="hide-m">家庭</th><th>階段</th><th class="hide-m">保單</th><th class="hide-m">保障缺口</th><th class="hide-m">上次聯絡</th><th class="hide-m">標籤</th></tr></thead><tbody>${rows}</tbody></table>`:`<div class="empty"><b>沒有符合的客戶</b>${S.clients.length?"換個篩選條件試試":"按右上角「新增客戶」開始"}</div>`}</div>
    ${list.length>CSHOW?`<div class="row" style="margin-top:10px;justify-content:center"><button class="btn" data-act="moreC">顯示更多（已顯示 ${shown.length} / ${list.length}）</button></div>`:""}
@@ -1073,7 +1166,7 @@ function vSetup(){
     ${COV.map(x=>`<label>${x.n}（${x.u}）<input class="inp" type="number" min="0" name="t_${x.k}" value="${(p.targets||{})[x.k]!=null?esc(p.targets[x.k]):""}" placeholder="預設 ${x.t}"></label>`).join("")}
     <div class="hint w3">壽險目標：若客戶有填年收入，取「年收入 × 10」與上方設定的較大值。</div>
     <div class="sec">LINE 訊息範本（可用 {name} 客戶名、{agent} 你的名字、{product} 商品、{amount} 金額、{date} 日期）</div>
-    ${[["birthday","生日祝福"],["payment","繳費提醒"],["paidup","繳費期滿"],["follow","追蹤約訪"],["care","一般關懷 / 群發"]].map(([k,n])=>`<label class="w3">${n}<textarea class="inp" rows="2" name="tpl_${k}">${esc((p.tpl||{})[k]||DEF_TPL[k])}</textarea></label>`).join("")}
+    ${[["birthday","生日祝福"],["payment","繳費提醒"],["paidup","繳費期滿"],["follow","追蹤約訪"],["agein","保險年齡增齡提醒"],["care","一般關懷 / 群發"]].map(([k,n])=>`<label class="w3">${n}<textarea class="inp" rows="2" name="tpl_${k}">${esc((p.tpl||{})[k]||DEF_TPL[k])}</textarea></label>`).join("")}
   </div><div class="row" style="margin-top:16px"><button class="btn p" type="submit">儲存設定</button></div></form>
   <div class="card" style="margin-top:14px"><h2>帳號與同步</h2>${S.mode==="cloud"?`<div class="row"><span>☁ 已登入：<b>${esc(S.email)}</b>，手機與電腦即時同步</span><span class="sp"></span><button class="btn" data-act="logout">登出</button></div>`:`<div class="row"><span>💾 目前是本機模式</span><span class="sp"></span><button class="btn p" data-act="toCloud">改用雲端同步</button></div>`}
     <div class="hint" style="margin-top:8px">從 claude.ai 版本搬資料過來：在舊版「設定 → 複製完整備份 JSON」，再到這裡按「匯入 JSON 備份」貼上。</div></div>
@@ -2082,8 +2175,15 @@ document.addEventListener("click",async e=>{
       if(!window.StarkCalc){toast("試算引擎載入中…");await new Promise((res,rej)=>{const sc=document.createElement("script");sc.src="calc/calc.js?v=8";sc.onload=res;sc.onerror=()=>rej(new Error("載入失敗"));document.head.appendChild(sc)}).catch(e=>toast("試算引擎載入失敗，請確認網路"))}
       if(window.StarkCalc)window.StarkCalc.open(it);break}
     case "playVid":e.preventDefault();playVid(el.dataset.id,el.dataset.t);break;
-    case "posView":{e.preventDefault();const vd=el.dataset.video,sr=vd||el.dataset.src;const ov=document.createElement("div");ov.className="vov";ov.innerHTML=`<div style="max-height:92vh;display:flex;flex-direction:column;align-items:center;gap:10px">${vd?`<video src="${esc(vd)}" poster="${esc(el.dataset.src||"")}" autoplay playsinline controls style="max-height:84vh;max-width:92vw;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.5);background:#000"></video>`:`<img src="${esc(el.dataset.src)}" style="max-height:84vh;max-width:92vw;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.5)">`}<div class="row" style="gap:8px"><a class="btn sm" href="${esc(sr)}" download>⬇ 下載${vd?"動畫":""}</a><button class="btn sm" data-x="1">✕ 關閉</button></div></div>`;ov.addEventListener("click",ev=>{if(ev.target===ov||ev.target.closest("[data-x]"))ov.remove()});document.body.appendChild(ov);break}
+    case "posView":{e.preventDefault();const vd=el.dataset.video,sr=vd||el.dataset.src;const ov=document.createElement("div");ov.className="vov";ov.innerHTML=`<div style="max-height:92vh;display:flex;flex-direction:column;align-items:center;gap:10px">${vd?`<video src="${esc(vd)}" poster="${esc(el.dataset.src||"")}" autoplay playsinline controls style="max-height:84vh;max-width:92vw;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.5);background:#000"></video>`:`<img src="${esc(el.dataset.src)}" style="max-height:84vh;max-width:92vw;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.5)">`}<div class="row" style="gap:8px">${vd&&el.dataset.src?`<a class="btn sm" href="${esc(el.dataset.src)}" download>⬇ 下載圖卡</a>`:""}<a class="btn sm" href="${esc(sr)}" download>⬇ 下載${vd?"動畫":""}</a><button class="btn sm" data-x="1">✕ 關閉</button></div></div>`;ov.addEventListener("click",ev=>{if(ev.target===ov||ev.target.closest("[data-x]"))ov.remove()});document.body.appendChild(ov);break}
     case "careF":CARE_F=el.dataset.v||"all";try{localStorage.setItem("stark-caref",CARE_F)}catch(e){}render();break;
+    case "dTab":DTAB=el.dataset.v||"todo";DMORE=false;try{localStorage.setItem("stark-dtab",DTAB)}catch(e){}render();break;
+    case "dMore":DMORE=!DMORE;render();break;
+    case "dSent":markSent(el.dataset.id,el.dataset.key);break;
+    case "dCopy":copy(el.dataset.msg);markSent(el.dataset.id,el.dataset.key,true);break;
+    case "dLine":markSent(el.dataset.id,el.dataset.key,true);break;
+    case "dGo":if(el.dataset.f)S.filter=el.dataset.f;S.q="";S.tag="";CSHOW=60;location.hash=el.dataset.v||"clients";render();break;
+    case "dSearch":S.q="";location.hash="clients";render();setTimeout(()=>{const q=document.getElementById("q");if(q)q.focus()},120);break;
     case "propCo":propCo=el.dataset.v||"";render();break;
     case "cview":CVIEW=el.dataset.v;try{localStorage.setItem("stark-cview",CVIEW)}catch(e){}render();break;
     case "mktgRep":mktgRep=el.dataset.id;render();break;
