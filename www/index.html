@@ -1458,7 +1458,7 @@ function policyBase(p){const t=String(p.sumText||"").replace(/,/g,"");const all=
 /* 計畫別比對：容許 計劃/計畫、「別」、空白、HS-10 ↔ 計畫10 的寫法差異，且「計畫1」不會誤配「計畫10」 */
 function planNorm(x){return String(x||"").toUpperCase().replace(/\s/g,"").replace(/劃/g,"畫").replace(/計畫別/g,"計畫").replace(/[（(]/g,"(").replace(/[）)]/g,")")}
 function planNum(x){const m=planNorm(x).match(/^(?:計畫|PLAN|HS-?|方案)?([A-Z]{0,2}\d+)$/);return m?m[1]:null}
-function planHit(text,plan){const T=planNorm(text),P=planNorm(plan);if(!P)return false;let i=T.indexOf(P);while(i>=0){const nx=T[i+P.length];if(!(/\d/.test(P.slice(-1))&&nx&&/\d/.test(nx)))return true;i=T.indexOf(P,i+1)}
+function planHit(text,plan){const T=planNorm(text),P=planNorm(plan);if(!P)return false;let i=T.indexOf(P);while(i>=0){const nx=T[i+P.length],pv=i>0?T[i-1]:"";const badN=/\d/.test(P.slice(-1))&&nx&&/[\d.]/.test(nx),badP=/^[\d.]/.test(P)&&pv&&/[\d.]/.test(pv);if(!badN&&!badP)return true;i=T.indexOf(P,i+1)}
   const n=planNum(plan);if(n){const re=new RegExp("(?:計畫|PLAN|HS-?|方案)"+n.replace(/[-]/g,"\\-")+"(?![0-9])");if(re.test(T))return true}return false}
 function computeFromProduct(p,pr){const base=policyBase(p);const t=String(p.sumText||"");const rules=(pr.rules||[]);
   const NOPLAN=/^(預設|全部|全計畫|不限|一般|通用)$/;const rs=rules.map(r=>NOPLAN.test(String(r.plan||"").trim())?Object.assign({},r,{plan:""}):r);let planned=rs.filter(r=>r.plan&&planHit(t,r.plan));if(!planned.length)planned=rs.filter(r=>r.plan&&planHit(String(p.product||""),r.plan));const use=rs.filter(r=>!r.plan||planned.includes(r));const out={};
