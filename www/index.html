@@ -1177,7 +1177,10 @@ function vClaims(){
   if(rInj>0)fracItems.push(["傷害醫療實支（醫療費 "+cost+" 萬）",Math.min(cost,rInj)]);
   const fracPols=(c.policies||[]).filter(active).filter(p=>/骨力|骨折/.test(p.product||"")&&!/未住院/.test(p.product||""));
   const dgTxt=dg[2]===1?"":dg[2]===0.5?" × 1/2":" × 1/4";
-  fracPols.forEach(p=>{let b=policyBase(p);if(b!=null&&b<10000)b*=10000;const nm=stripCode(p.product||"骨折險").replace(/^國泰人壽/,"");const std=/骨力/.test(p.product||"");
+  const fracBase=p=>{let b=policyBase(p);if(b!=null&&b<10000)b*=10000;return b?b*(isUSD(p)?usdRate():1):0};
+  const fracNm=p=>stripCode(p.product||"骨折險").replace(/^國泰人壽/,"");
+  const fracSum=fracPols.reduce((a,p)=>a+fracBase(p),0);
+  fracPols.forEach(p=>{let b=policyBase(p);if(b!=null&&b<10000)b*=10000;const nm=fracNm(p);const std=/骨力/.test(p.product||"");
     if(!b){fracItems.push([nm+"（保單未填保額，無法換算）",0]);return}
     const amt=b*(isUSD(p)?usdRate():1)*bone[2]/100*dg[2]/10000;
     fracItems.push([nm+"（保額 "+wfix(b/10000)+" 萬 × "+bone[2]+"%"+dgTxt+(std?"":"，比例暫用國泰骨折別表，請以條款核對")+"）",amt])});
@@ -1207,6 +1210,8 @@ function vClaims(){
       </div>
       <h3 style="margin-top:18px">${esc(c.name)} 目前保障</h3>
       ${COV.map(x=>`<div class="row" style="justify-content:space-between;font-size:13.5px;padding:3px 0;border-bottom:1px dashed var(--line)"><span>${x.n}</span><b>${fmt(v[x.k])} ${x.u}</b></div>`).join("")}
+      <div class="row" style="justify-content:space-between;font-size:13.5px;padding:3px 0;border-bottom:1px dashed var(--line)"><span>骨折險（定額）${fracPols.length>1?`<span class="sub">・${fracPols.length} 張</span>`:""}</span><b>${wfix(fracSum/10000)} 萬</b></div>
+      ${fracPols.map(p=>{const b=fracBase(p);return `<div class="row" style="justify-content:space-between;font-size:12.5px;padding:2px 0 2px 14px;color:var(--mut,#667)"><span>└ ${esc(fracNm(p))}</span><span>${b?wfix(b/10000)+" 萬":`<span style="color:var(--bad)">未填保額</span>`}</span></div>`}).join("")}
     </div>
     <div class="card"><h2>2. 「${sc.n}」可能理賠</h2>
       <table class="tbl claimtbl"><thead><tr><th>給付項目</th><th>金額（萬元）</th></tr></thead><tbody>
