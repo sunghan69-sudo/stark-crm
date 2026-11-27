@@ -1158,8 +1158,10 @@ function vRem(){
    <div class="card ralist">${rs.length?rs.map(remItem).join(""):`<div class="empty"><b>這段期間沒有提醒</b>${hide.size?"（部分類別已隱藏）":"客戶填上生日、保單生效日與繳別後，系統就會自動排出提醒。"}</div>`}</div>`;
 }
 /* 骨折日數表：壽險公會傷害保險示範條款「骨折別所定日數表」 */
-const FRAC_BONES=[["鼻骨、眶骨（含顴骨）",14],["掌骨、指骨",14],["蹠骨、趾骨",14],["下顎（齒槽醫療除外）",20],["肋骨",20],["鎖骨",28],["橈骨或尺骨",28],["膝蓋骨",28],["肩胛骨",34],["椎骨（胸椎、腰椎、尾骨）",40],["骨盤（腸骨、恥骨、坐骨、薦骨）",40],["臂骨（上臂）",40],["橈骨與尺骨",40],["腕骨（一手或雙手）",40],["脛骨或腓骨",40],["踝骨（一足或雙足）",40],["頭蓋骨",50],["股骨（大腿骨）",50],["脛骨及腓骨",50],["大腿骨頸",60]];
-function fracSel(){const bi=Math.min(FRAC_BONES.length-1,Math.max(0,Number.isFinite(+S.fBone)&&S.fBone!=null?Math.floor(+S.fBone):12));return {bi,bone:FRAC_BONES[bi],dg:FRAC_DEG.find(d=>d[0]===S.fDeg)||FRAC_DEG[0]}}
+/* [部位, 公會骨折未住院日數, 國泰真好骨力「骨折別表」完全骨折給付比例%] */
+const FRAC_BONES=[["指骨",14,3],["趾骨",14,3],["鼻骨、眶骨（含顴骨）",14,12],["掌骨",14,12],["蹠骨",14,12],["下顎（齒槽醫療除外）",20,20],["肋骨",20,20],["鎖骨",28,30],["橈骨或尺骨",28,30],["膝蓋骨",28,30],["肩胛骨",34,35],["椎骨（胸椎、腰椎、尾骨）",40,40],["骨盤（腸骨、恥骨、坐骨、薦骨）",40,40],["臂骨（上臂）",40,40],["橈骨與尺骨",40,40],["腕骨（一手或雙手）",40,40],["脛骨或腓骨",40,40],["踝骨（一足或雙足）",40,40],["頭蓋骨",50,60],["股骨（大腿骨）",50,60],["脛骨及腓骨",50,60],["大腿骨頸",60,80]];
+const FRAC_DEF=14;
+function fracSel(){const bi=Math.min(FRAC_BONES.length-1,Math.max(0,Number.isFinite(+S.fBone)&&S.fBone!=null?Math.floor(+S.fBone):FRAC_DEF));return {bi,bone:FRAC_BONES[bi],dg:FRAC_DEG.find(d=>d[0]===S.fDeg)||FRAC_DEG[0]}}
 const FRAC_DEG=[["full","完全骨折",1],["part","不完全骨折",0.5],["crack","骨裂（龜裂）",0.25]];
 function wfix(n){return (Math.round(n*100)/100).toString()}
 function vClaims(){
@@ -1173,7 +1175,13 @@ function vClaims(){
   const unHosp=Math.max(0,fDays-days);
   const fracItems=[...(days>0?[["意外住院日額 × "+days+" 天",aHosp*days/10000]]:[]),["骨折未住院（"+bone[1]+" 天 × "+(dg[2]===1?"1":dg[2]===0.5?"1/2":"1/4")+(days?" − 住院 "+days+" 天":"")+"，日額 × 1/2）",aHosp/2*unHosp/10000],["實支實付（醫療費 "+cost+" 萬）",Math.min(cost,v.med)]];
   if(rInj>0)fracItems.push(["傷害醫療實支（醫療費 "+cost+" 萬）",Math.min(cost,rInj)]);
-  if(aFrac>0)fracItems.push(["意外骨折保險金（最高，依部位比例核定）",aFrac,"cap"]);
+  const fracPols=(c.policies||[]).filter(active).filter(p=>/骨力|骨折/.test(p.product||"")&&!/未住院/.test(p.product||""));
+  const dgTxt=dg[2]===1?"":dg[2]===0.5?" × 1/2":" × 1/4";
+  fracPols.forEach(p=>{let b=policyBase(p);if(b!=null&&b<10000)b*=10000;const nm=stripCode(p.product||"骨折險").replace(/^國泰人壽/,"");const std=/骨力/.test(p.product||"");
+    if(!b){fracItems.push([nm+"（保單未填保額，無法換算）",0]);return}
+    const amt=b*(isUSD(p)?usdRate():1)*bone[2]/100*dg[2]/10000;
+    fracItems.push([nm+"（保額 "+wfix(b/10000)+" 萬 × "+bone[2]+"%"+dgTxt+(std?"":"，比例暫用國泰骨折別表，請以條款核對")+"）",amt])});
+  if(!fracPols.length){if(aFrac>0)fracItems.push(["意外骨折保險金（最高，依部位比例核定）",aFrac,"cap"]);else fracItems.push(["骨折險（定額給付，如真好骨力）",0])}
   const SC={
     cancer:{n:"罹患癌症",items:[["重大傷病/重疾",v.ci],["癌症一次金",v.cancer],["住院日額 × "+days+" 天",v.hosp*days/10000],["實支實付（醫療費 "+cost+" 萬）",Math.min(cost,v.med)]]},
     accident:{n:"嚴重車禍 / 意外住院",items:[["住院日額 × "+days+" 天",v.hosp*days/10000],["實支實付（醫療費 "+cost+" 萬）",Math.min(cost,v.med)],["意外失能（以 1 級失能計）",v.acc]]},
@@ -1189,9 +1197,9 @@ function vClaims(){
     <div class="card"><h2>1. 選客戶與情境</h2>
       <label class="sub">客戶</label><select class="inp" id="claimCid">${cs.map(x=>`<option value="${x.id}" ${x.id===c.id?"selected":""}>${esc(x.name)}${x.family?"（"+esc(x.family)+"）":""}</option>`).join("")}</select>
       <div class="chips">${Object.keys(SC).map(k=>`<button class="chip ${S.claimSc===k?"on":""}" data-act="claimSc" data-k="${k}">${SC[k].n}</button>`).join("")}</div>
-      ${S.claimSc==="frac"?`<div class="fracbox"><label class="sub">骨折部位</label><select class="inp" id="fBone">${FRAC_BONES.map((b,i)=>`<option value="${i}" ${i===bi?"selected":""}>${b[0]}（完全骨折 ${b[1]} 天）</option>`).join("")}</select>
+      ${S.claimSc==="frac"?`<div class="fracbox"><label class="sub">骨折部位</label><select class="inp" id="fBone">${FRAC_BONES.map((b,i)=>`<option value="${i}" ${i===bi?"selected":""}>${b[0]}（${b[1]} 天／骨折險 ${b[2]}%）</option>`).join("")}</select>
         <label class="sub" style="display:block;margin-top:10px">骨折程度</label><div class="seg fdeg">${FRAC_DEG.map(d=>`<button class="btn sm ${d===dg?"on":""}" data-act="fDeg" data-k="${d[0]}">${d[1]}</button>`).join("")}</div>
-        <div class="hint" style="margin-top:6px">依公會示範條款：不完全骨折按 1/2、骨裂按 1/4 計日數；多處骨折只賠最高一項。住院天數填 0 ＝ 完全沒住院。</div></div>`:""}
+        <div class="hint" style="margin-top:6px">日數依公會示範條款、骨折險比例依國泰真好骨力「骨折別表」；不完全骨折 1/2、骨裂 1/4。住院天數填 0 ＝ 完全沒住院。客戶名下有「骨力／骨折」保單會自動帶入保額換算。</div></div>`:""}
       <div class="form" style="grid-template-columns:1fr 1fr 1fr">
         <label>住院天數<input class="inp" type="number" min="0" id="cDays" value="${days}"></label>
         <label>醫療費用（萬）<input class="inp" type="number" min="0" id="cCost" value="${cost}"></label>
