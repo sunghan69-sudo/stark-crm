@@ -977,14 +977,15 @@ async function loadTicker(force){if(tkrBusy||(!force&&Date.now()-tkrAt<25000))re
 function tkrItem(x,dp){const up=x.c>0,dn=x.c<0;const p=x.p.toLocaleString("en-US",{minimumFractionDigits:dp||0,maximumFractionDigits:dp!=null?dp:2});
   return `<span class="tki"><b>${esc(x.n)}</b> ${p}${x.pct!=null?` <i class="${up?"mup":dn?"mdn":"mfl"}">${up?"▲":dn?"▼":""}${Math.abs(x.pct).toFixed(2)}%</i>`:""}</span>`}
 function tkrHtml(kind){const t=TKR;if(!t)return "";
-  if(kind==="s"){if(!(t.idx||[]).length&&!(t.top||[]).length)return "";return (t.idx||[]).map(x=>tkrItem(x)).join("")+((t.top||[]).length?`<span class="tkg">成交量前 5</span>`+t.top.map(x=>tkrItem(x)).join(""):"")}
+  if(kind==="s"){if(t.mode!==tkrMode())return "";if(!(t.idx||[]).length&&!(t.top||[]).length)return "";return (t.idx||[]).map(x=>tkrItem(x)).join("")+((t.top||[]).length?`<span class="tkg">成交量前 5</span>`+t.top.map(x=>tkrItem(x)).join(""):"")}
   return (t.fx||[]).map(x=>tkrItem(x,x.dp)).join("")}
 function tkrRow(kind){const inner=tkrHtml(kind);const t=TKR||{};const tw=(t.mode||tkrMode())==="tw";
-  const lab=kind==="s"?(tw?"📈 台股":"🇺🇸 美股"):"💱 匯率";const dur=kind==="s"?55:32;
+  const lab=kind==="s"?(tkrMode()==="tw"?"📈 台股":"🇺🇸 美股"):"💱 匯率";const dur=kind==="s"?55:32;
   return `<div class="dmq tk tk-${kind}" id="tk-${kind}"><span class="dmq-l">${lab}</span><span class="dmq-w"><span class="dmq-t" style="animation-duration:${dur}s"><span>${inner||"讀取中…"}</span><span aria-hidden="true">${inner||"讀取中…"}</span></span></span></div>`}
 function tkrPaint(){["s","f"].forEach(k=>{const el=document.getElementById("tk-"+k);if(!el)return;const inner=tkrHtml(k);if(!inner)return;
   const lab=el.querySelector(".dmq-l");if(lab&&k==="s")lab.textContent=(TKR.mode==="tw"?"📈 台股":"🇺🇸 美股");
   const sp=el.querySelectorAll(".dmq-t>span");if(sp.length===2&&sp[0].innerHTML!==inner){sp[0].innerHTML=inner;sp[1].innerHTML=inner}})}
+try{document.addEventListener("visibilitychange",()=>{if(!document.hidden&&S.view==="dashboard"){tkrAt=0;loadTicker()}})}catch(e){}
 function vTicker(){loadTicker();twrtTick();return `<div class="tkwrap">${tkrRow("s")}${tkrRow("f")}</div>`}
 function vDash(){
   const cs=S.clients;const pols=cs.flatMap(c=>(c.policies||[]).filter(active));
