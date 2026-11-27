@@ -1175,12 +1175,13 @@ function vClaims(){
   const unHosp=Math.max(0,fDays-days);
   const fracItems=[...(days>0?[["意外住院日額 × "+days+" 天",aHosp*days/10000]]:[]),["骨折未住院（"+bone[1]+" 天 × "+(dg[2]===1?"1":dg[2]===0.5?"1/2":"1/4")+(days?" − 住院 "+days+" 天":"")+"，日額 × 1/2）",aHosp/2*unHosp/10000],["實支實付（醫療費 "+cost+" 萬）",Math.min(cost,v.med)]];
   if(rInj>0)fracItems.push(["傷害醫療實支（醫療費 "+cost+" 萬）",Math.min(cost,rInj)]);
-  const fracPols=(c.policies||[]).filter(active).filter(p=>/骨力|骨折/.test(p.product||"")&&!/未住院/.test(p.product||""));
+  const fracPols=(c.policies||[]).filter(active).filter(p=>/骨力|骨折|筋骨/.test(p.product||"")&&!/未住院/.test(p.product||""));
   const dgTxt=dg[2]===1?"":dg[2]===0.5?" × 1/2":" × 1/4";
-  const fracBase=p=>{let b=policyBase(p);if(b!=null&&b<10000)b*=10000;return b?b*(isUSD(p)?usdRate():1):0};
+  const fracRaw=p=>{let b=policyBase(p);if(b!=null&&b<10000&&!/萬|元|美元|USD/i.test(String(p.sumText||"")))b*=10000;return b||0};
+  const fracBase=p=>{const b=fracRaw(p);return b?b*(isUSD(p)?usdRate():1):0};
   const fracNm=p=>stripCode(p.product||"骨折險").replace(/^國泰人壽/,"");
   const fracSum=fracPols.reduce((a,p)=>a+fracBase(p),0);
-  fracPols.forEach(p=>{let b=policyBase(p);if(b!=null&&b<10000)b*=10000;const nm=fracNm(p);const std=/骨力/.test(p.product||"");
+  fracPols.forEach(p=>{const b=fracRaw(p);const nm=fracNm(p);const std=/骨力/.test(p.product||"");
     if(!b){fracItems.push([nm+"（保單未填保額，無法換算）",0]);return}
     const amt=b*(isUSD(p)?usdRate():1)*bone[2]/100*dg[2]/10000;
     fracItems.push([nm+"（保額 "+wfix(b/10000)+" 萬 × "+bone[2]+"%"+dgTxt+(std?"":"，比例暫用國泰骨折別表，請以條款核對")+"）",amt])});
