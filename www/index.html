@@ -961,7 +961,7 @@ function vDash(){
   const byD=(x,y)=>x.d-y.d||String(x.c.name).localeCompare(String(y.c.name),"zh-Hant");up.sort(byD);bd.sort(byD);
   const sentOf=o=>!!(o.c.sent||{})[sentKey(o.k,o.d)];
   const left=a=>a.filter(o=>!sentOf(o)).length;
-  const over=todo.filter(o=>o.dd<0&&!sentOf(o)).length,wk=todo.filter(o=>o.dd>=0&&o.dd<=7).length;
+  const over=todo.filter(o=>o.dd<0&&!sentOf(o)).length,wk=todo.filter(o=>o.dd>=0&&o.dd<=7&&!sentOf(o)).length;
   const tabs=[["todo","待辦",todo],["up","⏫ 增齡",up],["bd","🎂 生日",bd]];
   const cur=tabs.find(x=>x[0]===DTAB)||tabs[0];
   /* 未處理的排前面，已處理的沉到下面 */
@@ -970,8 +970,8 @@ function vDash(){
   const when=o=>o.dd<0?[`逾期`,`${-o.dd} 天`]:o.dd===0?["今天",md(o.d)]:o.dd===1?["明天",md(o.d)]:[md(o.d),`${o.dd} 天後`];
   const arow=o=>{const sent=sentOf(o),key=sentKey(o.k,o.d),[w1,w2]=when(o);
     return `<div class="arow ${sent?"done":o.dd<0?"over":o.dd<=1?"hot":""}"><div class="awhen"><b>${w1}</b><span>${w2}</span></div>
-    <div class="abody" data-act="openClient" data-id="${o.c.id}"><div class="at">${esc(o.title)}${o.c.family?`<small>${esc(o.c.family)}</small>`:""}</div><div class="ad">${esc(o.sub)}</div></div>
-    <div class="aact"><button class="btn sm" data-act="dCopy" data-id="${o.c.id}" data-key="${key}" data-msg="${esc(o.msg)}">複製訊息</button><a class="btn sm line" data-act="dLine" data-id="${o.c.id}" data-key="${key}" href="${lineUrl(o.msg)}" target="_blank" rel="noopener">LINE</a><button class="ack ${sent?"on":""}" data-act="dSent" data-id="${o.c.id}" data-key="${key}" title="${sent?"取消已處理":"標記已處理"}" aria-label="${sent?"取消已處理":"標記已處理"}">✓</button></div></div>`};
+    <div class="abody" data-act="openClient" data-id="${esc(o.c.id)}"><div class="at">${esc(o.title)}${o.c.family?`<small>${esc(o.c.family)}</small>`:""}</div><div class="ad">${esc(o.sub)}</div></div>
+    <div class="aact"><button class="btn sm" data-act="dCopy" data-id="${esc(o.c.id)}" data-key="${esc(key)}" data-msg="${esc(o.msg)}">複製訊息</button><a class="btn sm line" data-act="dLine" data-id="${esc(o.c.id)}" data-key="${esc(key)}" href="${lineUrl(o.msg)}" target="_blank" rel="noopener">LINE</a><button class="ack ${sent?"on":""}" data-act="dSent" data-id="${esc(o.c.id)}" data-key="${esc(key)}" title="${sent?"取消已處理":"標記已處理"}" aria-label="${sent?"取消已處理":"標記已處理"}">✓</button></div></div>`};
   const emptyTxt={todo:"近 30 天沒有繳費、追蹤或期滿待辦 👍",up:"近 30 天沒有客戶保險年齡增齡",bd:"近 30 天沒有客戶生日"}[cur[0]];
   const h=new Date().getHours();const greet=h<11?"早安":h<18?"午安":"晚安";
   const kpi=(lab,val,sub,attrs,cls)=>`<a class="kpi ${cls||""}" ${attrs}><span>${lab}</span><b>${val}</b><small>${sub}</small></a>`;
@@ -983,7 +983,7 @@ function vDash(){
     ${kpi("客戶數",cs.length,`家庭 ${fams} 組`,`data-act="dGo" data-v="clients" data-f="all"`)}
     ${kpi("有效保單",pols.length,`平均每人 ${(pols.length/Math.max(1,cs.length)).toFixed(1)} 張`,`data-act="dGo" data-v="clients" data-f="all"`)}
     ${kpi("年化保費",premTxt,"全部有效保單",`data-act="dGo" data-v="clients" data-f="all"`)}
-    ${kpi("30 天待辦",todo.length+bd.length,over?`<b class="kbad">逾期 ${over} 件</b>・本週 ${wk}`:`本週 ${wk} 件`,`href="#reminders"`)}
+    ${kpi("30 天待處理",left(todo)+left(up)+left(bd),over?`<b class="kbad">逾期 ${over} 件</b>・本週 ${wk}`:`本週 ${wk} 件`,`href="#reminders"`)}
   </div>
   <div class="dgrid">
     <div class="dcol">
@@ -992,7 +992,7 @@ function vDash(){
         ${list.length?`<div class="alist">${shown.map(arow).join("")}</div>${list.length>N?`<button class="btn sm amore" data-act="dMore">${DMORE?"收合 ▴":`顯示全部 ${list.length} 筆 ▾`}</button>`:""}`:`<div class="empty" style="padding:22px">${emptyTxt}</div>`}
       </div>
       <div class="card"><div class="dch"><h2>保障缺口商機</h2><span class="sub">點一下直接列出名單</span></div>
-        ${gaps.map(g=>`<div class="covrow dgap" data-act="gapgo" data-k="${g.k}"><div class="n">${g.n}</div><div class="bar"><i class="low" style="width:${g.v/mx*100}%"></i></div><div class="x"><b>${g.v}</b> 人</div></div>`).join("")}
+        ${gaps.map(g=>`<div class="covrow dgap" data-act="gapgo" data-k="${esc(g.k)}"><div class="n">${g.n}</div><div class="bar"><i class="low" style="width:${g.v/mx*100}%"></i></div><div class="x"><b>${g.v}</b> 人</div></div>`).join("")}
       </div>
     </div>
     <div class="dcol">
@@ -1219,7 +1219,7 @@ function mergePlan(keepId,dupId,keepName){const k=clone(liveC(cById(keepId))),d=
   (d.policies||[]).forEach(p=>{p=clone(p);if(p.id&&(k.policies||[]).some(q=>q.id===p.id))p.id=uid();fixN(p);const key=pk(p);if(key&&seen.has(key)){skipped.push(p);return}if(key)seen.add(key);(k.policies=k.policies||[]).push(p);added.push(p)});
   const conflicts=[];Object.keys(d).forEach(f=>{if(["id","name","policies","logs","services","tags","family","relation","updated","type","isNew"].includes(f))return;const v=k[f],w=d[f];
     if(v==null||v===""||(Array.isArray(v)&&!v.length))k[f]=w;else if(w!=null&&w!==""&&typeof w!=="object"&&String(w)!==String(v))conflicts.push(f+"："+w)});
-  k.tags=[...new Set([...(k.tags||[]),...(d.tags||[])])];k.logs=[...(k.logs||[]),...(d.logs||[])];k.services=[...(k.services||[]),...(d.services||[])];
+  k.tags=[...new Set([...(k.tags||[]),...(d.tags||[])])];k.logs=[...(k.logs||[]),...(d.logs||[])];k.services=[...(k.services||[]),...(d.services||[])];if(d.sent)k.sent=Object.assign({},d.sent,k.sent||{});
   if(!k.family&&d.family){k.family=d.family;k.relation=d.relation}else if(k.family&&d.family===k.family&&isHead(d)&&!isHead(k))k.relation=d.relation;
   k.name=nm;delete k.isNew;const _t=new Date(),_d=_t.getFullYear()+"-"+String(_t.getMonth()+1).padStart(2,"0")+"-"+String(_t.getDate()).padStart(2,"0");
   k.logs.push({id:"l"+uid(),date:_d,type:"其他",content:"合併重複客戶「"+d.name+"」（併入 "+added.length+" 項保單"+(skipped.length?"，略過重複 "+skipped.length+" 項":"")+"）"+(conflicts.length?"；被合併那筆的不同資料："+conflicts.join("、"):"")});
