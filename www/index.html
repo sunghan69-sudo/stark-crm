@@ -427,6 +427,10 @@ details.fold{align-self:start}details.fold>summary{list-style:none;cursor:pointe
 .dgap .x{grid-column:auto!important;text-align:right!important;white-space:nowrap}
 .aact .btn.line,.aact a.btn{text-decoration:none}.dtb .dq{justify-content:center}
 @media (max-width:800px){.dgap{grid-template-columns:104px 1fr 44px!important;gap:10px}}
+.kpis{grid-template-columns:repeat(3,1fr)}
+.vone .vcard{display:grid;grid-template-columns:minmax(0,1fr);gap:0}.vmore{margin-top:10px}.vmore>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:1px solid var(--line);border-radius:10px;font-size:13.5px;color:var(--pri);font-weight:600;user-select:none}.vmore>summary::-webkit-details-marker{display:none}.vmore>summary .fchev{transition:transform .2s;color:var(--muted)}.vmore[open]>summary .fchev{transform:rotate(180deg)}
+@media (max-width:800px){.kpis{grid-template-columns:repeat(3,1fr)}.kpi{padding:10px}.kpi>b{font-size:19px}.kpi small{font-size:11px}}
+.dch .sub a,.top .sub a{color:var(--pri2);font-weight:600;text-decoration:none}
 @media (max-width:380px){.dtabs button{font-size:13px;padding:8px 2px}.dgap{grid-template-columns:96px 1fr 46px!important}}
 </style>
 </head>
@@ -458,7 +462,7 @@ details.fold{align-self:start}details.fold>summary{list-style:none;cursor:pointe
 const VIEWS=[
   {id:"dashboard",ic:"▦",n:"總覽",s:"總覽"},
   {id:"clients",ic:"👥",n:"客戶",s:"客戶"},
-  {id:"reminders",ic:"🔔",n:"提醒",s:"提醒"},
+  {id:"reminders",ic:"🔔",n:"保單提醒",s:"提醒"},
   {id:"claims",ic:"🧮",n:"怎麼賠",s:"理賠"},
   {id:"ecard",ic:"🪪",n:"名片",s:"名片"},
   {id:"marketing",ic:"📣",n:"行銷專區",s:"行銷"},
@@ -897,11 +901,12 @@ function usrtHtml(){const t=USRT;if(!t||!t.rows.length)return "";
   const tr=(q,code)=>`<tr><td><b>${esc(q.name)}</b>${code?`<small>${esc(q.code)}</small>`:""}</td><td class="mp">${mktPrice(q.price)}</td><td class="mc">${mktChg(q)}</td></tr>`;
   return `<div class="mkc mkrt" id="usrtBox"><div class="mkt1">🇺🇸 美股即時行情 <span class="rtb ${open?"on":""}">${open?"● 盤中即時":"已收盤"}</span><span class="rtt">台灣 ${tms}</span></div>
    <table class="mtb">${idx.map(q=>tr(q)).join("")}</table><div class="sub" style="margin:8px 0 2px">科技權值股</div><table class="mtb">${stk.map(q=>tr(q,true)).join("")}</table></div>`}
-function vVideos(){const m=MKT;const v=(m&&m.videos)||[];if(!v.length)return "";let open=false;try{open=localStorage.getItem("stark-fold-vid2")==="1"}catch(e){}
+function vVideos(){const m=MKT;const v=(m&&m.videos)||[];if(!v.length)return "";let open=false;try{open=localStorage.getItem("stark-fold-vid3")==="1"}catch(e){}
   const ago=t=>{const h=Math.max(0,Math.round((Date.now()-Date.parse(t))/36e5));return h<1?"剛剛":h<24?h+" 小時前":Math.round(h/24)+" 天前"};
-  const vw=n=>n>=1e4?(n/1e4).toFixed(1)+" 萬":n.toLocaleString();
-  return `<details class="card fold vids" ${open?"open":""} ontoggle="try{localStorage.setItem('stark-fold-vid2',this.open?'1':'0')}catch(e){}"><summary class="mkh"><b>🎬 今日重點影音</b><span class="sub">${v.length} 支精選・每天 8 點更新</span><span class="fchev">▾</span></summary>
-  <div class="vgrid">${v.map(x=>`<a class="vcard" data-act="playVid" data-id="${esc(x.id)}" data-t="${esc(x.title)}" href="https://www.youtube.com/watch?v=${esc(x.id)}" target="_blank" rel="noopener"><div class="vth"><img loading="lazy" src="https://i.ytimg.com/vi/${esc(x.id)}/hqdefault.jpg" alt=""><span class="vplay">▶</span><span class="vtag vt-${esc(x.cat||'inv')}">${({inv:'投資股市',biz:'商業',med:'醫療健康',ins:'保險'})[x.cat]||'財經'}</span></div><div class="vtt">${esc(x.title)}</div><div class="vmeta">${esc(x.ch)}・${vw(x.views)} 次觀看・${ago(x.pub)}</div></a>`).join("")}</div></details>`}
+  const vw=n=>n>=1e4?(n/1e4).toFixed(1)+" 萬":(+n||0).toLocaleString();
+  const card=x=>`<a class="vcard" data-act="playVid" data-id="${esc(x.id)}" data-t="${esc(x.title)}" href="https://www.youtube.com/watch?v=${esc(x.id)}" target="_blank" rel="noopener"><div class="vth"><img loading="lazy" src="https://i.ytimg.com/vi/${esc(x.id)}/hqdefault.jpg" alt=""><span class="vplay">▶</span><span class="vtag vt-${esc(x.cat||'inv')}">${({inv:'投資股市',biz:'商業',med:'醫療健康',ins:'保險'})[x.cat]||'財經'}</span></div><div class="vtt">${esc(x.title)}</div><div class="vmeta">${esc(x.ch)}・${vw(x.views)} 次觀看・${ago(x.pub)}</div></a>`;
+  return `<div class="card vids"><div class="dch"><h2>🎬 今日重點影音</h2><span class="sub">每天 8 點更新</span></div><div class="vone">${card(v[0])}</div>
+  ${v.length>1?`<details class="vmore" ${open?"open":""} ontoggle="try{localStorage.setItem('stark-fold-vid3',this.open?'1':'0')}catch(e){}"><summary><span>其他 ${v.length-1} 支影音</span><span class="fchev">▾</span></summary><div class="vgrid">${v.slice(1).map(card).join("")}</div></details>`:""}</div>`}
 function playVid(id,title){const ov=document.createElement("div");ov.className="vov";ov.innerHTML=`<div class="vbox"><div class="vhd"><b>${esc(title||"")}</b><a class="btn sm" href="https://www.youtube.com/watch?v=${esc(id)}" target="_blank" rel="noopener">在 YouTube 開啟</a><button class="btn sm" data-x="1">✕</button></div><div class="vfr"><iframe src="https://www.youtube-nocookie.com/embed/${esc(id)}?autoplay=1&rel=0" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div></div>`;
   const close=()=>{ov.remove();document.removeEventListener("keydown",k)};const k=e=>{if(e.key==="Escape")close()};document.addEventListener("keydown",k);ov.addEventListener("click",e=>{if(e.target===ov||e.target.closest("[data-x]"))close()});document.body.appendChild(ov)}
 /* 每日正能量限動圖卡（每天 7 點由排程產出並推上 mkt/positive.json） */
@@ -928,7 +933,7 @@ function vMarket(){loadMarket();loadTwRt();loadUsRt();twrtTick();const m=MKT;let
     ${usrtHtml()||`<div class="mkc"><div class="mkt1">📊 美股昨日收盤</div>${rows((m.index||[]).filter(q=>!/^\^TW/.test(q.sym||"")))}</div><div class="mkc"><div class="mkt1">🇺🇸 美股科技前五大</div>${rows(m.us||[],true)}</div>`}
   </div><div class="hint" style="margin-top:8px">台股、美股為即時報價（盤中每 30 秒更新，來源：鉅亨網；美股盤中為台灣時間晚上約 21:30／22:30 至清晨）；匯率每日更新（臺灣銀行）。僅供參考，紅漲綠跌。</div></details>`}
 /* ========== 總覽：今日行動為主，行情與影音收合在側欄 ========== */
-let DTAB=(()=>{try{return localStorage.getItem("stark-dtab")||"todo"}catch(e){return "todo"}})(),DMORE=false;
+let DTAB=(()=>{try{return localStorage.getItem("stark-dtab")||"bd"}catch(e){return "bd"}})(),DMORE=false;
 function isoD(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 function sentKey(k,d){return k+"-"+isoD(d)}
 function markSent(id,key,on){const c=S.clients.find(x=>x.id===id);if(!c||!key)return;const s=Object.assign({},c.sent||{});const lim=Date.now()-60*864e5;Object.keys(s).forEach(x=>{if(s[x]<lim)delete s[x]});
@@ -947,9 +952,10 @@ function vDash(){
   const st=STAGES.map(s=>({s,n:cs.filter(c=>(c.stage||"潛在")===s).length}));
   const gaps=[["ci","缺重疾/重大傷病"],["med","缺實支實付"],["acc","缺意外"],["ltc","缺長照"],["life","缺壽險"]].map(([k,n])=>({k,n,v:cs.filter(c=>cov(c)[k]<=0).length}));
   const mx=Math.max(1,...gaps.map(g=>g.v));
-  /* 待辦：繳費、追蹤（含逾期）、期滿；生日改放在「生日」分頁 */
+  /* 總覽只放「人」的關懷：生日、增齡、近期行程；繳費／期滿／追蹤放在「保單提醒」頁，不重複 */
   const dd=d=>Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate())-t0)/864e5);
-  const todo=reminders(30).filter(r=>r.kind!=="birthday").map(r=>({c:r.c,k:r.kind,d:r.d,dd:dd(r.d),title:r.t,sub:r.sub,msg:r.msg}));
+  const _td=ds(t);const sched=[];cs.forEach(c=>(c.logs||[]).forEach(l=>{if(l&&l.time&&l.date&&l.date>=_td)sched.push({c,date:l.date,time:l.time,type:l.type||"",content:l.content||"",d:pd(l.date)||t0})}));
+  sched.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   /* 增齡、生日（同名同生日視為同一人） */
   const seen={up:new Set(),bd:new Set()};const up=[],bd=[];
   cs.forEach(c=>{const d=pd(c.birthday);if(!d)return;const key=(c.name||"")+"|"+(c.birthday||"");
@@ -961,18 +967,20 @@ function vDash(){
   const byD=(x,y)=>x.d-y.d||String(x.c.name).localeCompare(String(y.c.name),"zh-Hant");up.sort(byD);bd.sort(byD);
   const sentOf=o=>!!(o.c.sent||{})[sentKey(o.k,o.d)];
   const left=a=>a.filter(o=>!sentOf(o)).length;
-  const over=todo.filter(o=>o.dd<0&&!sentOf(o)).length,wk=todo.filter(o=>o.dd>=0&&o.dd<=7&&!sentOf(o)).length;
-  const tabs=[["todo","待辦",todo],["up","⏫ 增齡",up],["bd","🎂 生日",bd]];
+  const tabs=[["bd","🎂 生日",bd],["up","⏫ 增齡",up],["cal","📅 行程",sched]];
   const cur=tabs.find(x=>x[0]===DTAB)||tabs[0];
   /* 未處理的排前面，已處理的沉到下面 */
-  const list=cur[2].slice().sort((x,y)=>(sentOf(x)-sentOf(y))||(x.d-y.d));
+  const isCal=cur[0]==="cal";const list=isCal?cur[2]:cur[2].slice().sort((x,y)=>(sentOf(x)-sentOf(y))||(x.d-y.d));
   const N=6;const shown=DMORE?list:list.slice(0,N);
   const when=o=>o.dd<0?[`逾期`,`${-o.dd} 天`]:o.dd===0?["今天",md(o.d)]:o.dd===1?["明天",md(o.d)]:[md(o.d),`${o.dd} 天後`];
   const arow=o=>{const sent=sentOf(o),key=sentKey(o.k,o.d),[w1,w2]=when(o);
     return `<div class="arow ${sent?"done":o.dd<0?"over":o.dd<=1?"hot":""}"><div class="awhen"><b>${w1}</b><span>${w2}</span></div>
     <div class="abody" data-act="openClient" data-id="${esc(o.c.id)}"><div class="at">${esc(o.title)}${o.c.family?`<small>${esc(o.c.family)}</small>`:""}</div><div class="ad">${esc(o.sub)}</div></div>
     <div class="aact"><button class="btn sm" data-act="dCopy" data-id="${esc(o.c.id)}" data-key="${esc(key)}" data-msg="${esc(o.msg)}">複製訊息</button><a class="btn sm line" data-act="dLine" data-id="${esc(o.c.id)}" data-key="${esc(key)}" href="${lineUrl(o.msg)}" target="_blank" rel="noopener">LINE</a><button class="ack ${sent?"on":""}" data-act="dSent" data-id="${esc(o.c.id)}" data-key="${esc(key)}" title="${sent?"取消已處理":"標記已處理"}" aria-label="${sent?"取消已處理":"標記已處理"}">✓</button></div></div>`};
-  const emptyTxt={todo:"近 30 天沒有繳費、追蹤或期滿待辦 👍",up:"近 30 天沒有客戶保險年齡增齡",bd:"近 30 天沒有客戶生日"}[cur[0]];
+  const crow=s=>{const n=dd(s.d);return `<div class="arow ${n<=1?"hot":""}"><div class="awhen"><b>${n===0?"今天":n===1?"明天":esc(s.date.slice(5).replace("-","/"))}</b><span>${esc(s.time)}</span></div>
+    <div class="abody" data-act="openClient" data-id="${esc(s.c.id)}" data-tab="log"><div class="at">${esc(s.c.name)}${s.type?`<small>${esc(s.type)}</small>`:""}</div><div class="ad">${esc(s.content)||"（未填內容）"}</div></div>
+    <div class="aact"><a class="btn sm" href="${gcalUrl(s.c.name+"｜"+s.content,s.date,s.time,"方式："+s.type)}" target="_blank" rel="noopener">📅 加到 Google 日曆</a></div></div>`};
+  const emptyTxt={up:"近 30 天沒有客戶保險年齡增齡",bd:"近 30 天沒有客戶生日",cal:"還沒有排定的行程（在客戶的服務紀錄填上日期＋時間就會出現在這裡）"}[cur[0]];
   const h=new Date().getHours();const greet=h<11?"早安":h<18?"午安":"晚安";
   const kpi=(lab,val,sub,attrs,cls)=>`<a class="kpi ${cls||""}" ${attrs}><span>${lab}</span><b>${val}</b><small>${sub}</small></a>`;
   const premTxt=prem>=1e8?(prem/1e8).toFixed(2)+"<em>億</em>":prem>=1e4?Math.round(prem/1e4).toLocaleString()+"<em>萬</em>":fmt(prem);
@@ -983,13 +991,12 @@ function vDash(){
     ${kpi("客戶數",cs.length,`家庭 ${fams} 組`,`data-act="dGo" data-v="clients" data-f="all"`)}
     ${kpi("有效保單",pols.length,`平均每人 ${(pols.length/Math.max(1,cs.length)).toFixed(1)} 張`,`data-act="dGo" data-v="clients" data-f="all"`)}
     ${kpi("年化保費",premTxt,"全部有效保單",`data-act="dGo" data-v="clients" data-f="all"`)}
-    ${kpi("30 天待處理",left(todo)+left(up)+left(bd),over?`<b class="kbad">逾期 ${over} 件</b>・本週 ${wk}`:`本週 ${wk} 件`,`href="#reminders"`)}
   </div>
   <div class="dgrid">
     <div class="dcol">
-      <div class="card dact"><div class="dch"><h2>今日行動</h2><span class="sub">複製訊息或按 LINE 會自動打勾，避免重複傳</span></div>
-        <div class="dtabs" role="tablist">${tabs.map(([id,n,a])=>{const l=left(a);return `<button role="tab" class="${cur[0]===id?"on":""}" data-act="dTab" data-v="${id}">${n} <span class="dn">${l}</span>${id==="todo"&&over?`<i>${over} 逾期</i>`:""}</button>`}).join("")}</div>
-        ${list.length?`<div class="alist">${shown.map(arow).join("")}</div>${list.length>N?`<button class="btn sm amore" data-act="dMore">${DMORE?"收合 ▴":`顯示全部 ${list.length} 筆 ▾`}</button>`:""}`:`<div class="empty" style="padding:22px">${emptyTxt}</div>`}
+      <div class="card dact"><div class="dch"><h2>客戶關懷</h2><span class="sub">複製訊息或按 LINE 會自動打勾｜繳費、期滿、追蹤在 <a href="#reminders">保單提醒</a></span></div>
+        <div class="dtabs" role="tablist">${tabs.map(([id,n,a])=>{const l=id==="cal"?a.length:left(a);return `<button role="tab" class="${cur[0]===id?"on":""}" data-act="dTab" data-v="${id}">${n} <span class="dn">${l}</span></button>`}).join("")}</div>
+        ${list.length?`<div class="alist">${shown.map(isCal?crow:arow).join("")}</div>${list.length>N?`<button class="btn sm amore" data-act="dMore">${DMORE?"收合 ▴":`顯示全部 ${list.length} 筆 ▾`}</button>`:""}`:`<div class="empty" style="padding:22px">${emptyTxt}</div>`}
       </div>
       <div class="card"><div class="dch"><h2>保障缺口商機</h2><span class="sub">點一下直接列出名單</span></div>
         ${gaps.map(g=>`<div class="covrow dgap" data-act="gapgo" data-k="${esc(g.k)}"><div class="n">${g.n}</div><div class="bar"><i class="low" style="width:${g.v/mx*100}%"></i></div><div class="x"><b>${g.v}</b> 人</div></div>`).join("")}
@@ -1054,18 +1061,18 @@ function vClients(){if(CVIEW==="fam")return vFamGrid();
 function remHideSet(){try{return new Set(JSON.parse(localStorage.getItem("stark-rem-hide")||"[]"))}catch(e){return new Set()}}
 function vRem(){
   const hide=remHideSet();
-  const rs=reminders(S.remDays).filter(r=>!hide.has(r.kind));const groups={};rs.forEach(r=>(groups[r.kind]=groups[r.kind]||[]).push(r));
-  const kinds=Object.keys(KIND).filter(k=>!hide.has(k));
-  const showCal=!hide.has("cal");
+  const rs=reminders(S.remDays).filter(r=>r.kind!=="birthday"&&!hide.has(r.kind));const groups={};rs.forEach(r=>(groups[r.kind]=groups[r.kind]||[]).push(r));
+  const kinds=Object.keys(KIND).filter(k=>k!=="birthday"&&!hide.has(k));
+  const showCal=false;/* 行程、生日已整合到總覽「客戶關懷」 */
   const _td=ds(today());const sched=[];S.clients.forEach(c=>(c.logs||[]).forEach(l=>{if(l&&l.time&&l.date&&l.date>=_td)sched.push({date:l.date,time:l.time,name:c.name,cid:c.id,type:l.type,content:l.content})}));
   sched.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));const upcoming=sched.slice(0,50);
-  const hideItems=[["cal","本週行程"],["birthday","生日"],["payment","繳費"],["paidup","期滿"],["follow","追蹤"]];
+  const hideItems=[["payment","繳費"],["paidup","期滿"],["follow","追蹤"]];
   const openAttr=(()=>{try{return localStorage.getItem("stark-rhide-open")==="1"?"open":""}catch(e){return""}})();
-  return `<div class="top"><div><h1>提醒中心</h1><div class="sub">生日祝福・繳費提醒・繳費期滿・追蹤約訪，一鍵複製 LINE 訊息</div></div>
+  return `<div class="top"><div><h1>保單提醒</h1><div class="sub">繳費提醒・繳費期滿・追蹤約訪，一鍵複製 LINE 訊息（生日、增齡、行程在 <a href="#dashboard">總覽</a>）</div></div>
    <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">${[7,30,60,90].map(d=>`<button class="chip ${S.remDays===d?"on":""}" data-act="remDays" data-d="${d}">${d} 天內</button>`).join("")}${S.isAdmin?`<details class="rhide" ${openAttr} ontoggle="try{localStorage.setItem('stark-rhide-open',this.open?'1':'0')}catch(e){}"><summary class="btn sm">⚙ 顯示設定 ▾</summary><div class="rhidebox"><div class="sub" style="font-size:12px;margin-bottom:2px">勾選＝顯示，取消＝隱藏</div>${hideItems.map(([k,n])=>`<label><input type="checkbox" data-act="remHideTog" data-k="${k}" ${hide.has(k)?"":"checked"}>${n}</label>`).join("")}</div></details>`:""}</div></div>
    ${showCal?`<div class="card"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px"><h2 style="margin:0">📅 我的近期行程</h2><span class="sub">來自各客戶服務紀錄裡填了「時間」的約訪</span></div>
     ${upcoming.length?upcoming.map(s=>`<div class="li"><div class="when"><b style="font-size:14px">${esc(s.date.slice(5).replace("-","/"))}</b><span>${esc(s.time)}</span></div><div class="body"><div><b class="click" data-act="openClient" data-id="${esc(s.cid)}" data-tab="log" style="cursor:pointer;color:var(--pri)">${esc(s.name)}</b>${s.type?` <span class="tag">${esc(s.type)}</span>`:""} ${esc(s.content)}</div></div><a class="btn sm ghost" href="${gcalUrl(s.name+"｜"+s.content,s.date,s.time,"方式："+s.type)}" target="_blank" rel="noopener" title="加到 Google 日曆">📅</a></div>`).join(""):`<div class="empty" style="padding:18px">近期沒有排定的約訪<br><span class="sub">到客戶的「服務紀錄」填上日期＋時間，就會列在這裡</span></div>`}</div>`:""}
-   <div class="grid k4" style="margin-bottom:14px">${kinds.length?kinds.map(k=>`<div class="card kpi"><div class="l"><span class="dot" style="background:${KIND[k].c}"></span>${KIND[k].n}</div><div class="v">${(groups[k]||[]).length}</div>${(groups[k]||[]).length?`<button class="btn sm" style="margin-top:6px" data-act="bulkKind" data-k="${k}">全部複製</button>`:""}</div>`).join(""):`<div class="sub" style="padding:8px">提醒類別已全部隱藏，點右上「⚙ 顯示設定」可開回。</div>`}</div>
+   <div class="grid k4" style="margin-bottom:14px;grid-template-columns:repeat(${Math.max(1,kinds.length)},minmax(0,1fr))">${kinds.length?kinds.map(k=>`<div class="card kpi"><div class="l"><span class="dot" style="background:${KIND[k].c}"></span>${KIND[k].n}</div><div class="v">${(groups[k]||[]).length}</div>${(groups[k]||[]).length?`<button class="btn sm" style="margin-top:6px" data-act="bulkKind" data-k="${k}">全部複製</button>`:""}</div>`).join(""):`<div class="sub" style="padding:8px">提醒類別已全部隱藏，點右上「⚙ 顯示設定」可開回。</div>`}</div>
    <div class="card">${rs.length?rs.map(remItem).join(""):`<div class="empty"><b>這段期間沒有提醒</b>${hide.size?"（部分類別已隱藏）":"客戶填上生日、保單生效日與繳別後，系統就會自動排出提醒。"}</div>`}</div>`;
 }
 function vClaims(){
@@ -2210,7 +2217,7 @@ document.addEventListener("click",async e=>{
     case "playVid":e.preventDefault();playVid(el.dataset.id,el.dataset.t);break;
     case "posView":{e.preventDefault();const vd=el.dataset.video,sr=vd||el.dataset.src;const ov=document.createElement("div");ov.className="vov";ov.innerHTML=`<div style="max-height:92vh;display:flex;flex-direction:column;align-items:center;gap:10px">${vd?`<video src="${esc(vd)}" poster="${esc(el.dataset.src||"")}" autoplay playsinline controls style="max-height:84vh;max-width:92vw;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.5);background:#000"></video>`:`<img src="${esc(el.dataset.src)}" style="max-height:84vh;max-width:92vw;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.5)">`}<div class="row" style="gap:8px">${vd&&el.dataset.src?`<a class="btn sm" href="${esc(el.dataset.src)}" download>⬇ 下載圖卡</a>`:""}<a class="btn sm" href="${esc(sr)}" download>⬇ 下載${vd?"動畫":""}</a><button class="btn sm" data-x="1">✕ 關閉</button></div></div>`;ov.addEventListener("click",ev=>{if(ev.target===ov||ev.target.closest("[data-x]"))ov.remove()});document.body.appendChild(ov);break}
     case "careF":CARE_F=el.dataset.v||"all";try{localStorage.setItem("stark-caref",CARE_F)}catch(e){}render();break;
-    case "dTab":DTAB=el.dataset.v||"todo";DMORE=false;try{localStorage.setItem("stark-dtab",DTAB)}catch(e){}render();break;
+    case "dTab":DTAB=el.dataset.v||"bd";DMORE=false;try{localStorage.setItem("stark-dtab",DTAB)}catch(e){}render();break;
     case "dMore":DMORE=!DMORE;render();break;
     case "dSent":markSent(el.dataset.id,el.dataset.key);break;
     case "dCopy":copy(el.dataset.msg);markSent(el.dataset.id,el.dataset.key,true);break;
